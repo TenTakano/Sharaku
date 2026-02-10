@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo fmt:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo run:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo remove:*)",
+      "Bash(rustfmt:*)"
+    ],
+    "ask": [
+      "Bash(cargo install:*)",
+      "Bash(cargo add:*)"
+    ]
+  }
+}
