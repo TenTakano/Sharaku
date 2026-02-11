@@ -98,7 +98,12 @@ pub fn list_works(
 
 pub fn get_thumbnail(conn: &Connection, work_id: i64) -> Result<Vec<u8>, AppError> {
     let mut stmt = conn.prepare_cached("SELECT thumbnail FROM works WHERE id = ?1")?;
-    let thumb: Option<Vec<u8>> = stmt.query_row([work_id], |row| row.get(0))?;
+    let thumb: Option<Vec<u8>> = stmt
+        .query_row([work_id], |row| row.get(0))
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => AppError::NotFound,
+            other => AppError::Database(other),
+        })?;
     thumb.ok_or(AppError::NotFound)
 }
 
