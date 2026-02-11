@@ -1,21 +1,26 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  import ScanButton from "./lib/components/ScanButton.svelte";
+  import ScanProgressBar from "./lib/components/ScanProgress.svelte";
+  import WorkGrid from "./lib/components/WorkGrid.svelte";
+  import type { ScanProgress } from "./lib/types";
 
-  let name = $state("");
-  let greetMsg = $state("");
+  let progress = $state<ScanProgress | null>(null);
+  let reloadTrigger = $state(0);
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    greetMsg = await invoke("greet", { name });
+  function handleProgress(p: ScanProgress) {
+    progress = p;
+  }
+
+  function handleComplete() {
+    reloadTrigger++;
   }
 </script>
 
 <main class="container">
-  <h1>Welcome to Sharaku</h1>
-
-  <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
+  <h1>Sharaku</h1>
+  <div class="controls">
+    <ScanButton onProgress={handleProgress} onComplete={handleComplete} />
+  </div>
+  <ScanProgressBar {progress} />
+  <WorkGrid {reloadTrigger} />
 </main>

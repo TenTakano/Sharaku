@@ -15,24 +15,15 @@
 }
 
 .container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.row {
-  display: flex;
-  justify-content: center;
+  margin: 0 auto;
+  padding: 24px;
+  max-width: 1200px;
 }
 
 h1 {
-  text-align: center;
+  margin: 0 0 16px;
 }
 
-input,
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -42,12 +33,9 @@ button {
   font-family: inherit;
   color: #0f0f0f;
   background-color: #ffffff;
+  cursor: pointer;
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
 }
 
 button:hover {
@@ -59,13 +47,89 @@ button:active {
   background-color: #e8e8e8;
 }
 
-input,
-button {
-  outline: none;
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-#greet-input {
-  margin-right: 5px;
+.controls {
+  margin-bottom: 16px;
+}
+
+.scan-progress {
+  margin-bottom: 16px;
+}
+
+.scan-progress progress {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  appearance: none;
+}
+
+.scan-progress progress::-webkit-progress-bar {
+  background-color: #e0e0e0;
+  border-radius: 4px;
+}
+
+.scan-progress progress::-webkit-progress-value {
+  background-color: #396cd8;
+  border-radius: 4px;
+}
+
+.scan-progress p {
+  margin: 4px 0;
+  font-size: 0.875rem;
+}
+
+.scan-progress .completed {
+  color: #2e7d32;
+}
+
+.scan-progress .error {
+  color: #c62828;
+}
+
+.work-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.work-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.work-card img {
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+  border-radius: 4px;
+  background-color: #e0e0e0;
+}
+
+.work-card .no-thumbnail {
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.work-title {
+  font-size: 0.75rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -74,7 +138,6 @@ button {
     background-color: #2f2f2f;
   }
 
-  input,
   button {
     color: #ffffff;
     background-color: #0f0f0f98;
@@ -82,5 +145,18 @@ button {
 
   button:active {
     background-color: #0f0f0f69;
+  }
+
+  .scan-progress progress::-webkit-progress-bar {
+    background-color: #444;
+  }
+
+  .work-card img {
+    background-color: #444;
+  }
+
+  .work-card .no-thumbnail {
+    background-color: #444;
+    color: #aaa;
   }
 }

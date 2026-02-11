@@ -1,0 +1,16 @@
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum ScanError {
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Image error: {0}")]
+    Image(#[from] image::ImageError),
+
+    #[error("Database error: {0}")]
+    Database(#[from] rusqlite::Error),
+
+    #[error("WebP encode failed")]
+    WebpEncode,
+}
