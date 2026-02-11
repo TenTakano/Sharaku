@@ -72,10 +72,15 @@ async fn get_work(app: tauri::AppHandle, work_id: i64) -> Result<WorkDetail, Str
 }
 
 #[tauri::command]
-async fn read_image_file(path: String) -> Result<Vec<u8>, String> {
-    tokio::task::spawn_blocking(move || std::fs::read(&path).map_err(|e| e.to_string()))
-        .await
-        .map_err(|e| e.to_string())?
+async fn read_image_file(app: tauri::AppHandle, work_id: i64) -> Result<Vec<u8>, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        let work = db::get_work(&conn, work_id).map_err(|e| e.to_string())?;
+        std::fs::read(&work.path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

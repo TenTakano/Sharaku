@@ -16,9 +16,7 @@
   async function loadWork() {
     try {
       work = await invoke("get_work", { workId });
-      const bytes: number[] = await invoke("read_image_file", {
-        path: work!.path,
-      });
+      const bytes: number[] = await invoke("read_image_file", { workId });
       const blob = new Blob([new Uint8Array(bytes)]);
       imageUrl = URL.createObjectURL(blob);
     } catch (e) {
