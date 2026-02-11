@@ -5,7 +5,7 @@ use tauri::ipc::Channel;
 use walkdir::WalkDir;
 
 use crate::db::{self, WorkRecord};
-use crate::error::ScanError;
+use crate::error::AppError;
 use crate::thumbnail;
 
 const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "gif", "webp", "bmp"];
@@ -41,7 +41,7 @@ pub fn scan_directory(
     root: &Path,
     app_data_dir: &Path,
     on_progress: &Channel<ScanProgress>,
-) -> Result<(), ScanError> {
+) -> Result<(), AppError> {
     let mut walk_errors = 0usize;
     let image_files: Vec<_> = WalkDir::new(root)
         .into_iter()

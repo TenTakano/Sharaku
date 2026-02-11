@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ScanError {
+pub enum AppError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -13,4 +13,7 @@ pub enum ScanError {
 
     #[error("WebP encode failed")]
     WebpEncode,
+
+    #[error("Not found")]
+    NotFound,
 }
