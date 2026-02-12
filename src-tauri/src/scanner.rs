@@ -112,3 +112,7 @@ pub fn scan_directory(
     let _ = on_progress.send(ScanProgress::Completed { registered, failed });
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/scanner.rs"]
+mod tests;

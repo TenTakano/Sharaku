@@ -9,9 +9,14 @@ pub fn open_db(app_data_dir: &Path) -> Result<Connection, AppError> {
     std::fs::create_dir_all(app_data_dir)?;
     let db_path = app_data_dir.join("sharaku.db");
     let conn = Connection::open(db_path)?;
+    init_db(&conn)?;
+    Ok(conn)
+}
+
+fn init_db(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
     conn.execute_batch(include_str!("../migrations/001_create_initial_tables.sql"))?;
-    Ok(conn)
+    Ok(())
 }
 
 pub fn path_exists(conn: &Connection, path: &str) -> Result<bool, AppError> {
@@ -98,12 +103,12 @@ pub fn list_works(
 
 pub fn get_thumbnail(conn: &Connection, work_id: i64) -> Result<Vec<u8>, AppError> {
     let mut stmt = conn.prepare_cached("SELECT thumbnail FROM works WHERE id = ?1")?;
-    let thumb: Option<Vec<u8>> = stmt
-        .query_row([work_id], |row| row.get(0))
-        .map_err(|e| match e {
-            rusqlite::Error::QueryReturnedNoRows => AppError::NotFound,
-            other => AppError::Database(other),
-        })?;
+    let thumb: Option<Vec<u8>> =
+        stmt.query_row([work_id], |row| row.get(0))
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => AppError::NotFound,
+                other => AppError::Database(other),
+            })?;
     thumb.ok_or(AppError::NotFound)
 }
 
@@ -126,3 +131,7 @@ pub fn get_work(conn: &Connection, work_id: i64) -> Result<WorkDetail, AppError>
         other => AppError::Database(other),
     })
 }
+
+#[cfg(test)]
+#[path = "tests/db.rs"]
+mod tests;

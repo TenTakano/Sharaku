@@ -1,3 +1,16 @@
+<script lang="ts" module>
+  export class WorkCard {
+    static _thumbnailCache = new Map<number, string>();
+
+    static clearCache() {
+      for (const url of WorkCard._thumbnailCache.values()) {
+        URL.revokeObjectURL(url);
+      }
+      WorkCard._thumbnailCache.clear();
+    }
+  }
+</script>
+
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import type { WorkSummary } from "../types";
@@ -40,19 +53,6 @@
     loading = true;
     loadThumbnail();
   });
-</script>
-
-<script lang="ts" module>
-  export class WorkCard {
-    static _thumbnailCache = new Map<number, string>();
-
-    static clearCache() {
-      for (const url of WorkCard._thumbnailCache.values()) {
-        URL.revokeObjectURL(url);
-      }
-      WorkCard._thumbnailCache.clear();
-    }
-  }
 </script>
 
 <button class="work-card" onclick={() => onclick(work.id)}>
