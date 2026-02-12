@@ -101,7 +101,7 @@ pub fn run() {
                         .status(500)
                         .body(Vec::new())
                         .unwrap(),
-                }
+                },
                 None => tauri::http::Response::builder()
                     .status(400)
                     .body(Vec::new())

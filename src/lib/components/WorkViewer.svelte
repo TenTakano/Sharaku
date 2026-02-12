@@ -24,7 +24,12 @@
   let pageCount = $derived(work?.pageCount ?? 1);
 
   let displayStyle = $derived.by(() => {
-    if (!naturalWidth || !naturalHeight || !containerWidth || !containerHeight) {
+    if (
+      !naturalWidth ||
+      !naturalHeight ||
+      !containerWidth ||
+      !containerHeight
+    ) {
       return "max-width: 100%; max-height: 100%; object-fit: contain;";
     }
 
