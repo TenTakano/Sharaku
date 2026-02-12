@@ -29,3 +29,5 @@ export interface WorkDetail {
 
 export type SortField = "title" | "created_at";
 export type SortOrder = "asc" | "desc";
+
+export type FitMode = "screen" | "width" | "height";
