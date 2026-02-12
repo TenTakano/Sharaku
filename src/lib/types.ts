@@ -31,3 +31,5 @@ export type SortField = "title" | "created_at";
 export type SortOrder = "asc" | "desc";
 
 export type FitMode = "screen" | "width" | "height";
+
+export type SlideshowMode = "page" | "work";
