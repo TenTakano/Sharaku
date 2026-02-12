@@ -10,6 +10,8 @@
     "sql:allow-execute",
     "fs:default",
     "dialog:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
   ]
 }

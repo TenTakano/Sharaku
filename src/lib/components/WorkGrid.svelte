@@ -8,9 +8,10 @@
   interface Props {
     reloadTrigger: number;
     onSelectWork: (workId: number) => void;
+    onWorksLoaded?: (workIds: number[]) => void;
   }
 
-  let { reloadTrigger, onSelectWork }: Props = $props();
+  let { reloadTrigger, onSelectWork, onWorksLoaded }: Props = $props();
 
   let works = $state<WorkSummary[]>([]);
   let sortField = $state<SortField>("created_at");
@@ -38,6 +39,7 @@
       sortBy: sortField,
       sortOrder: sortOrder,
     });
+    onWorksLoaded?.(works.map((w) => w.id));
   }
 
   $effect(() => {
