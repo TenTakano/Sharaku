@@ -87,14 +87,14 @@
   <span class="work-count">{works.length} works</span>
 </div>
 
-<div
-  class="grid-container"
-  bind:clientWidth={containerWidth}
->
+<div class="grid-container" bind:clientWidth={containerWidth}>
   {#if rows.length > 0}
     <VList data={rows} getKey={(_, i) => i} itemSize={280}>
       {#snippet children(row)}
-        <div class="grid-row" style="gap: {GAP}px; grid-template-columns: repeat({columnCount}, {CARD_WIDTH}px);">
+        <div
+          class="grid-row"
+          style="gap: {GAP}px; grid-template-columns: repeat({columnCount}, {CARD_WIDTH}px);"
+        >
           {#each row as work (work.id)}
             <WorkCardComponent {work} onclick={onSelectWork} />
           {/each}

@@ -17,7 +17,9 @@
       <p>{progress.current} / {progress.total}: {progress.fileName}</p>
       <progress max={progress.total} value={progress.current}></progress>
     {:else if progress.type === "completed"}
-      <p class="completed">完了: {progress.registered} 件登録, {progress.failed} 件失敗</p>
+      <p class="completed">
+        完了: {progress.registered} 件登録, {progress.failed} 件失敗
+      </p>
     {:else if progress.type === "error"}
       <p class="error">エラー: {progress.message}</p>
     {/if}
