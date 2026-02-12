@@ -26,6 +26,7 @@
   let slideshowPlaying = $state(false);
   let slideshowInterval = $state(5);
   let slideshowMode = $state<SlideshowMode>("page");
+  let slideshowLoop = $state(false);
   let slideshowTick = $state(0);
   let isFullscreen = $state(false);
   let controlsVisible = $state(true);
@@ -110,12 +111,16 @@
         currentPage++;
       } else if (hasMultipleWorks && currentWorkIndex < totalWorks - 1) {
         navigateToWork(workIds[currentWorkIndex + 1]);
+      } else if (slideshowLoop) {
+        navigateToWork(workIds[0]);
       } else {
         slideshowPlaying = false;
       }
     } else {
       if (hasMultipleWorks && currentWorkIndex < totalWorks - 1) {
         navigateToWork(workIds[currentWorkIndex + 1]);
+      } else if (slideshowLoop) {
+        navigateToWork(workIds[0]);
       } else {
         slideshowPlaying = false;
       }
@@ -206,6 +211,9 @@
         break;
       case "f":
         toggleFullscreen();
+        break;
+      case "l":
+        slideshowLoop = !slideshowLoop;
         break;
       case " ":
         e.preventDefault();
@@ -354,7 +362,7 @@
         }}
         title="前へ"
       >
-        ◀
+        ⏮
       </button>
       <button
         class="viewer-control-btn viewer-play-btn"
@@ -377,7 +385,7 @@
         }}
         title="次へ"
       >
-        ▶
+        ⏭
       </button>
 
       <span class="viewer-slideshow-separator">|</span>
@@ -436,6 +444,17 @@
         />
         作品
       </label>
+
+      <span class="viewer-slideshow-separator">|</span>
+
+      <button
+        class="viewer-control-btn"
+        class:active={slideshowLoop}
+        onclick={() => (slideshowLoop = !slideshowLoop)}
+        title="ループ (L)"
+      >
+        🔁
+      </button>
 
       <span class="viewer-slideshow-separator">|</span>
 
