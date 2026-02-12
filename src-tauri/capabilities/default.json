@@ -11,7 +11,7 @@
     "fs:default",
     "dialog:default",
     "dialog:allow-open",
-    "window:allow-set-fullscreen",
-    "window:allow-is-fullscreen"
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
   ]
 }
