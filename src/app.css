@@ -14,14 +14,23 @@
   -webkit-text-size-adjust: 100%;
 }
 
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
 .container {
-  margin: 0 auto;
-  padding: 24px;
-  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 16px 24px;
+  box-sizing: border-box;
 }
 
 h1 {
-  margin: 0 0 16px;
+  margin: 0;
+  font-size: 1.25rem;
 }
 
 button {
@@ -52,12 +61,17 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.controls {
-  margin-bottom: 16px;
+/* App header */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
+/* Scan progress */
 .scan-progress {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .scan-progress progress {
@@ -90,17 +104,79 @@ button:disabled {
   color: #c62828;
 }
 
-.work-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
+/* Toolbar (sort controls) */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-control label {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.sort-control select {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 0.875rem;
+  background: #fff;
+}
+
+.work-count {
+  font-size: 0.875rem;
+  color: #888;
+  margin-left: auto;
+}
+
+/* Grid container */
+.grid-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.grid-row {
+  display: grid;
+  padding: 8px 0;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #888;
+}
+
+/* Work card */
 .work-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.work-card:hover {
+  border-color: transparent;
+}
+
+.work-card:hover img {
+  opacity: 0.85;
 }
 
 .work-card img {
@@ -109,6 +185,7 @@ button:disabled {
   object-fit: cover;
   border-radius: 4px;
   background-color: #e0e0e0;
+  transition: opacity 0.15s;
 }
 
 .work-card .no-thumbnail {
@@ -132,6 +209,72 @@ button:disabled {
   max-width: 100%;
 }
 
+/* Viewer */
+.viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
+}
+
+.viewer-back-btn {
+  color: #fff;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+.viewer-back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.viewer-title {
+  color: #fff;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 16px;
+}
+
+.viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.viewer-loading,
+.viewer-error {
+  color: #aaa;
+  font-size: 1rem;
+}
+
+.viewer-error {
+  color: #e57373;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -149,6 +292,16 @@ button:disabled {
 
   .scan-progress progress::-webkit-progress-bar {
     background-color: #444;
+  }
+
+  .sort-control label {
+    color: #aaa;
+  }
+
+  .sort-control select {
+    background: #3a3a3a;
+    color: #f6f6f6;
+    border-color: #555;
   }
 
   .work-card img {

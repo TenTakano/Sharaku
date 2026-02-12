@@ -3,13 +3,13 @@ use std::path::Path;
 use image::imageops::FilterType;
 use image::GenericImageView;
 
-use crate::error::ScanError;
+use crate::error::AppError;
 
 const MAX_WIDTH: u32 = 200;
 const MAX_HEIGHT: u32 = 280;
 const WEBP_QUALITY: f32 = 65.0;
 
-pub fn generate_thumbnail(image_path: &Path) -> Result<Vec<u8>, ScanError> {
+pub fn generate_thumbnail(image_path: &Path) -> Result<Vec<u8>, AppError> {
     let img = image::open(image_path)?;
     let (orig_w, orig_h) = img.dimensions();
 
@@ -28,7 +28,7 @@ pub fn generate_thumbnail(image_path: &Path) -> Result<Vec<u8>, ScanError> {
     let mem = encoder.encode(WEBP_QUALITY);
 
     if mem.is_empty() {
-        return Err(ScanError::WebpEncode);
+        return Err(AppError::WebpEncode);
     }
 
     Ok(mem.to_vec())

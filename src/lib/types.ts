@@ -9,3 +9,23 @@ export interface Work {
   title: string;
   thumbnail: number[];
 }
+
+export interface WorkSummary {
+  id: number;
+  title: string;
+  workType: string;
+  pageCount: number;
+  createdAt: string;
+}
+
+export interface WorkDetail {
+  id: number;
+  title: string;
+  path: string;
+  workType: string;
+  pageCount: number;
+  createdAt: string;
+}
+
+export type SortField = "title" | "created_at";
+export type SortOrder = "asc" | "desc";
