@@ -114,5 +114,5 @@ pub fn scan_directory(
 }
 
 #[cfg(test)]
-#[path = "scanner_tests.rs"]
+#[path = "tests/scanner.rs"]
 mod tests;

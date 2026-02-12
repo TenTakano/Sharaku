@@ -133,5 +133,5 @@ pub fn get_work(conn: &Connection, work_id: i64) -> Result<WorkDetail, AppError>
 }
 
 #[cfg(test)]
-#[path = "db_tests.rs"]
+#[path = "tests/db.rs"]
 mod tests;
