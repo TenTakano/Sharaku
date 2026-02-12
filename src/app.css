@@ -393,6 +393,12 @@ button:disabled {
   border-color: #396cd8;
 }
 
+.viewer-interval-label {
+  color: #aaa;
+  font-size: 0.75rem;
+  user-select: none;
+}
+
 .viewer-interval-btn {
   color: #ccc;
   background: none;

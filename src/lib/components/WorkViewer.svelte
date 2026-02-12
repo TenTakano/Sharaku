@@ -390,27 +390,7 @@
 
       <span class="viewer-slideshow-separator">|</span>
 
-      <button
-        class="viewer-interval-btn"
-        class:active={slideshowInterval === 3}
-        onclick={() => (slideshowInterval = 3)}
-      >
-        3s
-      </button>
-      <button
-        class="viewer-interval-btn"
-        class:active={slideshowInterval === 5}
-        onclick={() => (slideshowInterval = 5)}
-      >
-        5s
-      </button>
-      <button
-        class="viewer-interval-btn"
-        class:active={slideshowInterval === 10}
-        onclick={() => (slideshowInterval = 10)}
-      >
-        10s
-      </button>
+      <span class="viewer-interval-label">間隔</span>
       <input
         type="number"
         class="viewer-interval-input"
@@ -420,8 +400,9 @@
         onchange={handleIntervalInput}
         onfocus={() => (intervalInputFocused = true)}
         onblur={() => (intervalInputFocused = false)}
-        title="間隔(秒)"
       />
+      <span class="viewer-interval-label">秒</span>
+
       <span class="viewer-slideshow-separator">|</span>
 
       <label class="viewer-mode-label">
@@ -448,12 +429,12 @@
       <span class="viewer-slideshow-separator">|</span>
 
       <button
-        class="viewer-control-btn"
+        class="viewer-interval-btn"
         class:active={slideshowLoop}
         onclick={() => (slideshowLoop = !slideshowLoop)}
         title="ループ (L)"
       >
-        🔁
+        ループ
       </button>
 
       <span class="viewer-slideshow-separator">|</span>
