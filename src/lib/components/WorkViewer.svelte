@@ -104,6 +104,26 @@
     onNavigateWork(newWorkId);
   }
 
+  function navigatePrev() {
+    if (currentPage > 0) {
+      currentPage--;
+    } else if (hasMultipleWorks && currentWorkIndex > 0) {
+      navigateToWork(workIds[currentWorkIndex - 1]);
+    } else if (slideshowLoop && hasMultipleWorks) {
+      navigateToWork(workIds[totalWorks - 1]);
+    }
+  }
+
+  function navigateNext() {
+    if (currentPage < pageCount - 1) {
+      currentPage++;
+    } else if (hasMultipleWorks && currentWorkIndex < totalWorks - 1) {
+      navigateToWork(workIds[currentWorkIndex + 1]);
+    } else if (slideshowLoop && hasMultipleWorks) {
+      navigateToWork(workIds[0]);
+    }
+  }
+
   function advanceSlideshow() {
     if (!work) return;
     if (slideshowMode === "page") {
@@ -172,19 +192,11 @@
         }
         break;
       case "ArrowLeft":
-        if (currentPage > 0) {
-          currentPage--;
-        } else if (hasMultipleWorks && currentWorkIndex > 0) {
-          navigateToWork(workIds[currentWorkIndex - 1]);
-        }
+        navigatePrev();
         if (slideshowPlaying) slideshowTick++;
         break;
       case "ArrowRight":
-        if (currentPage < pageCount - 1) {
-          currentPage++;
-        } else if (hasMultipleWorks && currentWorkIndex < totalWorks - 1) {
-          navigateToWork(workIds[currentWorkIndex + 1]);
-        }
+        navigateNext();
         if (slideshowPlaying) slideshowTick++;
         break;
       case "+":
@@ -350,14 +362,11 @@
     <div class="viewer-slideshow-controls">
       <button
         class="viewer-control-btn"
-        disabled={currentPage <= 0 &&
+        disabled={!slideshowLoop &&
+          currentPage <= 0 &&
           (!hasMultipleWorks || currentWorkIndex <= 0)}
         onclick={() => {
-          if (currentPage > 0) {
-            currentPage--;
-          } else if (hasMultipleWorks && currentWorkIndex > 0) {
-            navigateToWork(workIds[currentWorkIndex - 1]);
-          }
+          navigatePrev();
           if (slideshowPlaying) slideshowTick++;
         }}
         title="前へ"
@@ -373,14 +382,11 @@
       </button>
       <button
         class="viewer-control-btn"
-        disabled={currentPage >= pageCount - 1 &&
+        disabled={!slideshowLoop &&
+          currentPage >= pageCount - 1 &&
           (!hasMultipleWorks || currentWorkIndex >= totalWorks - 1)}
         onclick={() => {
-          if (currentPage < pageCount - 1) {
-            currentPage++;
-          } else if (hasMultipleWorks && currentWorkIndex < totalWorks - 1) {
-            navigateToWork(workIds[currentWorkIndex + 1]);
-          }
+          navigateNext();
           if (slideshowPlaying) slideshowTick++;
         }}
         title="次へ"
