@@ -2,6 +2,7 @@ mod db;
 mod error;
 mod scanner;
 mod thumbnail;
+mod viewer;
 
 use std::path::PathBuf;
 
@@ -71,18 +72,6 @@ async fn get_work(app: tauri::AppHandle, work_id: i64) -> Result<WorkDetail, Str
     .map_err(|e| e.to_string())?
 }
 
-#[tauri::command]
-async fn read_image_file(app: tauri::AppHandle, work_id: i64) -> Result<Vec<u8>, String> {
-    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
-        let work = db::get_work(&conn, work_id).map_err(|e| e.to_string())?;
-        std::fs::read(&work.path).map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![Migration {
@@ -101,12 +90,29 @@ pub fn run() {
         )
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .register_uri_scheme_protocol("sharaku", |ctx, request| {
+            let uri = request.uri().to_string();
+            match viewer::parse_view_uri(&uri) {
+                Some((work_id, page_index)) => match ctx.app_handle().path().app_data_dir() {
+                    Ok(app_data_dir) => {
+                        viewer::handle_view_request(&app_data_dir, work_id, page_index)
+                    }
+                    Err(_) => tauri::http::Response::builder()
+                        .status(500)
+                        .body(Vec::new())
+                        .unwrap(),
+                }
+                None => tauri::http::Response::builder()
+                    .status(400)
+                    .body(Vec::new())
+                    .unwrap(),
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             scan_library,
             list_works,
             get_thumbnail,
             get_work,
-            read_image_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
