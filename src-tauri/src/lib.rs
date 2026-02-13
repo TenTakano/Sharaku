@@ -2,6 +2,7 @@ mod db;
 mod error;
 mod scanner;
 mod settings;
+mod template;
 mod thumbnail;
 mod viewer;
 
@@ -111,13 +112,29 @@ async fn set_library_root(app: tauri::AppHandle, path: String) -> Result<(), Str
 
 #[tauri::command]
 async fn set_directory_template(app: tauri::AppHandle, template: String) -> Result<(), String> {
+    let trimmed = template.trim().to_string();
+    if !trimmed.is_empty() {
+        template::validate_template(&trimmed).map_err(|e| e.to_string())?;
+    }
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     tokio::task::spawn_blocking(move || {
         let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
-        settings::set_directory_template(&conn, &template).map_err(|e| e.to_string())
+        settings::set_directory_template(&conn, &trimmed).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn validate_template(template: String) -> Result<(), String> {
+    template::validate_template(&template).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn preview_template(template: String) -> Result<String, String> {
+    template::validate_template(&template).map_err(|e| e.to_string())?;
+    let metadata = template::sample_metadata();
+    Ok(template::render_template(&template, &metadata))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -172,6 +189,8 @@ pub fn run() {
             get_settings,
             set_library_root,
             set_directory_template,
+            validate_template,
+            preview_template,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

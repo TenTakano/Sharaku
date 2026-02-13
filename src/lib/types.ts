@@ -43,3 +43,17 @@ export interface AppSettings {
   libraryRoot: string | null;
   directoryTemplate: string | null;
 }
+
+export interface TemplateValidation {
+  valid: boolean;
+  error: string | null;
+}
+
+export interface WorkMetadata {
+  title: string;
+  artist: string | null;
+  year: number | null;
+  genre: string | null;
+  circle: string | null;
+  origin: string | null;
+}

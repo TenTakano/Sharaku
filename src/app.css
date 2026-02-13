@@ -560,6 +560,39 @@ button:disabled {
   opacity: 0.5;
 }
 
+.settings-input-error {
+  border-color: #c62828 !important;
+}
+
+.template-error {
+  font-size: 0.8125rem;
+  color: #c62828;
+  margin: 6px 0 0;
+}
+
+.template-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(57, 108, 216, 0.06);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+.template-preview-label {
+  color: #666;
+  white-space: nowrap;
+}
+
+.template-preview-path {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 6px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+
 .settings-message {
   font-size: 0.875rem;
   margin-top: 16px;
@@ -623,6 +656,26 @@ button:disabled {
     background: #3a3a3a;
     color: #f6f6f6;
     border-color: #555;
+  }
+
+  .settings-input-error {
+    border-color: #ef5350 !important;
+  }
+
+  .template-error {
+    color: #ef5350;
+  }
+
+  .template-preview {
+    background: rgba(57, 108, 216, 0.12);
+  }
+
+  .template-preview-label {
+    color: #aaa;
+  }
+
+  .template-preview-path {
+    background: rgba(255, 255, 255, 0.1);
   }
 
   .settings-save-btn {
