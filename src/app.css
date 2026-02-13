@@ -465,6 +465,114 @@ button:disabled {
   color: #e57373;
 }
 
+/* Settings button in header */
+.settings-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 1.25rem;
+  line-height: 1;
+  background: none;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.settings-btn:hover {
+  border-color: #396cd8;
+}
+
+/* Settings view */
+.settings-back-btn {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+.settings-loading {
+  color: #888;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.settings-content {
+  max-width: 640px;
+}
+
+.settings-section {
+  margin-bottom: 32px;
+}
+
+.settings-section h2 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+.settings-description {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.settings-description code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.8125rem;
+}
+
+.settings-field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: #396cd8;
+}
+
+.settings-browse-btn,
+.settings-save-btn {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.settings-save-btn {
+  background-color: #396cd8;
+  color: #fff;
+  border-color: #396cd8;
+}
+
+.settings-save-btn:hover:not(:disabled) {
+  background-color: #2e5bb8;
+}
+
+.settings-save-btn:disabled {
+  opacity: 0.5;
+}
+
+.settings-message {
+  font-size: 0.875rem;
+  margin-top: 16px;
+}
+
+.settings-message.success {
+  color: #2e7d32;
+}
+
+.settings-message.error {
+  color: #c62828;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -501,5 +609,24 @@ button:disabled {
   .work-card .no-thumbnail {
     background-color: #444;
     color: #aaa;
+  }
+
+  .settings-description {
+    color: #aaa;
+  }
+
+  .settings-description code {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .settings-input {
+    background: #3a3a3a;
+    color: #f6f6f6;
+    border-color: #555;
+  }
+
+  .settings-save-btn {
+    background-color: #396cd8;
+    color: #fff;
   }
 }

@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum AppError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -16,4 +17,7 @@ pub enum AppError {
 
     #[error("Not found")]
     NotFound,
+
+    #[error("Invalid template: {0}")]
+    InvalidTemplate(String),
 }

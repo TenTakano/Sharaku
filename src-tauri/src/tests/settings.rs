@@ -1,0 +1,51 @@
+use rusqlite::Connection;
+
+use crate::db;
+
+use super::*;
+
+fn test_conn() -> Connection {
+    let conn = Connection::open_in_memory().unwrap();
+    db::init_db_for_test(&conn).unwrap();
+    conn
+}
+
+#[test]
+fn get_setting_returns_none_when_not_set() {
+    let conn = test_conn();
+    assert_eq!(get_setting(&conn, "nonexistent").unwrap(), None);
+}
+
+#[test]
+fn set_and_get_setting() {
+    let conn = test_conn();
+    set_setting(&conn, "key1", "value1").unwrap();
+    assert_eq!(get_setting(&conn, "key1").unwrap(), Some("value1".into()));
+}
+
+#[test]
+fn set_setting_overwrites_existing() {
+    let conn = test_conn();
+    set_setting(&conn, "key1", "old").unwrap();
+    set_setting(&conn, "key1", "new").unwrap();
+    assert_eq!(get_setting(&conn, "key1").unwrap(), Some("new".into()));
+}
+
+#[test]
+fn library_root_helpers() {
+    let conn = test_conn();
+    assert_eq!(get_library_root(&conn).unwrap(), None);
+    set_library_root(&conn, "/my/library").unwrap();
+    assert_eq!(get_library_root(&conn).unwrap(), Some("/my/library".into()));
+}
+
+#[test]
+fn directory_template_helpers() {
+    let conn = test_conn();
+    assert_eq!(get_directory_template(&conn).unwrap(), None);
+    set_directory_template(&conn, "{artist}/{title}").unwrap();
+    assert_eq!(
+        get_directory_template(&conn).unwrap(),
+        Some("{artist}/{title}".into())
+    );
+}

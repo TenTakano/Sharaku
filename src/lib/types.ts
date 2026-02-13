@@ -25,6 +25,11 @@ export interface WorkDetail {
   workType: string;
   pageCount: number;
   createdAt: string;
+  artist: string | null;
+  year: number | null;
+  genre: string | null;
+  circle: string | null;
+  origin: string | null;
 }
 
 export type SortField = "title" | "created_at";
@@ -33,3 +38,8 @@ export type SortOrder = "asc" | "desc";
 export type FitMode = "screen" | "width" | "height";
 
 export type SlideshowMode = "page" | "work";
+
+export interface AppSettings {
+  libraryRoot: string | null;
+  directoryTemplate: string | null;
+}
