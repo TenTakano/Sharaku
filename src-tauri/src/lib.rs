@@ -112,10 +112,14 @@ async fn set_library_root(app: tauri::AppHandle, path: String) -> Result<(), Str
 
 #[tauri::command]
 async fn set_directory_template(app: tauri::AppHandle, template: String) -> Result<(), String> {
+    let trimmed = template.trim().to_string();
+    if !trimmed.is_empty() {
+        template::validate_template(&trimmed).map_err(|e| e.to_string())?;
+    }
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     tokio::task::spawn_blocking(move || {
         let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
-        settings::set_directory_template(&conn, &template).map_err(|e| e.to_string())
+        settings::set_directory_template(&conn, &trimmed).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
