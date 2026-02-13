@@ -128,3 +128,33 @@ fn preview_path_with_template() {
     let result = preview_import_path(Path::new("/library"), "{artist}/{title}", &metadata);
     assert_eq!(result, "/library/Artist/My Work");
 }
+
+// paths_overlap tests
+
+#[test]
+fn paths_overlap_identical() {
+    assert!(paths_overlap(Path::new("/a/b"), Path::new("/a/b")));
+}
+
+#[test]
+fn paths_overlap_source_contains_dest() {
+    assert!(paths_overlap(Path::new("/a"), Path::new("/a/b")));
+}
+
+#[test]
+fn paths_overlap_dest_contains_source() {
+    assert!(paths_overlap(Path::new("/a/b/c"), Path::new("/a/b")));
+}
+
+#[test]
+fn paths_overlap_disjoint() {
+    assert!(!paths_overlap(Path::new("/a/b"), Path::new("/c/d")));
+}
+
+#[test]
+fn paths_overlap_partial_name_no_overlap() {
+    assert!(!paths_overlap(
+        Path::new("/library/art"),
+        Path::new("/library/artist")
+    ));
+}
