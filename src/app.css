@@ -739,6 +739,148 @@ button:disabled {
   margin: 0 0 12px;
 }
 
+/* Relocation dialog */
+.relocation-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.relocation-dialog {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.relocation-dialog h2 {
+  font-size: 1.125rem;
+  margin: 0 0 12px;
+}
+
+.relocation-warning {
+  font-size: 0.875rem;
+  color: #c62828;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.relocation-preview-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 40vh;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.relocation-preview-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.relocation-preview-item:last-child {
+  border-bottom: none;
+}
+
+.relocation-preview-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.relocation-paths {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.relocation-path-old,
+.relocation-path-new {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+.relocation-path-old {
+  background: rgba(198, 40, 40, 0.08);
+  color: #c62828;
+}
+
+.relocation-path-new {
+  background: rgba(46, 125, 50, 0.08);
+  color: #2e7d32;
+}
+
+.relocation-arrow {
+  font-size: 0.75rem;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.relocation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.relocation-cancel-btn {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
+.relocation-execute-btn {
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  background-color: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+.relocation-execute-btn:hover:not(:disabled) {
+  background-color: #b71c1c;
+}
+
+.relocation-progress {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 8px 0;
+}
+
+.relocation-progress-error {
+  color: #c62828;
+}
+
+.relocation-dialog progress {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  appearance: none;
+}
+
+.relocation-dialog progress::-webkit-progress-bar {
+  background-color: #e0e0e0;
+  border-radius: 4px;
+}
+
+.relocation-dialog progress::-webkit-progress-value {
+  background-color: #396cd8;
+  border-radius: 4px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -839,5 +981,57 @@ button:disabled {
 
   .import-error {
     color: #ef5350;
+  }
+
+  .relocation-dialog {
+    background: #3a3a3a;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .relocation-warning {
+    color: #ef5350;
+  }
+
+  .relocation-preview-list {
+    border-color: #555;
+  }
+
+  .relocation-preview-item {
+    border-bottom-color: #4a4a4a;
+  }
+
+  .relocation-path-old {
+    background: rgba(239, 83, 80, 0.15);
+    color: #ef5350;
+  }
+
+  .relocation-path-new {
+    background: rgba(102, 187, 106, 0.15);
+    color: #66bb6a;
+  }
+
+  .relocation-arrow {
+    color: #aaa;
+  }
+
+  .relocation-execute-btn {
+    background-color: #d32f2f;
+    border-color: #d32f2f;
+  }
+
+  .relocation-execute-btn:hover:not(:disabled) {
+    background-color: #c62828;
+  }
+
+  .relocation-progress {
+    color: #aaa;
+  }
+
+  .relocation-progress-error {
+    color: #ef5350;
+  }
+
+  .relocation-dialog progress::-webkit-progress-bar {
+    background-color: #555;
   }
 }

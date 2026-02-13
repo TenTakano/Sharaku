@@ -22,4 +22,7 @@ pub enum AppError {
 
     #[error("Import error: {0}")]
     ImportError(String),
+
+    #[error("Relocation error: {0}")]
+    RelocationError(String),
 }

@@ -80,3 +80,16 @@ export interface ParsedMetadata {
   title: string;
   artist: string | null;
 }
+
+export type RelocationProgress =
+  | { type: "started"; total: number }
+  | { type: "moving"; current: number; total: number; title: string }
+  | { type: "completed"; relocated: number; skipped: number; failed: number }
+  | { type: "error"; message: string };
+
+export interface RelocationPreview {
+  workId: number;
+  title: string;
+  oldPath: string;
+  newPath: string;
+}
