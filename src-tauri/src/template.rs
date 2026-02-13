@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::error::AppError;
 
 const KNOWN_PLACEHOLDERS: &[&str] = &["title", "artist", "year", "genre", "circle", "origin"];
-const FORBIDDEN_CHARS: &[char] = &['\\', ':', '*', '?', '"', '<', '>', '|'];
+const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
 pub struct WorkMetadata {
     pub title: String,
@@ -149,7 +149,7 @@ pub fn resolve_work_path(
     if !normalized.starts_with(&root_normalized) {
         library_root.join("_invalid_path")
     } else {
-        resolved
+        normalized
     }
 }
 
