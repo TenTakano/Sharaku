@@ -158,3 +158,60 @@ fn paths_overlap_partial_name_no_overlap() {
         Path::new("/library/artist")
     ));
 }
+
+// Natural sort tests
+
+#[test]
+fn list_images_natural_sort_order() {
+    let dir = std::env::temp_dir().join("sharaku_test_natord");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    std::fs::write(dir.join("page1.jpg"), b"fake").unwrap();
+    std::fs::write(dir.join("page2.jpg"), b"fake").unwrap();
+    std::fs::write(dir.join("page10.jpg"), b"fake").unwrap();
+    std::fs::write(dir.join("page20.jpg"), b"fake").unwrap();
+    std::fs::write(dir.join("page3.jpg"), b"fake").unwrap();
+
+    let images = list_images_in_folder(&dir).unwrap();
+    assert_eq!(images.len(), 5);
+    assert_eq!(images[0].file_name().unwrap(), "page1.jpg");
+    assert_eq!(images[1].file_name().unwrap(), "page2.jpg");
+    assert_eq!(images[2].file_name().unwrap(), "page3.jpg");
+    assert_eq!(images[3].file_name().unwrap(), "page10.jpg");
+    assert_eq!(images[4].file_name().unwrap(), "page20.jpg");
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+// count_direct_images tests
+
+#[test]
+fn count_direct_images_only_counts_immediate() {
+    let dir = std::env::temp_dir().join("sharaku_test_count_direct");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    std::fs::write(dir.join("a.jpg"), b"fake").unwrap();
+    std::fs::write(dir.join("b.png"), b"fake").unwrap();
+    std::fs::write(dir.join("readme.txt"), b"text").unwrap();
+
+    let sub = dir.join("subdir");
+    std::fs::create_dir_all(&sub).unwrap();
+    std::fs::write(sub.join("c.jpg"), b"fake").unwrap();
+
+    assert_eq!(count_direct_images(&dir), 2);
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn count_direct_images_empty_dir() {
+    let dir = std::env::temp_dir().join("sharaku_test_count_empty");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    assert_eq!(count_direct_images(&dir), 0);
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}

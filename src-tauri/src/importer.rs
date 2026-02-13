@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use tauri::ipc::Channel;
+use walkdir::WalkDir;
 
 use crate::db::{self, WorkRecord};
 use crate::error::AppError;
@@ -29,7 +31,7 @@ pub struct ImportResult {
     pub page_count: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParsedMetadata {
     pub title: String,
@@ -82,7 +84,11 @@ pub fn list_images_in_folder(folder_path: &Path) -> Result<Vec<PathBuf>, AppErro
         .map(|entry| entry.path())
         .filter(|path| path.is_file() && scanner::is_image_file(path))
         .collect();
-    images.sort();
+    images.sort_by(|a, b| {
+        let a_name = a.file_name().unwrap_or_default().to_string_lossy();
+        let b_name = b.file_name().unwrap_or_default().to_string_lossy();
+        natord::compare(&a_name, &b_name)
+    });
     Ok(images)
 }
 
@@ -198,6 +204,139 @@ fn copy_images_to_dest(images: &[PathBuf], dest: &Path) -> Result<(), AppError> 
         std::fs::copy(image, &dest_file)?;
     }
     Ok(())
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoveredFolder {
+    pub path: String,
+    pub folder_name: String,
+    pub image_count: usize,
+    pub parsed_metadata: ParsedMetadata,
+    pub already_registered: bool,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum DiscoverProgress {
+    Scanning { scanned_dirs: usize },
+    Completed { found: usize },
+}
+
+pub fn discover_image_folders(
+    root: &Path,
+    app_data_dir: &Path,
+    on_progress: &Channel<DiscoverProgress>,
+) -> Result<Vec<DiscoveredFolder>, AppError> {
+    let conn = db::open_db(app_data_dir)?;
+    let mut folders = Vec::new();
+    let mut scanned_dirs = 0usize;
+
+    for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
+        if !entry.file_type().is_dir() {
+            continue;
+        }
+
+        scanned_dirs += 1;
+        if scanned_dirs.is_multiple_of(50) {
+            let _ = on_progress.send(DiscoverProgress::Scanning { scanned_dirs });
+        }
+
+        let dir_path = entry.path();
+        let image_count = count_direct_images(dir_path);
+        if image_count == 0 {
+            continue;
+        }
+
+        let folder_name = dir_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        let path_str = dir_path.to_string_lossy().to_string();
+        let already_registered = db::path_exists(&conn, &path_str)?;
+        let parsed_metadata = parse_folder_name(&folder_name);
+
+        folders.push(DiscoveredFolder {
+            path: path_str,
+            folder_name,
+            image_count,
+            parsed_metadata,
+            already_registered,
+        });
+    }
+
+    let _ = on_progress.send(DiscoverProgress::Completed {
+        found: folders.len(),
+    });
+    Ok(folders)
+}
+
+fn count_direct_images(dir: &Path) -> usize {
+    std::fs::read_dir(dir)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    e.file_type().map(|ft| ft.is_file()).unwrap_or(false)
+                        && scanner::is_image_file(&e.path())
+                })
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum BulkImportProgress {
+    Started {
+        total: usize,
+    },
+    Importing {
+        current: usize,
+        total: usize,
+        title: String,
+    },
+    Completed {
+        succeeded: usize,
+        failed: usize,
+    },
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BulkImportSummary {
+    pub succeeded: usize,
+    pub failed: usize,
+}
+
+pub fn bulk_import(
+    requests: &[ImportRequest],
+    app_data_dir: &Path,
+    on_progress: &Channel<BulkImportProgress>,
+) -> Result<BulkImportSummary, AppError> {
+    let total = requests.len();
+    let _ = on_progress.send(BulkImportProgress::Started { total });
+
+    let mut succeeded = 0usize;
+    let mut failed = 0usize;
+
+    for (i, request) in requests.iter().enumerate() {
+        let _ = on_progress.send(BulkImportProgress::Importing {
+            current: i + 1,
+            total,
+            title: request.title.clone(),
+        });
+
+        match import_work(request, app_data_dir) {
+            Ok(_) => succeeded += 1,
+            Err(_) => failed += 1,
+        }
+    }
+
+    let _ = on_progress.send(BulkImportProgress::Completed { succeeded, failed });
+    Ok(BulkImportSummary { succeeded, failed })
 }
 
 #[cfg(test)]

@@ -69,41 +69,6 @@ button:disabled {
   margin-bottom: 12px;
 }
 
-/* Scan progress */
-.scan-progress {
-  margin-bottom: 12px;
-}
-
-.scan-progress progress {
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  appearance: none;
-}
-
-.scan-progress progress::-webkit-progress-bar {
-  background-color: #e0e0e0;
-  border-radius: 4px;
-}
-
-.scan-progress progress::-webkit-progress-value {
-  background-color: #396cd8;
-  border-radius: 4px;
-}
-
-.scan-progress p {
-  margin: 4px 0;
-  font-size: 0.875rem;
-}
-
-.scan-progress .completed {
-  color: #2e7d32;
-}
-
-.scan-progress .error {
-  color: #c62828;
-}
-
 /* Toolbar (sort controls) */
 .toolbar {
   display: flex;
@@ -739,6 +704,159 @@ button:disabled {
   margin: 0 0 12px;
 }
 
+/* Bulk import */
+.bulk-discover-status {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 12px;
+}
+
+.bulk-review-content {
+  max-width: 900px;
+}
+
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.bulk-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.bulk-select-all input[type="checkbox"] {
+  margin: 0;
+  accent-color: #396cd8;
+}
+
+.bulk-table-wrapper {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.bulk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.bulk-table thead {
+  position: sticky;
+  top: 0;
+  background: #f6f6f6;
+  z-index: 1;
+}
+
+.bulk-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 500;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.bulk-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.bulk-th-check {
+  width: 32px;
+}
+
+.bulk-th-count {
+  width: 56px;
+  text-align: center;
+}
+
+.bulk-th-status {
+  width: 64px;
+}
+
+.bulk-cell-folder {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-cell-count {
+  text-align: center;
+}
+
+.bulk-cell-status {
+  text-align: center;
+}
+
+.bulk-inline-input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.bulk-inline-input:focus {
+  outline: none;
+  border-color: #396cd8;
+}
+
+.bulk-inline-input:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: #888;
+}
+
+.bulk-row-disabled {
+  opacity: 0.5;
+}
+
+.bulk-registered {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.bulk-new {
+  color: #396cd8;
+  font-size: 0.75rem;
+}
+
+.bulk-progress-text {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0 0 8px;
+}
+
+.bulk-review-content progress,
+.import-content progress {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  appearance: none;
+}
+
+.bulk-review-content progress::-webkit-progress-bar,
+.import-content progress::-webkit-progress-bar {
+  background-color: #e0e0e0;
+  border-radius: 4px;
+}
+
+.bulk-review-content progress::-webkit-progress-value,
+.import-content progress::-webkit-progress-value {
+  background-color: #396cd8;
+  border-radius: 4px;
+}
+
 /* Relocation dialog */
 .relocation-overlay {
   position: fixed;
@@ -896,10 +1014,6 @@ button:disabled {
     background-color: #0f0f0f69;
   }
 
-  .scan-progress progress::-webkit-progress-bar {
-    background-color: #444;
-  }
-
   .sort-control label {
     color: #aaa;
   }
@@ -1033,5 +1147,54 @@ button:disabled {
 
   .relocation-dialog progress::-webkit-progress-bar {
     background-color: #555;
+  }
+
+  .bulk-discover-status {
+    color: #aaa;
+  }
+
+  .bulk-table-wrapper {
+    border-color: #555;
+  }
+
+  .bulk-table thead {
+    background: #2f2f2f;
+  }
+
+  .bulk-table th {
+    border-bottom-color: #555;
+  }
+
+  .bulk-table td {
+    border-bottom-color: #4a4a4a;
+  }
+
+  .bulk-inline-input {
+    background: #3a3a3a;
+    color: #f6f6f6;
+    border-color: #555;
+  }
+
+  .bulk-inline-input:disabled {
+    background: transparent;
+    border-color: transparent;
+    color: #666;
+  }
+
+  .bulk-registered {
+    color: #666;
+  }
+
+  .bulk-new {
+    color: #5c93e6;
+  }
+
+  .bulk-progress-text {
+    color: #aaa;
+  }
+
+  .bulk-review-content progress::-webkit-progress-bar,
+  .import-content progress::-webkit-progress-bar {
+    background-color: #444;
   }
 }
