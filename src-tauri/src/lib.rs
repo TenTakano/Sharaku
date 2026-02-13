@@ -1,6 +1,7 @@
 mod db;
 mod error;
 mod scanner;
+mod settings;
 mod thumbnail;
 mod viewer;
 
@@ -11,6 +12,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 use db::{WorkDetail, WorkSummary};
 use scanner::ScanProgress;
+use serde::Serialize;
 
 #[tauri::command]
 async fn scan_library(
@@ -72,14 +74,68 @@ async fn get_work(app: tauri::AppHandle, work_id: i64) -> Result<WorkDetail, Str
     .map_err(|e| e.to_string())?
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppSettings {
+    library_root: Option<String>,
+    directory_template: Option<String>,
+}
+
+#[tauri::command]
+async fn get_settings(app: tauri::AppHandle) -> Result<AppSettings, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        let library_root = settings::get_library_root(&conn).map_err(|e| e.to_string())?;
+        let directory_template =
+            settings::get_directory_template(&conn).map_err(|e| e.to_string())?;
+        Ok(AppSettings {
+            library_root,
+            directory_template,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn set_library_root(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        settings::set_library_root(&conn, &path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn set_directory_template(app: tauri::AppHandle, template: String) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        settings::set_directory_template(&conn, &template).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![Migration {
-        version: 1,
-        description: "create_initial_tables",
-        sql: include_str!("../migrations/001_create_initial_tables.sql"),
-        kind: MigrationKind::Up,
-    }];
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "create_initial_tables",
+            sql: include_str!("../migrations/001_create_initial_tables.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_metadata_and_settings",
+            sql: include_str!("../migrations/002_add_metadata_and_settings.sql"),
+            kind: MigrationKind::Up,
+        },
+    ];
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -113,6 +169,9 @@ pub fn run() {
             list_works,
             get_thumbnail,
             get_work,
+            get_settings,
+            set_library_root,
+            set_directory_template,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

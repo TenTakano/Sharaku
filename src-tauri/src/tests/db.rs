@@ -14,6 +14,11 @@ fn sample_record<'a>(title: &'a str, path: &'a str) -> WorkRecord<'a> {
         work_type: "image",
         page_count: 1,
         thumbnail: b"fake_thumb",
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
     }
 }
 
@@ -103,6 +108,11 @@ fn get_work_returns_detail() {
     assert_eq!(detail.title, "Title");
     assert_eq!(detail.path, "/path.jpg");
     assert_eq!(detail.work_type, "image");
+    assert_eq!(detail.artist, None);
+    assert_eq!(detail.year, None);
+    assert_eq!(detail.genre, None);
+    assert_eq!(detail.circle, None);
+    assert_eq!(detail.origin, None);
 }
 
 #[test]
@@ -110,4 +120,30 @@ fn get_work_not_found() {
     let conn = test_conn();
     let result = get_work(&conn, 9999);
     assert!(matches!(result, Err(AppError::NotFound)));
+}
+
+#[test]
+fn insert_work_with_metadata() {
+    let conn = test_conn();
+    let record = WorkRecord {
+        title: "My Work",
+        path: "/meta.jpg",
+        work_type: "image",
+        page_count: 1,
+        thumbnail: b"thumb",
+        artist: Some("Artist A"),
+        year: Some(2024),
+        genre: Some("Fantasy"),
+        circle: Some("Circle X"),
+        origin: Some("Original"),
+    };
+    insert_work(&conn, &record).unwrap();
+
+    let works = list_works(&conn, "title", "asc").unwrap();
+    let detail = get_work(&conn, works[0].id).unwrap();
+    assert_eq!(detail.artist.as_deref(), Some("Artist A"));
+    assert_eq!(detail.year, Some(2024));
+    assert_eq!(detail.genre.as_deref(), Some("Fantasy"));
+    assert_eq!(detail.circle.as_deref(), Some("Circle X"));
+    assert_eq!(detail.origin.as_deref(), Some("Original"));
 }

@@ -103,6 +103,11 @@ pub fn scan_directory(
                 work_type: "image",
                 page_count: 1,
                 thumbnail: &thumb,
+                artist: None,
+                year: None,
+                genre: None,
+                circle: None,
+                origin: None,
             },
         )?;
 
