@@ -300,9 +300,7 @@
           <p class="bulk-progress-text">
             {importProgress.current} / {importProgress.total}: {importProgress.title}
           </p>
-          <progress
-            max={importProgress.total}
-            value={importProgress.current}
+          <progress max={importProgress.total} value={importProgress.current}
           ></progress>
         {:else if importProgress && importProgress.type === "started"}
           <p class="bulk-progress-text">

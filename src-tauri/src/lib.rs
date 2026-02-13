@@ -14,8 +14,10 @@ use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 use db::{WorkDetail, WorkSummary};
-use importer::{BulkImportProgress, BulkImportSummary, DiscoverProgress, DiscoveredFolder,
-    ImportResult, ParsedMetadata};
+use importer::{
+    BulkImportProgress, BulkImportSummary, DiscoverProgress, DiscoveredFolder, ImportResult,
+    ParsedMetadata,
+};
 use relocator::{RelocationPreview, RelocationProgress};
 use serde::Serialize;
 use template::WorkMetadata;
