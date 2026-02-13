@@ -132,7 +132,55 @@ fn render_with_literal_text() {
     assert_eq!(result, "works/Artist A - My Title");
 }
 
+#[test]
+fn render_utf8_metadata() {
+    let meta = WorkMetadata {
+        title: "日本語タイトル".to_string(),
+        artist: Some("アーティスト名".to_string()),
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+    };
+    let result = render_template("{artist}/{title}", &meta);
+    assert_eq!(result, "アーティスト名/日本語タイトル");
+}
+
+#[test]
+fn render_dot_dot_in_metadata_is_sanitized() {
+    let meta = WorkMetadata {
+        title: "safe".to_string(),
+        artist: Some("..".to_string()),
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+    };
+    let result = render_template("{artist}/{title}", &meta);
+    assert!(!result.starts_with(".."));
+}
+
 // resolve_work_path tests
+
+#[test]
+fn resolve_path_stays_under_root() {
+    let root = Path::new("/library");
+    let meta = WorkMetadata {
+        title: "safe".to_string(),
+        artist: Some("../../etc".to_string()),
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+    };
+    let path = resolve_work_path(root, "{artist}/{title}", &meta);
+    let path_str = path.to_string_lossy();
+    assert!(
+        path_str.starts_with("/library"),
+        "path escaped root: {}",
+        path_str
+    );
+}
 
 #[test]
 fn resolve_path_simple() {

@@ -64,11 +64,17 @@ pub fn validate_template(template: &str) -> Result<(), AppError> {
 }
 
 fn sanitize_segment(s: &str) -> String {
-    s.chars()
+    let cleaned: String = s
+        .chars()
         .filter(|c| !FORBIDDEN_CHARS.contains(c))
         .collect::<String>()
         .trim()
-        .to_string()
+        .to_string();
+    if cleaned == ".." || cleaned == "." || cleaned.is_empty() {
+        "_".to_string()
+    } else {
+        cleaned
+    }
 }
 
 fn resolve_placeholder(name: &str, metadata: &WorkMetadata) -> String {
@@ -104,22 +110,24 @@ pub fn render_template(template: &str, metadata: &WorkMetadata) -> String {
         .iter()
         .map(|segment| {
             let mut result = String::new();
-            let mut pos = 0;
-            let bytes = segment.as_bytes();
-            while pos < bytes.len() {
-                if bytes[pos] == b'{' {
-                    if let Some(close_offset) = segment[pos..].find('}') {
-                        let close = pos + close_offset;
-                        let name = &segment[pos + 1..close];
+            let mut chars = segment.char_indices().peekable();
+            while let Some((i, ch)) = chars.next() {
+                if ch == '{' {
+                    if let Some(close_offset) = segment[i..].find('}') {
+                        let name = &segment[i + 1..i + close_offset];
                         result.push_str(&resolve_placeholder(name, metadata));
-                        pos = close + 1;
+                        while let Some(&(j, _)) = chars.peek() {
+                            if j <= i + close_offset {
+                                chars.next();
+                            } else {
+                                break;
+                            }
+                        }
                     } else {
                         result.push('{');
-                        pos += 1;
                     }
                 } else {
-                    result.push(bytes[pos] as char);
-                    pos += 1;
+                    result.push(ch);
                 }
             }
             sanitize_segment(&result)
@@ -135,7 +143,28 @@ pub fn resolve_work_path(
     metadata: &WorkMetadata,
 ) -> PathBuf {
     let rendered = render_template(template, metadata);
-    library_root.join(rendered)
+    let resolved = library_root.join(&rendered);
+    let normalized = normalize_path(&resolved);
+    let root_normalized = normalize_path(library_root);
+    if !normalized.starts_with(&root_normalized) {
+        library_root.join("_invalid_path")
+    } else {
+        resolved
+    }
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut components = Vec::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                components.pop();
+            }
+            std::path::Component::CurDir => {}
+            c => components.push(c),
+        }
+    }
+    components.iter().collect()
 }
 
 #[allow(dead_code)]
