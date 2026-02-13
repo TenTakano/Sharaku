@@ -27,12 +27,9 @@ pub fn validate_template(template: &str) -> Result<(), AppError> {
 
     while pos < bytes.len() {
         if bytes[pos] == b'{' {
-            let close = template[pos..]
-                .find('}')
-                .map(|i| i + pos)
-                .ok_or_else(|| {
-                    AppError::InvalidTemplate("閉じられていないプレースホルダーがあります".into())
-                })?;
+            let close = template[pos..].find('}').map(|i| i + pos).ok_or_else(|| {
+                AppError::InvalidTemplate("閉じられていないプレースホルダーがあります".into())
+            })?;
             let name = &template[pos + 1..close];
             if name.is_empty() {
                 return Err(AppError::InvalidTemplate(
@@ -55,9 +52,7 @@ pub fn validate_template(template: &str) -> Result<(), AppError> {
     }
 
     if !has_title {
-        return Err(AppError::InvalidTemplate(
-            "{title} は必須です".to_string(),
-        ));
+        return Err(AppError::InvalidTemplate("{title} は必須です".to_string()));
     }
 
     Ok(())
@@ -137,11 +132,7 @@ pub fn render_template(template: &str, metadata: &WorkMetadata) -> String {
 }
 
 #[allow(dead_code)]
-pub fn resolve_work_path(
-    library_root: &Path,
-    template: &str,
-    metadata: &WorkMetadata,
-) -> PathBuf {
+pub fn resolve_work_path(library_root: &Path, template: &str, metadata: &WorkMetadata) -> PathBuf {
     let rendered = render_template(template, metadata);
     let resolved = library_root.join(&rendered);
     let normalized = normalize_path(&resolved);
