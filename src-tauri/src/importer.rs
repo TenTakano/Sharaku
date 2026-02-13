@@ -130,6 +130,12 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
     let dest =
         template::resolve_unique_work_path(Path::new(&library_root), &template_str, &metadata);
 
+    if paths_overlap(source, &dest) {
+        return Err(AppError::ImportError(
+            "取り込み元と取り込み先が重複しています".to_string(),
+        ));
+    }
+
     let thumb = thumbnail::generate_thumbnail(&images[0])?;
 
     std::fs::create_dir_all(&dest)?;
@@ -177,6 +183,10 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
         destination_path: dest_str,
         page_count,
     })
+}
+
+fn paths_overlap(a: &Path, b: &Path) -> bool {
+    a.starts_with(b) || b.starts_with(a)
 }
 
 fn copy_images_to_dest(images: &[PathBuf], dest: &Path) -> Result<(), AppError> {
