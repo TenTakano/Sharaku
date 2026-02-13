@@ -1,9 +1,3 @@
-export type ScanProgress =
-  | { type: "started"; total: number }
-  | { type: "processing"; current: number; total: number; fileName: string }
-  | { type: "completed"; registered: number; failed: number }
-  | { type: "error"; message: string };
-
 export interface Work {
   id: number;
   title: string;
@@ -92,4 +86,26 @@ export interface RelocationPreview {
   title: string;
   oldPath: string;
   newPath: string;
+}
+
+export interface DiscoveredFolder {
+  path: string;
+  folderName: string;
+  imageCount: number;
+  parsedMetadata: ParsedMetadata;
+  alreadyRegistered: boolean;
+}
+
+export type DiscoverProgress =
+  | { type: "scanning"; scannedDirs: number }
+  | { type: "completed"; found: number };
+
+export type BulkImportProgress =
+  | { type: "started"; total: number }
+  | { type: "importing"; current: number; total: number; title: string }
+  | { type: "completed"; succeeded: number; failed: number };
+
+export interface BulkImportSummary {
+  succeeded: number;
+  failed: number;
 }

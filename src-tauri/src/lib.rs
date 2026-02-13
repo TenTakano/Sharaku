@@ -14,34 +14,11 @@ use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 use db::{WorkDetail, WorkSummary};
-use importer::{ImportResult, ParsedMetadata};
+use importer::{BulkImportProgress, BulkImportSummary, DiscoverProgress, DiscoveredFolder,
+    ImportResult, ParsedMetadata};
 use relocator::{RelocationPreview, RelocationProgress};
-use scanner::ScanProgress;
 use serde::Serialize;
 use template::WorkMetadata;
-
-#[tauri::command]
-async fn scan_library(
-    app: tauri::AppHandle,
-    root_path: String,
-    on_progress: tauri::ipc::Channel<ScanProgress>,
-) -> Result<(), String> {
-    let app_data_dir: PathBuf = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    let root = PathBuf::from(root_path);
-
-    tokio::task::spawn_blocking(move || {
-        let result = scanner::scan_directory(&root, &app_data_dir, &on_progress);
-        if let Err(ref e) = result {
-            let _ = on_progress.send(ScanProgress::Error {
-                message: e.to_string(),
-            });
-        }
-        result
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
-}
 
 #[tauri::command]
 async fn list_works(
@@ -185,6 +162,36 @@ async fn import_work(
 }
 
 #[tauri::command]
+async fn discover_folders(
+    app: tauri::AppHandle,
+    root_path: String,
+    on_progress: tauri::ipc::Channel<DiscoverProgress>,
+) -> Result<Vec<DiscoveredFolder>, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let root = PathBuf::from(root_path);
+    tokio::task::spawn_blocking(move || {
+        importer::discover_image_folders(&root, &app_data_dir, &on_progress)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn bulk_import(
+    app: tauri::AppHandle,
+    requests: Vec<importer::ImportRequest>,
+    on_progress: tauri::ipc::Channel<BulkImportProgress>,
+) -> Result<BulkImportSummary, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        importer::bulk_import(&requests, &app_data_dir, &on_progress).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn preview_relocation(
     app: tauri::AppHandle,
     new_template: String,
@@ -272,7 +279,6 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            scan_library,
             list_works,
             get_thumbnail,
             get_work,
@@ -284,6 +290,8 @@ pub fn run() {
             parse_folder_name,
             preview_import_path,
             import_work,
+            discover_folders,
+            bulk_import,
             preview_relocation,
             relocate_works,
         ])

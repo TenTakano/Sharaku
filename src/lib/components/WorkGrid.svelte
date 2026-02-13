@@ -105,7 +105,7 @@
     </VList>
   {:else}
     <div class="empty-state">
-      <p>No works found. Scan a directory to get started.</p>
+      <p>作品がありません。「+ 取り込み」または「一括取り込み」で作品を追加してください。</p>
     </div>
   {/if}
 </div>
