@@ -22,6 +22,7 @@
   });
   let templatePreview = $state<string | null>(null);
   let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+  let validationRequestId = 0;
 
   async function loadSettings() {
     try {
@@ -84,18 +85,23 @@
       templatePreview = null;
       return;
     }
+    const requestId = ++validationRequestId;
     try {
       await invoke("validate_template", { template: trimmed });
+      if (requestId !== validationRequestId) return;
       templateValidation = { valid: true, error: null };
       try {
         const preview = await invoke<string>("preview_template", {
           template: trimmed,
         });
+        if (requestId !== validationRequestId) return;
         templatePreview = preview;
       } catch {
+        if (requestId !== validationRequestId) return;
         templatePreview = null;
       }
     } catch (e) {
+      if (requestId !== validationRequestId) return;
       templateValidation = { valid: false, error: String(e) };
       templatePreview = null;
     }
