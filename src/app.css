@@ -606,6 +606,139 @@ button:disabled {
   color: #c62828;
 }
 
+/* Import view */
+.import-header-btn {
+  padding: 6px 14px;
+  font-size: 0.875rem;
+}
+
+.import-content {
+  max-width: 640px;
+}
+
+.import-section {
+  margin-bottom: 32px;
+}
+
+.import-section h2 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+.import-description {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.import-select-btn {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
+.import-source-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  word-break: break-all;
+}
+
+.import-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.import-required {
+  color: #c62828;
+}
+
+.import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.import-field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.import-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.import-mode-select {
+  display: flex;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.import-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.import-mode-option input[type="radio"] {
+  margin: 0;
+  accent-color: #396cd8;
+}
+
+.import-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.import-execute-btn {
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  background-color: #396cd8;
+  color: #fff;
+  border-color: #396cd8;
+}
+
+.import-execute-btn:hover:not(:disabled) {
+  background-color: #2e5bb8;
+}
+
+.import-execute-btn:disabled {
+  opacity: 0.5;
+}
+
+.import-loading {
+  color: #888;
+  text-align: center;
+  margin-top: 40px;
+  font-size: 1rem;
+}
+
+.import-success {
+  color: #2e7d32;
+  font-size: 0.875rem;
+  margin: 0 0 12px;
+}
+
+.import-error {
+  color: #c62828;
+  font-size: 0.875rem;
+  margin: 0 0 12px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -681,5 +814,30 @@ button:disabled {
   .settings-save-btn {
     background-color: #396cd8;
     color: #fff;
+  }
+
+  .import-description {
+    color: #aaa;
+  }
+
+  .import-source-path {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .import-required {
+    color: #ef5350;
+  }
+
+  .import-execute-btn {
+    background-color: #396cd8;
+    color: #fff;
+  }
+
+  .import-success {
+    color: #66bb6a;
+  }
+
+  .import-error {
+    color: #ef5350;
   }
 }

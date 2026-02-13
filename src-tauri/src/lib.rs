@@ -1,5 +1,6 @@
 mod db;
 mod error;
+mod importer;
 mod scanner;
 mod settings;
 mod template;
@@ -12,8 +13,10 @@ use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 use db::{WorkDetail, WorkSummary};
+use importer::{ImportResult, ParsedMetadata};
 use scanner::ScanProgress;
 use serde::Serialize;
+use template::WorkMetadata;
 
 #[tauri::command]
 async fn scan_library(
@@ -137,6 +140,48 @@ async fn preview_template(template: String) -> Result<String, String> {
     Ok(template::render_template(&template, &metadata))
 }
 
+#[tauri::command]
+async fn parse_folder_name(folder_name: String) -> Result<ParsedMetadata, String> {
+    Ok(importer::parse_folder_name(&folder_name))
+}
+
+#[tauri::command]
+async fn preview_import_path(
+    app: tauri::AppHandle,
+    metadata: WorkMetadata,
+) -> Result<String, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        let library_root = settings::get_library_root(&conn)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "ライブラリルートが設定されていません".to_string())?;
+        let template_str = settings::get_directory_template(&conn)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "ディレクトリテンプレートが設定されていません".to_string())?;
+        Ok(importer::preview_import_path(
+            std::path::Path::new(&library_root),
+            &template_str,
+            &metadata,
+        ))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn import_work(
+    app: tauri::AppHandle,
+    request: importer::ImportRequest,
+) -> Result<ImportResult, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        importer::import_work(&request, &app_data_dir).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -150,6 +195,12 @@ pub fn run() {
             version: 2,
             description: "add_metadata_and_settings",
             sql: include_str!("../migrations/002_add_metadata_and_settings.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 3,
+            description: "allow_folder_work_type",
+            sql: include_str!("../migrations/003_allow_folder_work_type.sql"),
             kind: MigrationKind::Up,
         },
     ];
@@ -191,6 +242,9 @@ pub fn run() {
             set_directory_template,
             validate_template,
             preview_template,
+            parse_folder_name,
+            preview_import_path,
+            import_work,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

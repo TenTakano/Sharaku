@@ -1,10 +1,13 @@
 use std::path::{Path, PathBuf};
 
+use serde::Deserialize;
+
 use crate::error::AppError;
 
 const KNOWN_PLACEHOLDERS: &[&str] = &["title", "artist", "year", "genre", "circle", "origin"];
 const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
+#[derive(Deserialize)]
 pub struct WorkMetadata {
     pub title: String,
     pub artist: Option<String>,
@@ -131,7 +134,6 @@ pub fn render_template(template: &str, metadata: &WorkMetadata) -> String {
         .join("/")
 }
 
-#[allow(dead_code)]
 pub fn resolve_work_path(library_root: &Path, template: &str, metadata: &WorkMetadata) -> PathBuf {
     let rendered = render_template(template, metadata);
     let resolved = library_root.join(&rendered);
@@ -158,7 +160,6 @@ fn normalize_path(path: &Path) -> PathBuf {
     components.iter().collect()
 }
 
-#[allow(dead_code)]
 pub fn resolve_unique_work_path(
     library_root: &Path,
     template: &str,
