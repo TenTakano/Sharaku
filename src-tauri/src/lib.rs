@@ -1,6 +1,7 @@
 mod db;
 mod error;
 mod importer;
+mod relocator;
 mod scanner;
 mod settings;
 mod template;
@@ -14,6 +15,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 use db::{WorkDetail, WorkSummary};
 use importer::{ImportResult, ParsedMetadata};
+use relocator::{RelocationPreview, RelocationProgress};
 use scanner::ScanProgress;
 use serde::Serialize;
 use template::WorkMetadata;
@@ -182,6 +184,43 @@ async fn import_work(
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn preview_relocation(
+    app: tauri::AppHandle,
+    new_template: String,
+) -> Result<Vec<RelocationPreview>, String> {
+    let trimmed = new_template.trim().to_string();
+    template::validate_template(&trimmed).map_err(|e| e.to_string())?;
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        let library_root = settings::get_library_root(&conn)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "ライブラリルートが設定されていません".to_string())?;
+        relocator::preview_relocation(&conn, std::path::Path::new(&library_root), &trimmed)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn relocate_works(
+    app: tauri::AppHandle,
+    new_template: String,
+    on_progress: tauri::ipc::Channel<RelocationProgress>,
+) -> Result<(), String> {
+    let trimmed = new_template.trim().to_string();
+    template::validate_template(&trimmed).map_err(|e| e.to_string())?;
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        relocator::execute_relocation(&app_data_dir, &trimmed, &on_progress)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -245,6 +284,8 @@ pub fn run() {
             parse_folder_name,
             preview_import_path,
             import_work,
+            preview_relocation,
+            relocate_works,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

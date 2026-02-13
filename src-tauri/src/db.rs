@@ -169,6 +169,40 @@ pub fn get_thumbnail(conn: &Connection, work_id: i64) -> Result<Vec<u8>, AppErro
     thumb.ok_or(AppError::NotFound)
 }
 
+pub fn list_folder_works(conn: &Connection) -> Result<Vec<WorkDetail>, AppError> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT id, title, path, type, page_count, created_at, artist, year, genre, circle, origin FROM works WHERE type = 'folder'",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(WorkDetail {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            path: row.get(2)?,
+            work_type: row.get(3)?,
+            page_count: row.get(4)?,
+            created_at: row.get(5)?,
+            artist: row.get(6)?,
+            year: row.get(7)?,
+            genre: row.get(8)?,
+            circle: row.get(9)?,
+            origin: row.get(10)?,
+        })
+    })?;
+    let mut works = Vec::new();
+    for row in rows {
+        works.push(row?);
+    }
+    Ok(works)
+}
+
+pub fn update_work_path(conn: &Connection, work_id: i64, new_path: &str) -> Result<(), AppError> {
+    conn.execute(
+        "UPDATE works SET path = ?1 WHERE id = ?2",
+        rusqlite::params![new_path, work_id],
+    )?;
+    Ok(())
+}
+
 pub fn get_work(conn: &Connection, work_id: i64) -> Result<WorkDetail, AppError> {
     let mut stmt = conn.prepare_cached(
         "SELECT id, title, path, type, page_count, created_at, artist, year, genre, circle, origin FROM works WHERE id = ?1",

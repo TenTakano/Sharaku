@@ -1,7 +1,13 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { Channel } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
-  import type { AppSettings, TemplateValidation } from "../types";
+  import type {
+    AppSettings,
+    TemplateValidation,
+    RelocationPreview,
+    RelocationProgress,
+  } from "../types";
 
   interface Props {
     onBack: () => void;
@@ -23,6 +29,11 @@
   let templatePreview = $state<string | null>(null);
   let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
   let validationRequestId = 0;
+
+  let relocationPreviews = $state<RelocationPreview[]>([]);
+  let showRelocationDialog = $state(false);
+  let relocating = $state(false);
+  let relocationProgress = $state<RelocationProgress | null>(null);
 
   async function loadSettings() {
     try {
@@ -64,17 +75,57 @@
     saving = true;
     message = null;
     try {
-      await invoke("set_directory_template", {
-        template: directoryTemplate.trim(),
+      const previews = await invoke<RelocationPreview[]>("preview_relocation", {
+        newTemplate: directoryTemplate.trim(),
       });
-      message = {
-        type: "success",
-        text: "ディレクトリテンプレートを保存しました",
-      };
+      if (previews.length === 0) {
+        await invoke("set_directory_template", {
+          template: directoryTemplate.trim(),
+        });
+        message = {
+          type: "success",
+          text: "ディレクトリテンプレートを保存しました",
+        };
+      } else {
+        relocationPreviews = previews;
+        showRelocationDialog = true;
+      }
     } catch (e) {
       message = { type: "error", text: `保存に失敗しました: ${e}` };
     } finally {
       saving = false;
+    }
+  }
+
+  function cancelRelocation() {
+    showRelocationDialog = false;
+    relocationPreviews = [];
+    relocationProgress = null;
+  }
+
+  async function executeRelocation() {
+    relocating = true;
+    relocationProgress = null;
+    try {
+      const channel = new Channel<RelocationProgress>();
+      channel.onmessage = (progress) => {
+        relocationProgress = progress;
+      };
+      await invoke("relocate_works", {
+        newTemplate: directoryTemplate.trim(),
+        onProgress: channel,
+      });
+      showRelocationDialog = false;
+      relocationPreviews = [];
+      message = {
+        type: "success",
+        text: "テンプレートを保存し、作品を再配置しました",
+      };
+    } catch (e) {
+      message = { type: "error", text: `再配置に失敗しました: ${e}` };
+    } finally {
+      relocating = false;
+      relocationProgress = null;
     }
   }
 
@@ -204,5 +255,69 @@
     {#if message}
       <p class="settings-message {message.type}">{message.text}</p>
     {/if}
+  {/if}
+
+  {#if showRelocationDialog}
+    <div class="relocation-overlay">
+      <div class="relocation-dialog">
+        {#if !relocating}
+          <h2>作品の再配置</h2>
+          <p class="relocation-warning">
+            テンプレートの変更により、{relocationPreviews.length}
+            件の作品ディレクトリが移動されます。
+          </p>
+          <div class="relocation-preview-list">
+            {#each relocationPreviews as item (item.workId)}
+              <div class="relocation-preview-item">
+                <span class="relocation-preview-title">{item.title}</span>
+                <div class="relocation-paths">
+                  <code class="relocation-path-old">{item.oldPath}</code>
+                  <span class="relocation-arrow">→</span>
+                  <code class="relocation-path-new">{item.newPath}</code>
+                </div>
+              </div>
+            {/each}
+          </div>
+          <div class="relocation-actions">
+            <button class="relocation-cancel-btn" onclick={cancelRelocation}>
+              キャンセル
+            </button>
+            <button class="relocation-execute-btn" onclick={executeRelocation}>
+              実行
+            </button>
+          </div>
+        {:else}
+          <h2>再配置中...</h2>
+          {#if relocationProgress}
+            {#if relocationProgress.type === "started"}
+              <p class="relocation-progress">
+                {relocationProgress.total} 件の作品を処理します...
+              </p>
+            {:else if relocationProgress.type === "moving"}
+              <p class="relocation-progress">
+                ({relocationProgress.current}/{relocationProgress.total})
+                {relocationProgress.title}
+              </p>
+              <progress
+                value={relocationProgress.current}
+                max={relocationProgress.total}
+              ></progress>
+            {:else if relocationProgress.type === "completed"}
+              <p class="relocation-progress">
+                完了: {relocationProgress.relocated} 件移動,
+                {relocationProgress.skipped} 件スキップ,
+                {relocationProgress.failed} 件失敗
+              </p>
+            {:else if relocationProgress.type === "error"}
+              <p class="relocation-progress relocation-progress-error">
+                {relocationProgress.message}
+              </p>
+            {/if}
+          {:else}
+            <p class="relocation-progress">準備中...</p>
+          {/if}
+        {/if}
+      </div>
+    </div>
   {/if}
 </main>
