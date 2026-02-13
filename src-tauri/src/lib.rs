@@ -2,6 +2,7 @@ mod db;
 mod error;
 mod scanner;
 mod settings;
+mod template;
 mod thumbnail;
 mod viewer;
 
@@ -120,6 +121,18 @@ async fn set_directory_template(app: tauri::AppHandle, template: String) -> Resu
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn validate_template(template: String) -> Result<(), String> {
+    template::validate_template(&template).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn preview_template(template: String) -> Result<String, String> {
+    template::validate_template(&template).map_err(|e| e.to_string())?;
+    let metadata = template::sample_metadata();
+    Ok(template::render_template(&template, &metadata))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -172,6 +185,8 @@ pub fn run() {
             get_settings,
             set_library_root,
             set_directory_template,
+            validate_template,
+            preview_template,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
-  import type { AppSettings } from "../types";
+  import type { AppSettings, TemplateValidation } from "../types";
 
   interface Props {
     onBack: () => void;
@@ -16,12 +16,21 @@
   let message = $state<{ type: "success" | "error"; text: string } | null>(
     null,
   );
+  let templateValidation = $state<TemplateValidation>({
+    valid: true,
+    error: null,
+  });
+  let templatePreview = $state<string | null>(null);
+  let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
   async function loadSettings() {
     try {
       const settings = await invoke<AppSettings>("get_settings");
       libraryRoot = settings.libraryRoot ?? "";
       directoryTemplate = settings.directoryTemplate ?? "";
+      if (directoryTemplate) {
+        await validateAndPreviewTemplate(directoryTemplate);
+      }
     } catch (e) {
       message = { type: "error", text: `設定の読み込みに失敗しました: ${e}` };
     } finally {
@@ -66,6 +75,39 @@
     } finally {
       saving = false;
     }
+  }
+
+  async function validateAndPreviewTemplate(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      templateValidation = { valid: true, error: null };
+      templatePreview = null;
+      return;
+    }
+    try {
+      await invoke("validate_template", { template: trimmed });
+      templateValidation = { valid: true, error: null };
+      try {
+        const preview = await invoke<string>("preview_template", {
+          template: trimmed,
+        });
+        templatePreview = preview;
+      } catch {
+        templatePreview = null;
+      }
+    } catch (e) {
+      templateValidation = { valid: false, error: String(e) };
+      templatePreview = null;
+    }
+  }
+
+  function onTemplateInput() {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      validateAndPreviewTemplate(directoryTemplate);
+    }, 300);
   }
 
   $effect(() => {
@@ -127,18 +169,29 @@
           <input
             type="text"
             class="settings-input"
+            class:settings-input-error={!templateValidation.valid}
             bind:value={directoryTemplate}
+            oninput={onTemplateInput}
             placeholder={"{artist}/{title}"}
             disabled={saving}
           />
           <button
             class="settings-save-btn"
             onclick={saveDirectoryTemplate}
-            disabled={saving}
+            disabled={saving || !templateValidation.valid}
           >
             保存
           </button>
         </div>
+        {#if !templateValidation.valid && templateValidation.error}
+          <p class="template-error">{templateValidation.error}</p>
+        {/if}
+        {#if templateValidation.valid && templatePreview}
+          <div class="template-preview">
+            <span class="template-preview-label">プレビュー:</span>
+            <code class="template-preview-path">{templatePreview}</code>
+          </div>
+        {/if}
       </section>
     </div>
 
