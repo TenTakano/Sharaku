@@ -74,7 +74,10 @@ fn list_images_finds_image_files() {
 
     let images = list_images_in_folder(&dir).unwrap();
     assert_eq!(images.len(), 2);
-    assert!(images[0].file_name().unwrap().to_str().unwrap() <= images[1].file_name().unwrap().to_str().unwrap());
+    assert!(
+        images[0].file_name().unwrap().to_str().unwrap()
+            <= images[1].file_name().unwrap().to_str().unwrap()
+    );
 
     std::fs::remove_dir_all(&dir).unwrap();
 }

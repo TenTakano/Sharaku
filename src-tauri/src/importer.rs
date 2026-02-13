@@ -114,10 +114,9 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
 
     let library_root = settings::get_library_root(&conn)?
         .ok_or_else(|| AppError::ImportError("ライブラリルートが設定されていません".to_string()))?;
-    let template_str = settings::get_directory_template(&conn)?
-        .ok_or_else(|| {
-            AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
-        })?;
+    let template_str = settings::get_directory_template(&conn)?.ok_or_else(|| {
+        AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
+    })?;
 
     let metadata = WorkMetadata {
         title: request.title.clone(),

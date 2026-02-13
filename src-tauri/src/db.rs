@@ -56,9 +56,7 @@ fn apply_migration_003(conn: &Connection) -> Result<(), AppError> {
     };
 
     if needs_migration {
-        conn.execute_batch(include_str!(
-            "../migrations/003_allow_folder_work_type.sql"
-        ))?;
+        conn.execute_batch(include_str!("../migrations/003_allow_folder_work_type.sql"))?;
     }
     Ok(())
 }
