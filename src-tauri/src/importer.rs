@@ -238,7 +238,7 @@ pub fn discover_image_folders(
         }
 
         scanned_dirs += 1;
-        if scanned_dirs % 50 == 0 {
+        if scanned_dirs.is_multiple_of(50) {
             let _ = on_progress.send(DiscoverProgress::Scanning { scanned_dirs });
         }
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke, Channel } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
+  import { SvelteSet, SvelteMap } from "svelte/reactivity";
   import type {
     DiscoveredFolder,
     DiscoverProgress,
@@ -23,9 +24,9 @@
   let discovering = $state(false);
   let discoverStatus = $state("");
   let folders = $state<DiscoveredFolder[]>([]);
-  let selected = $state<Set<number>>(new Set());
-  let editedTitles = $state<Map<number, string>>(new Map());
-  let editedArtists = $state<Map<number, string>>(new Map());
+  let selected = new SvelteSet<number>();
+  let editedTitles = new SvelteMap<number, string>();
+  let editedArtists = new SvelteMap<number, string>();
   let mode = $state<ImportMode>("copy");
   let importProgress = $state<BulkImportProgress | null>(null);
   let summary = $state<BulkImportSummary | null>(null);
@@ -52,15 +53,14 @@
         onProgress: channel,
       });
       folders = result;
-      const initialSelected = new Set<number>();
+      selected.clear();
       folders.forEach((f, i) => {
         if (!f.alreadyRegistered) {
-          initialSelected.add(i);
+          selected.add(i);
         }
       });
-      selected = initialSelected;
-      editedTitles = new Map();
-      editedArtists = new Map();
+      editedTitles.clear();
+      editedArtists.clear();
       step = "review";
     } catch (e) {
       discoverStatus = `エラー: ${e}`;
@@ -80,24 +80,21 @@
   }
 
   function toggleSelect(index: number) {
-    const next = new Set(selected);
-    if (next.has(index)) {
-      next.delete(index);
+    if (selected.has(index)) {
+      selected.delete(index);
     } else {
-      next.add(index);
+      selected.add(index);
     }
-    selected = next;
   }
 
   function toggleAll() {
     if (selected.size === selectableCount) {
-      selected = new Set();
+      selected.clear();
     } else {
-      const next = new Set<number>();
+      selected.clear();
       folders.forEach((f, i) => {
-        if (!f.alreadyRegistered) next.add(i);
+        if (!f.alreadyRegistered) selected.add(i);
       });
-      selected = next;
     }
   }
 
@@ -135,7 +132,7 @@
         onProgress: channel,
       });
       step = "done";
-    } catch (e) {
+    } catch {
       summary = { succeeded: 0, failed: requests.length };
       step = "done";
     }
@@ -149,9 +146,9 @@
   function resetToDiscover() {
     step = "discover";
     folders = [];
-    selected = new Set();
-    editedTitles = new Map();
-    editedArtists = new Map();
+    selected.clear();
+    editedTitles.clear();
+    editedArtists.clear();
     importProgress = null;
     summary = null;
     discoverStatus = "";
