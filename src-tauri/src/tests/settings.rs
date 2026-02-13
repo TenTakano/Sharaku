@@ -36,10 +36,7 @@ fn library_root_helpers() {
     let conn = test_conn();
     assert_eq!(get_library_root(&conn).unwrap(), None);
     set_library_root(&conn, "/my/library").unwrap();
-    assert_eq!(
-        get_library_root(&conn).unwrap(),
-        Some("/my/library".into())
-    );
+    assert_eq!(get_library_root(&conn).unwrap(), Some("/my/library".into()));
 }
 
 #[test]
