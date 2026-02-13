@@ -19,4 +19,7 @@ pub enum AppError {
 
     #[error("Invalid template: {0}")]
     InvalidTemplate(String),
+
+    #[error("Import error: {0}")]
+    ImportError(String),
 }

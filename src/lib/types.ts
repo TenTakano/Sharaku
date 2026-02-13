@@ -57,3 +57,26 @@ export interface WorkMetadata {
   circle: string | null;
   origin: string | null;
 }
+
+export type ImportMode = "copy" | "move";
+
+export interface ImportRequest {
+  sourcePath: string;
+  title: string;
+  artist: string | null;
+  year: number | null;
+  genre: string | null;
+  circle: string | null;
+  origin: string | null;
+  mode: ImportMode;
+}
+
+export interface ImportResult {
+  destinationPath: string;
+  pageCount: number;
+}
+
+export interface ParsedMetadata {
+  title: string;
+  artist: string | null;
+}

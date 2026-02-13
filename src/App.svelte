@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ImportView from "./lib/components/ImportView.svelte";
   import ScanButton from "./lib/components/ScanButton.svelte";
   import ScanProgressBar from "./lib/components/ScanProgress.svelte";
   import SettingsView from "./lib/components/SettingsView.svelte";
@@ -8,7 +9,9 @@
 
   let progress = $state<ScanProgress | null>(null);
   let reloadTrigger = $state(0);
-  let currentView = $state<"library" | "viewer" | "settings">("library");
+  let currentView = $state<"library" | "viewer" | "settings" | "import">(
+    "library",
+  );
   let selectedWorkId = $state<number | null>(null);
   let workIds = $state<number[]>([]);
 
@@ -48,11 +51,19 @@
   />
 {:else if currentView === "settings"}
   <SettingsView onBack={handleBackToLibrary} />
+{:else if currentView === "import"}
+  <ImportView onBack={handleBackToLibrary} onImported={() => reloadTrigger++} />
 {:else}
   <main class="container">
     <div class="app-header">
       <h1>Sharaku</h1>
       <ScanButton onProgress={handleProgress} onComplete={handleComplete} />
+      <button
+        class="import-header-btn"
+        onclick={() => (currentView = "import")}
+      >
+        + 取り込み
+      </button>
       <button
         class="settings-btn"
         onclick={() => (currentView = "settings")}

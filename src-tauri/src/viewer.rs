@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::db;
+use crate::importer;
 
 pub fn parse_view_uri(uri: &str) -> Option<(i64, usize)> {
     let idx = uri.find("view/")?;
@@ -36,14 +37,30 @@ fn load_image(
     work_id: i64,
     page_index: usize,
 ) -> Result<(Vec<u8>, &'static str), u16> {
-    if page_index != 0 {
-        return Err(404);
-    }
     let conn = db::open_db(app_data_dir).map_err(|_| 500u16)?;
     let work = db::get_work(&conn, work_id).map_err(|_| 404u16)?;
-    let data = std::fs::read(&work.path).map_err(|_| 404u16)?;
-    let content_type = content_type_from_path(&work.path);
-    Ok((data, content_type))
+
+    if work.work_type == "folder" {
+        let images = importer::list_images_in_folder(Path::new(&work.path)).map_err(|e| {
+            if let crate::error::AppError::Io(ref io_err) = e {
+                if io_err.kind() == std::io::ErrorKind::NotFound {
+                    return 404u16;
+                }
+            }
+            500u16
+        })?;
+        let file_path = images.get(page_index).ok_or(404u16)?;
+        let data = std::fs::read(file_path).map_err(|_| 404u16)?;
+        let content_type = content_type_from_path(&file_path.to_string_lossy());
+        Ok((data, content_type))
+    } else {
+        if page_index != 0 {
+            return Err(404);
+        }
+        let data = std::fs::read(&work.path).map_err(|_| 404u16)?;
+        let content_type = content_type_from_path(&work.path);
+        Ok((data, content_type))
+    }
 }
 
 fn content_type_from_path(path: &str) -> &'static str {

@@ -22,6 +22,7 @@ fn init_db(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
     conn.execute_batch(include_str!("../migrations/001_create_initial_tables.sql"))?;
     apply_migration_002(conn)?;
+    apply_migration_003(conn)?;
     Ok(())
 }
 
@@ -41,6 +42,22 @@ fn apply_migration_002(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
     )?;
+    Ok(())
+}
+
+fn apply_migration_003(conn: &Connection) -> Result<(), AppError> {
+    let needs_migration = match conn.query_row(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='works'",
+        [],
+        |row| row.get::<_, String>(0),
+    ) {
+        Ok(sql) => !sql.contains("folder"),
+        Err(e) => return Err(AppError::Database(e)),
+    };
+
+    if needs_migration {
+        conn.execute_batch(include_str!("../migrations/003_allow_folder_work_type.sql"))?;
+    }
     Ok(())
 }
 
