@@ -30,6 +30,7 @@
   let mode = $state<ImportMode>("copy");
   let importProgress = $state<BulkImportProgress | null>(null);
   let summary = $state<BulkImportSummary | null>(null);
+  let importErrors = $state<{ title: string; message: string }[]>([]);
 
   async function selectRootAndDiscover() {
     const rootPath = await open({ directory: true });
@@ -121,9 +122,14 @@
     step = "importing";
     importProgress = null;
 
+    importErrors = [];
     const channel = new Channel<BulkImportProgress>();
     channel.onmessage = (p) => {
-      importProgress = p;
+      if (p.type === "error") {
+        importErrors = [...importErrors, { title: p.title, message: p.message }];
+      } else {
+        importProgress = p;
+      }
     };
 
     try {
@@ -151,6 +157,7 @@
     editedArtists.clear();
     importProgress = null;
     summary = null;
+    importErrors = [];
     discoverStatus = "";
   }
 </script>
@@ -317,6 +324,16 @@
           <p class="import-success">
             成功: {summary.succeeded} 件 / 失敗: {summary.failed} 件
           </p>
+        {/if}
+        {#if importErrors.length > 0}
+          <div class="bulk-error-list">
+            <h3>エラー詳細</h3>
+            <ul>
+              {#each importErrors as err}
+                <li><strong>{err.title}</strong>: {err.message}</li>
+              {/each}
+            </ul>
+          </div>
         {/if}
         <div class="import-actions">
           <button class="settings-back-btn" onclick={handleDone}>

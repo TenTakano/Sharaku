@@ -185,6 +185,7 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
         for image in &images {
             let _ = std::fs::remove_file(image);
         }
+        let _ = std::fs::remove_dir(source);
     }
 
     Ok(ImportResult {
@@ -304,6 +305,11 @@ pub enum BulkImportProgress {
         succeeded: usize,
         failed: usize,
     },
+    #[serde(rename_all = "camelCase")]
+    Error {
+        title: String,
+        message: String,
+    },
 }
 
 #[derive(Serialize)]
@@ -333,7 +339,13 @@ pub fn bulk_import(
 
         match import_work(request, app_data_dir) {
             Ok(_) => succeeded += 1,
-            Err(_) => failed += 1,
+            Err(e) => {
+                let _ = on_progress.send(BulkImportProgress::Error {
+                    title: request.title.clone(),
+                    message: e.to_string(),
+                });
+                failed += 1;
+            }
         }
     }
 

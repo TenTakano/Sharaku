@@ -32,6 +32,7 @@
   let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
   let validationRequestId = 0;
 
+  let savedDirectoryTemplate = $state("");
   let relocationPreviews = $state<RelocationPreview[]>([]);
   let showRelocationDialog = $state(false);
   let relocating = $state(false);
@@ -42,6 +43,7 @@
       const settings = await invoke<AppSettings>("get_settings");
       libraryRoot = settings.libraryRoot ?? "";
       directoryTemplate = settings.directoryTemplate ?? "";
+      savedDirectoryTemplate = directoryTemplate;
       typeLabelImage = settings.typeLabelImage;
       typeLabelFolder = settings.typeLabelFolder;
       if (directoryTemplate) {
@@ -86,6 +88,7 @@
         await invoke("set_directory_template", {
           template: directoryTemplate.trim(),
         });
+        savedDirectoryTemplate = directoryTemplate;
         message = {
           type: "success",
           text: "ディレクトリテンプレートを保存しました",
@@ -105,6 +108,10 @@
     showRelocationDialog = false;
     relocationPreviews = [];
     relocationProgress = null;
+    directoryTemplate = savedDirectoryTemplate;
+    if (directoryTemplate) {
+      validateAndPreviewTemplate(directoryTemplate);
+    }
   }
 
   async function executeRelocation() {
@@ -121,6 +128,7 @@
       });
       showRelocationDialog = false;
       relocationPreviews = [];
+      savedDirectoryTemplate = directoryTemplate;
       message = {
         type: "success",
         text: "テンプレートを保存し、作品を再配置しました",

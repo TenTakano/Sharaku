@@ -105,7 +105,8 @@ export type DiscoverProgress =
 export type BulkImportProgress =
   | { type: "started"; total: number }
   | { type: "importing"; current: number; total: number; title: string }
-  | { type: "completed"; succeeded: number; failed: number };
+  | { type: "completed"; succeeded: number; failed: number }
+  | { type: "error"; title: string; message: string };
 
 export interface BulkImportSummary {
   succeeded: number;

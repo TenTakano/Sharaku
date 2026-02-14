@@ -151,19 +151,22 @@ pub fn execute_relocation(
             continue;
         }
 
-        match move_work_files(old_path, new_path) {
+        match copy_work_files(old_path, new_path) {
             Ok(()) => {
                 if let Err(e) = db::update_work_path(&conn, item.work_id, &item.new_path) {
                     let _ = on_progress.send(RelocationProgress::Error {
                         message: format!("DB更新失敗 ({}): {}", item.title, e),
                     });
+                    let _ = std::fs::remove_dir_all(new_path);
                     failed += 1;
                     continue;
                 }
+                remove_work_files(old_path);
                 cleanup_empty_ancestors(old_path, &library_root);
                 relocated += 1;
             }
             Err(e) => {
+                let _ = std::fs::remove_dir_all(new_path);
                 let _ = on_progress.send(RelocationProgress::Error {
                     message: format!("移動失敗 ({}): {}", item.title, e),
                 });
@@ -183,7 +186,7 @@ pub fn execute_relocation(
     Ok(())
 }
 
-fn move_work_files(old_path: &Path, new_path: &Path) -> Result<(), AppError> {
+fn copy_work_files(old_path: &Path, new_path: &Path) -> Result<(), AppError> {
     std::fs::create_dir_all(new_path)?;
 
     let images = importer::list_images_in_folder(old_path)?;
@@ -192,15 +195,19 @@ fn move_work_files(old_path: &Path, new_path: &Path) -> Result<(), AppError> {
             .file_name()
             .ok_or_else(|| AppError::RelocationError("無効なファイル名".into()))?;
         let dest = new_path.join(file_name);
-        std::fs::rename(image, &dest).or_else(|_| {
-            std::fs::copy(image, &dest)?;
-            std::fs::remove_file(image)?;
-            Ok::<(), AppError>(())
-        })?;
+        std::fs::copy(image, &dest)?;
     }
 
-    let _ = std::fs::remove_dir(old_path);
     Ok(())
+}
+
+fn remove_work_files(path: &Path) {
+    if let Ok(images) = importer::list_images_in_folder(path) {
+        for image in &images {
+            let _ = std::fs::remove_file(image);
+        }
+    }
+    let _ = std::fs::remove_dir(path);
 }
 
 fn cleanup_empty_ancestors(path: &Path, stop_at: &Path) {

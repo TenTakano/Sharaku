@@ -177,24 +177,15 @@ pub fn resolve_unique_work_path(
     if !base.exists() {
         return base;
     }
-    let suffix: u16 = rand_suffix();
-    let dir_name = format!(
-        "{}_{:04x}",
-        base.file_name().unwrap().to_string_lossy(),
-        suffix
-    );
-    base.with_file_name(dir_name)
-}
-
-fn rand_suffix() -> u16 {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    use std::time::SystemTime;
-
-    let mut hasher = DefaultHasher::new();
-    SystemTime::now().hash(&mut hasher);
-    std::thread::current().id().hash(&mut hasher);
-    hasher.finish() as u16
+    let base_name = base.file_name().unwrap().to_string_lossy().to_string();
+    for i in 1u32.. {
+        let dir_name = format!("{}_{:04x}", base_name, i);
+        let candidate = base.with_file_name(&dir_name);
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    unreachable!()
 }
 
 pub fn sample_metadata() -> WorkMetadata {
