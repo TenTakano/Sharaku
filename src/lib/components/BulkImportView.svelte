@@ -126,7 +126,10 @@
     const channel = new Channel<BulkImportProgress>();
     channel.onmessage = (p) => {
       if (p.type === "error") {
-        importErrors = [...importErrors, { title: p.title, message: p.message }];
+        importErrors = [
+          ...importErrors,
+          { title: p.title, message: p.message },
+        ];
       } else {
         importProgress = p;
       }

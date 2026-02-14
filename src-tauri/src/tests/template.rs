@@ -243,10 +243,7 @@ fn resolve_unique_skips_existing_suffixes() {
     std::fs::create_dir_all(&first_suffix).unwrap();
 
     let path = resolve_unique_work_path(&dir, "{title}", &full_metadata());
-    assert_eq!(
-        path.file_name().unwrap().to_string_lossy(),
-        "My Title_0002"
-    );
+    assert_eq!(path.file_name().unwrap().to_string_lossy(), "My Title_0002");
 
     std::fs::remove_dir_all(&dir).unwrap();
 }
