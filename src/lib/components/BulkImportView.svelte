@@ -332,7 +332,7 @@
           <div class="bulk-error-list">
             <h3>エラー詳細</h3>
             <ul>
-              {#each importErrors as err}
+              {#each importErrors as err, i (i)}
                 <li><strong>{err.title}</strong>: {err.message}</li>
               {/each}
             </ul>
