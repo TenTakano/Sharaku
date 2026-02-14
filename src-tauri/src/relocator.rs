@@ -107,7 +107,12 @@ pub fn preview_relocation(
 ) -> Result<Vec<RelocationPreview>, AppError> {
     let works = db::list_folder_works(conn)?;
     let type_label = settings::get_type_label_folder(conn)?;
-    Ok(compute_relocation_plan(&works, library_root, new_template, &type_label))
+    Ok(compute_relocation_plan(
+        &works,
+        library_root,
+        new_template,
+        &type_label,
+    ))
 }
 
 pub fn execute_relocation(

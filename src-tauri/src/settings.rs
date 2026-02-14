@@ -52,7 +52,8 @@ pub fn set_type_label_image(conn: &Connection, label: &str) -> Result<(), AppErr
 }
 
 pub fn get_type_label_folder(conn: &Connection) -> Result<String, AppError> {
-    Ok(get_setting(conn, KEY_TYPE_LABEL_FOLDER)?.unwrap_or_else(|| DEFAULT_TYPE_LABEL_FOLDER.into()))
+    Ok(get_setting(conn, KEY_TYPE_LABEL_FOLDER)?
+        .unwrap_or_else(|| DEFAULT_TYPE_LABEL_FOLDER.into()))
 }
 
 pub fn set_type_label_folder(conn: &Connection, label: &str) -> Result<(), AppError> {

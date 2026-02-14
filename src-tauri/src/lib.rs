@@ -76,8 +76,7 @@ async fn get_settings(app: tauri::AppHandle) -> Result<AppSettings, String> {
         let library_root = settings::get_library_root(&conn).map_err(|e| e.to_string())?;
         let directory_template =
             settings::get_directory_template(&conn).map_err(|e| e.to_string())?;
-        let type_label_image =
-            settings::get_type_label_image(&conn).map_err(|e| e.to_string())?;
+        let type_label_image = settings::get_type_label_image(&conn).map_err(|e| e.to_string())?;
         let type_label_folder =
             settings::get_type_label_folder(&conn).map_err(|e| e.to_string())?;
         Ok(AppSettings {
@@ -149,8 +148,7 @@ async fn preview_template(app: tauri::AppHandle, template: String) -> Result<Str
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     tokio::task::spawn_blocking(move || {
         let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
-        let folder_label =
-            settings::get_type_label_folder(&conn).map_err(|e| e.to_string())?;
+        let folder_label = settings::get_type_label_folder(&conn).map_err(|e| e.to_string())?;
         let mut metadata = template::sample_metadata();
         metadata.work_type = Some(folder_label);
         Ok(template::render_template(&template, &metadata))

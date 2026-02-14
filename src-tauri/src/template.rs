@@ -4,7 +4,9 @@ use serde::Deserialize;
 
 use crate::error::AppError;
 
-const KNOWN_PLACEHOLDERS: &[&str] = &["title", "artist", "year", "genre", "circle", "origin", "type"];
+const KNOWN_PLACEHOLDERS: &[&str] = &[
+    "title", "artist", "year", "genre", "circle", "origin", "type",
+];
 const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
 #[derive(Deserialize)]
