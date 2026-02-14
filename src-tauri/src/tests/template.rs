@@ -233,6 +233,22 @@ fn resolve_unique_existing_gets_suffix() {
 }
 
 #[test]
+fn resolve_unique_skips_existing_suffixes() {
+    let dir = std::env::temp_dir().join("sharaku_test_unique_skip");
+    let _ = std::fs::remove_dir_all(&dir);
+
+    let base = dir.join("My Title");
+    let first_suffix = dir.join("My Title_0001");
+    std::fs::create_dir_all(&base).unwrap();
+    std::fs::create_dir_all(&first_suffix).unwrap();
+
+    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata());
+    assert_eq!(path.file_name().unwrap().to_string_lossy(), "My Title_0002");
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
 fn render_type_placeholder_with_value() {
     let mut meta = full_metadata();
     meta.work_type = Some("Manga".to_string());

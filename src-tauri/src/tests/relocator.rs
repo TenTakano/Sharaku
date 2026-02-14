@@ -147,6 +147,27 @@ fn compute_plan_handles_path_collision() {
 }
 
 #[test]
+fn copy_work_files_preserves_source() {
+    let temp = std::env::temp_dir().join("sharaku_test_copy_preserves");
+    let _ = std::fs::remove_dir_all(&temp);
+
+    let src = temp.join("src_folder");
+    let dst = temp.join("dst_folder");
+    std::fs::create_dir_all(&src).unwrap();
+    std::fs::write(src.join("01.jpg"), b"image_data").unwrap();
+    std::fs::write(src.join("02.png"), b"image_data2").unwrap();
+
+    copy_work_files(&src, &dst).unwrap();
+
+    assert!(dst.join("01.jpg").exists());
+    assert!(dst.join("02.png").exists());
+    assert!(src.join("01.jpg").exists());
+    assert!(src.join("02.png").exists());
+
+    std::fs::remove_dir_all(&temp).unwrap();
+}
+
+#[test]
 fn cleanup_empty_ancestors_removes_empty_dirs() {
     let temp = std::env::temp_dir().join("sharaku_test_cleanup_ancestors");
     let _ = std::fs::remove_dir_all(&temp);
