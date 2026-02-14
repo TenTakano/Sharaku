@@ -49,3 +49,28 @@ fn directory_template_helpers() {
         Some("{artist}/{title}".into())
     );
 }
+
+#[test]
+fn type_label_defaults() {
+    let conn = test_conn();
+    assert_eq!(get_type_label_image(&conn).unwrap(), "Image");
+    assert_eq!(get_type_label_folder(&conn).unwrap(), "Folder");
+}
+
+#[test]
+fn type_label_set_and_get() {
+    let conn = test_conn();
+    set_type_label_image(&conn, "イラスト").unwrap();
+    set_type_label_folder(&conn, "漫画").unwrap();
+    assert_eq!(get_type_label_image(&conn).unwrap(), "イラスト");
+    assert_eq!(get_type_label_folder(&conn).unwrap(), "漫画");
+}
+
+#[test]
+fn resolve_type_label_uses_settings() {
+    let conn = test_conn();
+    set_type_label_folder(&conn, "漫画").unwrap();
+    assert_eq!(resolve_type_label(&conn, "folder").unwrap(), "漫画");
+    assert_eq!(resolve_type_label(&conn, "image").unwrap(), "Image");
+    assert_eq!(resolve_type_label(&conn, "other").unwrap(), "other");
+}

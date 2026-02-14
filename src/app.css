@@ -558,6 +558,28 @@ button:disabled {
   word-break: break-all;
 }
 
+.type-label-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-label-name {
+  min-width: 100px;
+  font-size: 0.875rem;
+  color: #333;
+}
+
+.type-label-input {
+  max-width: 200px;
+}
+
 .settings-message {
   font-size: 0.875rem;
   margin-top: 16px;

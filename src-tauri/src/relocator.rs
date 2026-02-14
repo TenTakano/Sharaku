@@ -39,7 +39,7 @@ pub struct RelocationPreview {
     pub new_path: String,
 }
 
-fn work_detail_to_metadata(work: &WorkDetail) -> WorkMetadata {
+fn work_detail_to_metadata(work: &WorkDetail, type_label: &str) -> WorkMetadata {
     WorkMetadata {
         title: work.title.clone(),
         artist: work.artist.clone(),
@@ -47,6 +47,7 @@ fn work_detail_to_metadata(work: &WorkDetail) -> WorkMetadata {
         genre: work.genre.clone(),
         circle: work.circle.clone(),
         origin: work.origin.clone(),
+        work_type: Some(type_label.to_string()),
     }
 }
 
@@ -54,12 +55,13 @@ fn compute_relocation_plan(
     works: &[WorkDetail],
     library_root: &Path,
     new_template: &str,
+    type_label: &str,
 ) -> Vec<RelocationPreview> {
     let mut used_paths: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut previews = Vec::new();
 
     for work in works {
-        let metadata = work_detail_to_metadata(work);
+        let metadata = work_detail_to_metadata(work, type_label);
         let base_path = template::resolve_work_path(library_root, new_template, &metadata);
         let base_str = base_path.to_string_lossy().to_string();
 
@@ -104,7 +106,13 @@ pub fn preview_relocation(
     new_template: &str,
 ) -> Result<Vec<RelocationPreview>, AppError> {
     let works = db::list_folder_works(conn)?;
-    Ok(compute_relocation_plan(&works, library_root, new_template))
+    let type_label = settings::get_type_label_folder(conn)?;
+    Ok(compute_relocation_plan(
+        &works,
+        library_root,
+        new_template,
+        &type_label,
+    ))
 }
 
 pub fn execute_relocation(
@@ -118,7 +126,8 @@ pub fn execute_relocation(
     let library_root = PathBuf::from(&library_root);
 
     let works = db::list_folder_works(&conn)?;
-    let plan = compute_relocation_plan(&works, &library_root, new_template);
+    let type_label = settings::get_type_label_folder(&conn)?;
+    let plan = compute_relocation_plan(&works, &library_root, new_template, &type_label);
 
     let total = plan.len();
     let _ = on_progress.send(RelocationProgress::Started { total });

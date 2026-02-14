@@ -4,7 +4,9 @@ use serde::Deserialize;
 
 use crate::error::AppError;
 
-const KNOWN_PLACEHOLDERS: &[&str] = &["title", "artist", "year", "genre", "circle", "origin"];
+const KNOWN_PLACEHOLDERS: &[&str] = &[
+    "title", "artist", "year", "genre", "circle", "origin", "type",
+];
 const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
 #[derive(Deserialize)]
@@ -15,6 +17,8 @@ pub struct WorkMetadata {
     pub genre: Option<String>,
     pub circle: Option<String>,
     pub origin: Option<String>,
+    #[serde(default)]
+    pub work_type: Option<String>,
 }
 
 pub fn validate_template(template: &str) -> Result<(), AppError> {
@@ -96,6 +100,10 @@ fn resolve_placeholder(name: &str, metadata: &WorkMetadata) -> String {
             .unwrap_or_else(|| "Unknown".to_string()),
         "origin" => metadata
             .origin
+            .clone()
+            .unwrap_or_else(|| "Unknown".to_string()),
+        "type" => metadata
+            .work_type
             .clone()
             .unwrap_or_else(|| "Unknown".to_string()),
         _ => "Unknown".to_string(),
@@ -197,6 +205,7 @@ pub fn sample_metadata() -> WorkMetadata {
         genre: Some("Illustration".to_string()),
         circle: Some("Circle".to_string()),
         origin: Some("Original".to_string()),
+        work_type: None,
     }
 }
 

@@ -112,7 +112,7 @@ fn execute_moves_files_and_updates_db() {
 
     let conn = db::open_db(&app_data_dir).unwrap();
     let works = db::list_folder_works(&conn).unwrap();
-    let plan = compute_relocation_plan(&works, &library_root, "{artist}/{title}");
+    let plan = compute_relocation_plan(&works, &library_root, "{artist}/{title}", "Folder");
     assert_eq!(plan.len(), 1);
     assert!(plan[0].new_path.contains("Artist"));
 
@@ -140,7 +140,7 @@ fn compute_plan_handles_path_collision() {
     insert_folder_work(&conn, "SameTitle", "/library/folder_b", Some("Artist"));
 
     let works = db::list_folder_works(&conn).unwrap();
-    let plan = compute_relocation_plan(&works, Path::new("/library"), "{artist}/{title}");
+    let plan = compute_relocation_plan(&works, Path::new("/library"), "{artist}/{title}", "Folder");
 
     assert_eq!(plan.len(), 2);
     assert_ne!(plan[0].new_path, plan[1].new_path);

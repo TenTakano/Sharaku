@@ -124,6 +124,7 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
 
+    let type_label = settings::resolve_type_label(&conn, "folder")?;
     let metadata = WorkMetadata {
         title: request.title.clone(),
         artist: request.artist.clone(),
@@ -131,6 +132,7 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
         genre: request.genre.clone(),
         circle: request.circle.clone(),
         origin: request.origin.clone(),
+        work_type: Some(type_label),
     };
 
     let dest =

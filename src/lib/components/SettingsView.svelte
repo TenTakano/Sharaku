@@ -17,6 +17,8 @@
 
   let libraryRoot = $state("");
   let directoryTemplate = $state("");
+  let typeLabelImage = $state("");
+  let typeLabelFolder = $state("");
   let loading = $state(true);
   let saving = $state(false);
   let message = $state<{ type: "success" | "error"; text: string } | null>(
@@ -40,6 +42,8 @@
       const settings = await invoke<AppSettings>("get_settings");
       libraryRoot = settings.libraryRoot ?? "";
       directoryTemplate = settings.directoryTemplate ?? "";
+      typeLabelImage = settings.typeLabelImage;
+      typeLabelFolder = settings.typeLabelFolder;
       if (directoryTemplate) {
         await validateAndPreviewTemplate(directoryTemplate);
       }
@@ -158,6 +162,25 @@
     }
   }
 
+  async function saveTypeLabels() {
+    saving = true;
+    message = null;
+    try {
+      await invoke("set_type_labels", {
+        imageLabel: typeLabelImage.trim(),
+        folderLabel: typeLabelFolder.trim(),
+      });
+      message = { type: "success", text: "作品種別ラベルを保存しました" };
+      if (directoryTemplate) {
+        await validateAndPreviewTemplate(directoryTemplate);
+      }
+    } catch (e) {
+      message = { type: "error", text: `保存に失敗しました: ${e}` };
+    } finally {
+      saving = false;
+    }
+  }
+
   function onTemplateInput() {
     if (debounceTimer) {
       clearTimeout(debounceTimer);
@@ -220,7 +243,7 @@
           <code>{"{title}"}</code>, <code>{"{artist}"}</code>,
           <code>{"{year}"}</code>,
           <code>{"{genre}"}</code>, <code>{"{circle}"}</code>,
-          <code>{"{origin}"}</code>
+          <code>{"{origin}"}</code>, <code>{"{type}"}</code>
         </p>
         <div class="settings-field-row">
           <input
@@ -249,6 +272,51 @@
             <code class="template-preview-path">{templatePreview}</code>
           </div>
         {/if}
+      </section>
+
+      <section class="settings-section">
+        <h2>作品種別ラベル</h2>
+        <p class="settings-description">
+          テンプレートの <code>{"{type}"}</code>
+          に使用するラベルをカスタマイズできます。
+        </p>
+        <div class="type-label-fields">
+          <div class="type-label-row">
+            <label class="type-label-name" for="type-label-image"
+              >画像作品:</label
+            >
+            <input
+              id="type-label-image"
+              type="text"
+              class="settings-input type-label-input"
+              bind:value={typeLabelImage}
+              placeholder="Image"
+              disabled={saving}
+            />
+          </div>
+          <div class="type-label-row">
+            <label class="type-label-name" for="type-label-folder"
+              >フォルダ作品:</label
+            >
+            <input
+              id="type-label-folder"
+              type="text"
+              class="settings-input type-label-input"
+              bind:value={typeLabelFolder}
+              placeholder="Folder"
+              disabled={saving}
+            />
+          </div>
+          <button
+            class="settings-save-btn"
+            onclick={saveTypeLabels}
+            disabled={saving ||
+              !typeLabelImage.trim() ||
+              !typeLabelFolder.trim()}
+          >
+            保存
+          </button>
+        </div>
       </section>
     </div>
 
