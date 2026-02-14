@@ -124,6 +124,7 @@ fn preview_path_with_template() {
         genre: None,
         circle: None,
         origin: None,
+        work_type: None,
     };
     let result = preview_import_path(Path::new("/library"), "{artist}/{title}", &metadata);
     assert_eq!(result, "/library/Artist/My Work");

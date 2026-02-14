@@ -36,6 +36,8 @@ export type SlideshowMode = "page" | "work";
 export interface AppSettings {
   libraryRoot: string | null;
   directoryTemplate: string | null;
+  typeLabelImage: string;
+  typeLabelFolder: string;
 }
 
 export interface TemplateValidation {

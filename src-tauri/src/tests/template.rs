@@ -10,6 +10,7 @@ fn full_metadata() -> WorkMetadata {
         genre: Some("Manga".to_string()),
         circle: Some("Circle X".to_string()),
         origin: Some("Original".to_string()),
+        work_type: None,
     }
 }
 
@@ -21,6 +22,7 @@ fn partial_metadata() -> WorkMetadata {
         genre: None,
         circle: None,
         origin: None,
+        work_type: None,
     }
 }
 
@@ -32,6 +34,7 @@ fn validate_valid_template() {
     assert!(validate_template("{artist}/{title}").is_ok());
     assert!(validate_template("{year}/{genre}/{title}").is_ok());
     assert!(validate_template("prefix-{title}-suffix").is_ok());
+    assert!(validate_template("{type}/{title}").is_ok());
 }
 
 #[test]
@@ -105,6 +108,7 @@ fn render_sanitizes_forbidden_chars() {
         genre: None,
         circle: None,
         origin: None,
+        work_type: None,
     };
     let result = render_template("{artist}/{title}", &meta);
     assert!(!result.contains(':'));
@@ -141,6 +145,7 @@ fn render_utf8_metadata() {
         genre: None,
         circle: None,
         origin: None,
+        work_type: None,
     };
     let result = render_template("{artist}/{title}", &meta);
     assert_eq!(result, "アーティスト名/日本語タイトル");
@@ -155,6 +160,7 @@ fn render_dot_dot_in_metadata_is_sanitized() {
         genre: None,
         circle: None,
         origin: None,
+        work_type: None,
     };
     let result = render_template("{artist}/{title}", &meta);
     assert!(!result.starts_with(".."));
@@ -172,6 +178,7 @@ fn resolve_path_stays_under_root() {
         genre: None,
         circle: None,
         origin: None,
+        work_type: None,
     };
     let path = resolve_work_path(root, "{artist}/{title}", &meta);
     let path_str = path.to_string_lossy();
@@ -223,4 +230,24 @@ fn resolve_unique_existing_gets_suffix() {
         .starts_with("My Title_"));
 
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn render_type_placeholder_with_value() {
+    let mut meta = full_metadata();
+    meta.work_type = Some("Manga".to_string());
+    let result = render_template("{type}/{title}", &meta);
+    assert_eq!(result, "Manga/My Title");
+}
+
+#[test]
+fn render_type_placeholder_none_falls_back_to_unknown() {
+    let result = render_template("{type}/{title}", &full_metadata());
+    assert_eq!(result, "Unknown/My Title");
+}
+
+#[test]
+fn validate_type_placeholder() {
+    assert!(validate_template("{type}/{title}").is_ok());
+    assert!(validate_template("{artist}/{type}/{title}").is_ok());
 }

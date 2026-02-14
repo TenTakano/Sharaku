@@ -21,6 +21,11 @@ pub fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(), AppE
 
 const KEY_LIBRARY_ROOT: &str = "library_root";
 const KEY_DIRECTORY_TEMPLATE: &str = "directory_template";
+const KEY_TYPE_LABEL_IMAGE: &str = "type_label_image";
+const KEY_TYPE_LABEL_FOLDER: &str = "type_label_folder";
+
+const DEFAULT_TYPE_LABEL_IMAGE: &str = "Image";
+const DEFAULT_TYPE_LABEL_FOLDER: &str = "Folder";
 
 pub fn get_library_root(conn: &Connection) -> Result<Option<String>, AppError> {
     get_setting(conn, KEY_LIBRARY_ROOT)
@@ -36,6 +41,30 @@ pub fn get_directory_template(conn: &Connection) -> Result<Option<String>, AppEr
 
 pub fn set_directory_template(conn: &Connection, template: &str) -> Result<(), AppError> {
     set_setting(conn, KEY_DIRECTORY_TEMPLATE, template)
+}
+
+pub fn get_type_label_image(conn: &Connection) -> Result<String, AppError> {
+    Ok(get_setting(conn, KEY_TYPE_LABEL_IMAGE)?.unwrap_or_else(|| DEFAULT_TYPE_LABEL_IMAGE.into()))
+}
+
+pub fn set_type_label_image(conn: &Connection, label: &str) -> Result<(), AppError> {
+    set_setting(conn, KEY_TYPE_LABEL_IMAGE, label)
+}
+
+pub fn get_type_label_folder(conn: &Connection) -> Result<String, AppError> {
+    Ok(get_setting(conn, KEY_TYPE_LABEL_FOLDER)?.unwrap_or_else(|| DEFAULT_TYPE_LABEL_FOLDER.into()))
+}
+
+pub fn set_type_label_folder(conn: &Connection, label: &str) -> Result<(), AppError> {
+    set_setting(conn, KEY_TYPE_LABEL_FOLDER, label)
+}
+
+pub fn resolve_type_label(conn: &Connection, work_type: &str) -> Result<String, AppError> {
+    match work_type {
+        "image" => get_type_label_image(conn),
+        "folder" => get_type_label_folder(conn),
+        _ => Ok(work_type.to_string()),
+    }
 }
 
 #[cfg(test)]

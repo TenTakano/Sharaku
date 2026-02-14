@@ -64,6 +64,8 @@ async fn get_work(app: tauri::AppHandle, work_id: i64) -> Result<WorkDetail, Str
 struct AppSettings {
     library_root: Option<String>,
     directory_template: Option<String>,
+    type_label_image: String,
+    type_label_folder: String,
 }
 
 #[tauri::command]
@@ -74,9 +76,15 @@ async fn get_settings(app: tauri::AppHandle) -> Result<AppSettings, String> {
         let library_root = settings::get_library_root(&conn).map_err(|e| e.to_string())?;
         let directory_template =
             settings::get_directory_template(&conn).map_err(|e| e.to_string())?;
+        let type_label_image =
+            settings::get_type_label_image(&conn).map_err(|e| e.to_string())?;
+        let type_label_folder =
+            settings::get_type_label_folder(&conn).map_err(|e| e.to_string())?;
         Ok(AppSettings {
             library_root,
             directory_template,
+            type_label_image,
+            type_label_folder,
         })
     })
     .await
@@ -115,10 +123,40 @@ async fn validate_template(template: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn preview_template(template: String) -> Result<String, String> {
+async fn set_type_labels(
+    app: tauri::AppHandle,
+    image_label: String,
+    folder_label: String,
+) -> Result<(), String> {
+    let image_label = image_label.trim().to_string();
+    let folder_label = folder_label.trim().to_string();
+    if image_label.is_empty() || folder_label.is_empty() {
+        return Err("ラベルは空にできません".to_string());
+    }
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        settings::set_type_label_image(&conn, &image_label).map_err(|e| e.to_string())?;
+        settings::set_type_label_folder(&conn, &folder_label).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn preview_template(app: tauri::AppHandle, template: String) -> Result<String, String> {
     template::validate_template(&template).map_err(|e| e.to_string())?;
-    let metadata = template::sample_metadata();
-    Ok(template::render_template(&template, &metadata))
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        let folder_label =
+            settings::get_type_label_folder(&conn).map_err(|e| e.to_string())?;
+        let mut metadata = template::sample_metadata();
+        metadata.work_type = Some(folder_label);
+        Ok(template::render_template(&template, &metadata))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -287,6 +325,7 @@ pub fn run() {
             get_settings,
             set_library_root,
             set_directory_template,
+            set_type_labels,
             validate_template,
             preview_template,
             parse_folder_name,
