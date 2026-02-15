@@ -1021,6 +1021,55 @@ button:disabled {
   border-radius: 4px;
 }
 
+/* Tag remove confirmation dialog */
+.tag-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.tag-confirm-dialog {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.tag-confirm-dialog p {
+  font-size: 0.875rem;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.tag-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.tag-confirm-cancel {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+}
+
+.tag-confirm-delete {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  background-color: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+.tag-confirm-delete:hover {
+  background-color: #b71c1c;
+}
+
 /* Tag badge */
 .tag-badge {
   display: inline-flex;
@@ -1033,6 +1082,26 @@ button:disabled {
   color: #396cd8;
   white-space: nowrap;
   line-height: 1.6;
+}
+
+.tag-badge[data-category="artist"] {
+  background: rgba(216, 57, 57, 0.15);
+  color: #d83939;
+}
+
+.tag-badge[data-category="circle"] {
+  background: rgba(57, 162, 216, 0.15);
+  color: #39a2d8;
+}
+
+.tag-badge[data-category="genre"] {
+  background: rgba(57, 216, 108, 0.15);
+  color: #2e9e54;
+}
+
+.tag-badge[data-category="series"] {
+  background: rgba(216, 162, 57, 0.15);
+  color: #c88a2e;
 }
 
 .tag-badge-remove {
@@ -1105,6 +1174,21 @@ button:disabled {
   font-style: italic;
 }
 
+.tag-input-category-header {
+  padding: 4px 10px 2px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tag-input-category-header:not(:first-child) {
+  border-top: 1px solid #e8e8e8;
+  margin-top: 2px;
+  padding-top: 6px;
+}
+
 /* TagInput dark variant */
 .tag-input-dark .tag-input-field {
   background: rgba(255, 255, 255, 0.1);
@@ -1138,6 +1222,11 @@ button:disabled {
   color: #5c93e6;
 }
 
+.tag-input-dark .tag-input-category-header {
+  color: #888;
+  border-top-color: #555;
+}
+
 /* TagInput light variant */
 .tag-input-light .tag-input-field {
   background: #fff;
@@ -1158,6 +1247,26 @@ button:disabled {
 .viewer-tag-bar .tag-badge {
   background: rgba(57, 108, 216, 0.3);
   color: #8ab4f8;
+}
+
+.viewer-tag-bar .tag-badge[data-category="artist"] {
+  background: rgba(216, 57, 57, 0.3);
+  color: #f08080;
+}
+
+.viewer-tag-bar .tag-badge[data-category="circle"] {
+  background: rgba(57, 162, 216, 0.3);
+  color: #7ec8e8;
+}
+
+.viewer-tag-bar .tag-badge[data-category="genre"] {
+  background: rgba(57, 216, 108, 0.3);
+  color: #6ed89a;
+}
+
+.viewer-tag-bar .tag-badge[data-category="series"] {
+  background: rgba(216, 162, 57, 0.3);
+  color: #e0b86e;
 }
 
 /* Filter section in toolbar */
@@ -1283,6 +1392,20 @@ button:disabled {
     color: #ef5350;
   }
 
+  .tag-confirm-dialog {
+    background: #3a3a3a;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .tag-confirm-delete {
+    background-color: #d32f2f;
+    border-color: #d32f2f;
+  }
+
+  .tag-confirm-delete:hover {
+    background-color: #c62828;
+  }
+
   .relocation-dialog {
     background: #3a3a3a;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -1389,6 +1512,26 @@ button:disabled {
     color: #5c93e6;
   }
 
+  .tag-badge[data-category="artist"] {
+    background: rgba(216, 57, 57, 0.25);
+    color: #e87070;
+  }
+
+  .tag-badge[data-category="circle"] {
+    background: rgba(57, 162, 216, 0.25);
+    color: #5cb8e0;
+  }
+
+  .tag-badge[data-category="genre"] {
+    background: rgba(57, 216, 108, 0.25);
+    color: #5cc87e;
+  }
+
+  .tag-badge[data-category="series"] {
+    background: rgba(216, 162, 57, 0.25);
+    color: #d8a84e;
+  }
+
   .tag-input-light .tag-input-field {
     background: #3a3a3a;
     color: #f6f6f6;
@@ -1411,6 +1554,11 @@ button:disabled {
 
   .tag-input-light .tag-input-create {
     color: #5c93e6;
+  }
+
+  .tag-input-light .tag-input-category-header {
+    color: #888;
+    border-top-color: #555;
   }
 
   .filter-mode-select {

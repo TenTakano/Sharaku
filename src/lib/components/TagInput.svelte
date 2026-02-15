@@ -69,6 +69,53 @@
     selectTag(tag);
   }
 
+  const CATEGORY_ORDER: Record<string, number> = {
+    artist: 0,
+    circle: 1,
+    genre: 2,
+    series: 3,
+  };
+
+  type GroupedItem =
+    | { type: "header"; category: string }
+    | { type: "tag"; tag: Tag; flatIndex: number };
+
+  let groupedItems = $derived.by(() => {
+    if (suggestions.length === 0) return [];
+
+    const sorted = [...suggestions].sort((a, b) => {
+      const catA = a.category ?? "\uffff";
+      const catB = b.category ?? "\uffff";
+      const orderA = CATEGORY_ORDER[catA] ?? 999;
+      const orderB = CATEGORY_ORDER[catB] ?? 999;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name);
+    });
+
+    const items: GroupedItem[] = [];
+    let currentCategory: string | undefined;
+    let flatIndex = 0;
+    for (const tag of sorted) {
+      const cat = tag.category ?? "";
+      if (cat !== currentCategory) {
+        currentCategory = cat;
+        items.push({ type: "header", category: tag.category ?? "" });
+      }
+      items.push({ type: "tag", tag, flatIndex });
+      flatIndex++;
+    }
+    return items;
+  });
+
+  let sortedSuggestions = $derived(
+    groupedItems
+      .filter(
+        (item): item is Extract<GroupedItem, { type: "tag" }> =>
+          item.type === "tag",
+      )
+      .map((item) => item.tag),
+  );
+
   let hasExactMatch = $derived(
     suggestions.some(
       (t) => t.name.toLowerCase() === query.trim().toLowerCase(),
@@ -77,7 +124,7 @@
   let showCreate = $derived(
     open && query.trim() && !hasExactMatch && !!onCreateTag,
   );
-  let totalOptions = $derived(suggestions.length + (showCreate ? 1 : 0));
+  let totalOptions = $derived(sortedSuggestions.length + (showCreate ? 1 : 0));
 
   function handleKeydown(e: KeyboardEvent) {
     if (!open && e.key !== "Escape") return;
@@ -95,9 +142,9 @@
         break;
       case "Enter":
         e.preventDefault();
-        if (highlightIndex >= 0 && highlightIndex < suggestions.length) {
-          selectTag(suggestions[highlightIndex]);
-        } else if (showCreate && highlightIndex === suggestions.length) {
+        if (highlightIndex >= 0 && highlightIndex < sortedSuggestions.length) {
+          selectTag(sortedSuggestions[highlightIndex]);
+        } else if (showCreate && highlightIndex === sortedSuggestions.length) {
           createTag(query.trim());
         }
         break;
@@ -134,20 +181,26 @@
   {#if open && totalOptions > 0}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="tag-input-dropdown" onmousedown={(e) => e.preventDefault()}>
-      {#each suggestions as tag, i (tag.id)}
-        <button
-          class="tag-input-option"
-          class:tag-input-option-highlight={i === highlightIndex}
-          onmousedown={() => selectTag(tag)}
-        >
-          {tag.name}
-        </button>
+      {#each groupedItems as item (item.type === "header" ? `h:${item.category}` : `t:${item.tag.id}`)}
+        {#if item.type === "header"}
+          <div class="tag-input-category-header">
+            {item.category || "その他"}
+          </div>
+        {:else}
+          <button
+            class="tag-input-option"
+            class:tag-input-option-highlight={item.flatIndex === highlightIndex}
+            onmousedown={() => selectTag(item.tag)}
+          >
+            {item.tag.name}
+          </button>
+        {/if}
       {/each}
       {#if showCreate}
         <button
           class="tag-input-option tag-input-create"
           class:tag-input-option-highlight={highlightIndex ===
-            suggestions.length}
+            sortedSuggestions.length}
           onmousedown={() => createTag(query.trim())}
         >
           "{query.trim()}" を作成

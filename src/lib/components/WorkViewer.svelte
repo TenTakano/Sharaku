@@ -35,6 +35,7 @@
   let intervalInputFocused = $state(false);
   let tagInputFocused = $state(false);
   let workTags = $state<Tag[]>([]);
+  let tagToRemove = $state<Tag | null>(null);
 
   let imageUrl = $derived(`sharaku://localhost/view/${workId}/${currentPage}`);
   let pageCount = $derived(work?.pageCount ?? 1);
@@ -206,6 +207,13 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (tagToRemove) {
+      if (e.key === "Escape") {
+        tagToRemove = null;
+        e.stopPropagation();
+      }
+      return;
+    }
     if ((intervalInputFocused || tagInputFocused) && e.key !== "Escape") return;
 
     switch (e.key) {
@@ -371,12 +379,9 @@
     onfocusout={() => (tagInputFocused = false)}
   >
     {#each workTags as tag (tag.id)}
-      <span class="tag-badge">
+      <span class="tag-badge" data-category={tag.category}>
         {tag.name}
-        <button
-          class="tag-badge-remove"
-          onclick={() => handleRemoveTag(tag.id)}
-        >
+        <button class="tag-badge-remove" onclick={() => (tagToRemove = tag)}>
           &times;
         </button>
       </span>
@@ -513,4 +518,37 @@
       </span>
     </div>
   </div>
+
+  {#if tagToRemove}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="tag-confirm-overlay"
+      onmousedown={(e) => {
+        if (e.target === e.currentTarget) tagToRemove = null;
+      }}
+    >
+      <div class="tag-confirm-dialog">
+        <p>タグ「{tagToRemove.name}」を削除しますか？</p>
+        <div class="tag-confirm-actions">
+          <button
+            class="tag-confirm-cancel"
+            onclick={() => (tagToRemove = null)}
+          >
+            キャンセル
+          </button>
+          <button
+            class="tag-confirm-delete"
+            onclick={() => {
+              if (tagToRemove) {
+                handleRemoveTag(tagToRemove.id);
+                tagToRemove = null;
+              }
+            }}
+          >
+            削除
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </div>
