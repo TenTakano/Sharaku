@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use rusqlite::params_from_iter;
 use rusqlite::Connection;
 use serde::Serialize;
 
@@ -96,6 +97,14 @@ pub fn insert_work(conn: &Connection, record: &WorkRecord) -> Result<(), AppErro
         ],
     )?;
     Ok(())
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Tag {
+    pub id: i64,
+    pub name: String,
+    pub category: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -226,6 +235,167 @@ pub fn get_work(conn: &Connection, work_id: i64) -> Result<WorkDetail, AppError>
         rusqlite::Error::QueryReturnedNoRows => AppError::NotFound,
         other => AppError::Database(other),
     })
+}
+
+pub fn create_tag(
+    conn: &Connection,
+    name: &str,
+    category: Option<&str>,
+) -> Result<Tag, AppError> {
+    conn.execute(
+        "INSERT INTO tags (name, category) VALUES (?1, ?2)",
+        rusqlite::params![name, category],
+    )?;
+    Ok(Tag {
+        id: conn.last_insert_rowid(),
+        name: name.to_string(),
+        category: category.map(|s| s.to_string()),
+    })
+}
+
+pub fn update_tag(
+    conn: &Connection,
+    id: i64,
+    name: &str,
+    category: Option<&str>,
+) -> Result<(), AppError> {
+    let rows = conn.execute(
+        "UPDATE tags SET name = ?1, category = ?2 WHERE id = ?3",
+        rusqlite::params![name, category, id],
+    )?;
+    if rows == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(())
+}
+
+pub fn delete_tag(conn: &Connection, id: i64) -> Result<(), AppError> {
+    let rows = conn.execute("DELETE FROM tags WHERE id = ?1", [id])?;
+    if rows == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(())
+}
+
+pub fn search_tags(
+    conn: &Connection,
+    query: &str,
+    category: Option<&str>,
+) -> Result<Vec<Tag>, AppError> {
+    let pattern = format!("%{query}%");
+    let mut stmt = conn.prepare(
+        "SELECT id, name, category FROM tags WHERE name LIKE ?1 AND (?2 IS NULL OR category = ?2) ORDER BY name LIMIT 50",
+    )?;
+    let rows = stmt.query_map(rusqlite::params![pattern, category], |row| {
+        Ok(Tag {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            category: row.get(2)?,
+        })
+    })?;
+    let mut tags = Vec::new();
+    for row in rows {
+        tags.push(row?);
+    }
+    Ok(tags)
+}
+
+pub fn add_tag_to_work(conn: &Connection, work_id: i64, tag_id: i64) -> Result<(), AppError> {
+    conn.execute(
+        "INSERT OR IGNORE INTO works_tags (work_id, tag_id) VALUES (?1, ?2)",
+        rusqlite::params![work_id, tag_id],
+    )?;
+    Ok(())
+}
+
+pub fn remove_tag_from_work(
+    conn: &Connection,
+    work_id: i64,
+    tag_id: i64,
+) -> Result<(), AppError> {
+    conn.execute(
+        "DELETE FROM works_tags WHERE work_id = ?1 AND tag_id = ?2",
+        rusqlite::params![work_id, tag_id],
+    )?;
+    Ok(())
+}
+
+pub fn get_tags_for_work(conn: &Connection, work_id: i64) -> Result<Vec<Tag>, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT t.id, t.name, t.category FROM tags t INNER JOIN works_tags wt ON t.id = wt.tag_id WHERE wt.work_id = ?1 ORDER BY t.name",
+    )?;
+    let rows = stmt.query_map([work_id], |row| {
+        Ok(Tag {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            category: row.get(2)?,
+        })
+    })?;
+    let mut tags = Vec::new();
+    for row in rows {
+        tags.push(row?);
+    }
+    Ok(tags)
+}
+
+pub fn search_works_by_tags(
+    conn: &Connection,
+    tag_ids: &[i64],
+    mode: &str,
+) -> Result<Vec<WorkSummary>, AppError> {
+    if tag_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut unique_ids: Vec<i64> = tag_ids.to_vec();
+    unique_ids.sort_unstable();
+    unique_ids.dedup();
+
+    let placeholders: Vec<String> = (1..=unique_ids.len()).map(|i| format!("?{i}")).collect();
+    let in_clause = placeholders.join(", ");
+
+    let sql = if mode == "and" {
+        format!(
+            "SELECT w.id, w.title, w.type, w.page_count, w.created_at \
+             FROM works w \
+             INNER JOIN works_tags wt ON w.id = wt.work_id \
+             WHERE wt.tag_id IN ({in_clause}) \
+             GROUP BY w.id \
+             HAVING COUNT(DISTINCT wt.tag_id) = ?{} \
+             ORDER BY w.created_at DESC",
+            unique_ids.len() + 1
+        )
+    } else {
+        format!(
+            "SELECT DISTINCT w.id, w.title, w.type, w.page_count, w.created_at \
+             FROM works w \
+             INNER JOIN works_tags wt ON w.id = wt.work_id \
+             WHERE wt.tag_id IN ({in_clause}) \
+             ORDER BY w.created_at DESC"
+        )
+    };
+
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> =
+        unique_ids.iter().map(|id| Box::new(*id) as _).collect();
+    if mode == "and" {
+        params.push(Box::new(unique_ids.len() as i64));
+    }
+
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(params_from_iter(params.iter()), |row| {
+        Ok(WorkSummary {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            work_type: row.get(2)?,
+            page_count: row.get(3)?,
+            created_at: row.get(4)?,
+        })
+    })?;
+    let mut works = Vec::new();
+    for row in rows {
+        works.push(row?);
+    }
+    Ok(works)
 }
 
 #[cfg(test)]
