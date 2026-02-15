@@ -26,6 +26,14 @@ export interface WorkDetail {
   origin: string | null;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  category: string | null;
+}
+
+export type TagSearchMode = "and" | "or";
+
 export type SortField = "title" | "created_at";
 export type SortOrder = "asc" | "desc";
 

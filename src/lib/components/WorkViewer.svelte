@@ -1,7 +1,8 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import type { WorkDetail, FitMode, SlideshowMode } from "../types";
+  import type { WorkDetail, FitMode, SlideshowMode, Tag } from "../types";
+  import TagInput from "./TagInput.svelte";
 
   interface Props {
     workId: number;
@@ -32,6 +33,8 @@
   let controlsVisible = $state(true);
   let controlsTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
   let intervalInputFocused = $state(false);
+  let tagInputFocused = $state(false);
+  let workTags = $state<Tag[]>([]);
 
   let imageUrl = $derived(`sharaku://localhost/view/${workId}/${currentPage}`);
   let pageCount = $derived(work?.pageCount ?? 1);
@@ -81,8 +84,31 @@
   async function loadWork() {
     try {
       work = await invoke("get_work", { workId });
+      workTags = await invoke("get_tags_for_work", { workId });
     } catch (e) {
       error = String(e);
+    }
+  }
+
+  async function handleAddTag(tag: Tag) {
+    try {
+      await invoke("add_tag_to_work", { workId, tagId: tag.id });
+      workTags = [...workTags, tag];
+    } catch (e) {
+      console.error("Failed to add tag:", e);
+    }
+  }
+
+  async function handleCreateTag(name: string): Promise<Tag> {
+    return await invoke("create_tag", { name, category: null });
+  }
+
+  async function handleRemoveTag(tagId: number) {
+    try {
+      await invoke("remove_tag_from_work", { workId, tagId });
+      workTags = workTags.filter((t) => t.id !== tagId);
+    } catch (e) {
+      console.error("Failed to remove tag:", e);
     }
   }
 
@@ -180,7 +206,7 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (intervalInputFocused && e.key !== "Escape") return;
+    if ((intervalInputFocused || tagInputFocused) && e.key !== "Escape") return;
 
     switch (e.key) {
       case "Escape":
@@ -253,6 +279,7 @@
     work = null;
     error = null;
     currentPage = 0;
+    workTags = [];
     loadWork();
   });
 
@@ -335,6 +362,31 @@
       </button>
       <span class="viewer-zoom-label">{Math.round(zoom * 100)}%</span>
     </div>
+  </div>
+
+  <div
+    class="viewer-tag-bar"
+    class:viewer-controls-hidden={isFullscreen && !controlsVisible}
+    onfocusin={() => (tagInputFocused = true)}
+    onfocusout={() => (tagInputFocused = false)}
+  >
+    {#each workTags as tag (tag.id)}
+      <span class="tag-badge">
+        {tag.name}
+        <button
+          class="tag-badge-remove"
+          onclick={() => handleRemoveTag(tag.id)}
+        >
+          &times;
+        </button>
+      </span>
+    {/each}
+    <TagInput
+      variant="dark"
+      onSelectTag={handleAddTag}
+      onCreateTag={handleCreateTag}
+      excludeTagIds={workTags.map((t) => t.id)}
+    />
   </div>
 
   <div class="viewer-content" bind:this={containerEl} onwheel={handleWheel}>

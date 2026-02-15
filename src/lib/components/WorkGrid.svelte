@@ -3,15 +3,34 @@
   import { VList } from "virtua/svelte";
   import WorkCardComponent from "./WorkCard.svelte";
   import { WorkCard } from "./WorkCard.svelte";
-  import type { WorkSummary, SortField, SortOrder } from "../types";
+  import type {
+    WorkSummary,
+    SortField,
+    SortOrder,
+    Tag,
+    TagSearchMode,
+  } from "../types";
+  import TagInput from "./TagInput.svelte";
 
   interface Props {
     reloadTrigger: number;
+    filterTags: Tag[];
+    tagSearchMode: TagSearchMode;
     onSelectWork: (workId: number) => void;
     onWorksLoaded?: (workIds: number[]) => void;
+    onFilterTagsChange: (tags: Tag[]) => void;
+    onTagSearchModeChange: (mode: TagSearchMode) => void;
   }
 
-  let { reloadTrigger, onSelectWork, onWorksLoaded }: Props = $props();
+  let {
+    reloadTrigger,
+    filterTags,
+    tagSearchMode,
+    onSelectWork,
+    onWorksLoaded,
+    onFilterTagsChange,
+    onTagSearchModeChange,
+  }: Props = $props();
 
   let works = $state<WorkSummary[]>([]);
   let sortField = $state<SortField>("created_at");
@@ -33,19 +52,57 @@
     return result;
   });
 
+  function sortWorksClientSide(
+    list: WorkSummary[],
+    field: SortField,
+    order: SortOrder,
+  ): WorkSummary[] {
+    return [...list].sort((a, b) => {
+      let cmp: number;
+      if (field === "title") {
+        cmp = a.title.localeCompare(b.title);
+      } else {
+        cmp = a.createdAt.localeCompare(b.createdAt);
+      }
+      return order === "asc" ? cmp : -cmp;
+    });
+  }
+
   async function loadWorks() {
     WorkCard.clearCache();
-    works = await invoke("list_works", {
-      sortBy: sortField,
-      sortOrder: sortOrder,
-    });
+    if (filterTags.length > 0) {
+      const filtered: WorkSummary[] = await invoke("search_works_by_tags", {
+        tagIds: filterTags.map((t) => t.id),
+        mode: tagSearchMode,
+      });
+      works = sortWorksClientSide(filtered, sortField, sortOrder);
+    } else {
+      works = await invoke("list_works", {
+        sortBy: sortField,
+        sortOrder: sortOrder,
+      });
+    }
     onWorksLoaded?.(works.map((w) => w.id));
+  }
+
+  function addFilterTag(tag: Tag) {
+    onFilterTagsChange([...filterTags, tag]);
+  }
+
+  function removeFilterTag(tagId: number) {
+    onFilterTagsChange(filterTags.filter((t) => t.id !== tagId));
+  }
+
+  function toggleSearchMode() {
+    onTagSearchModeChange(tagSearchMode === "and" ? "or" : "and");
   }
 
   $effect(() => {
     void reloadTrigger;
     void sortField;
     void sortOrder;
+    void filterTags;
+    void tagSearchMode;
     loadWorks();
   });
 
@@ -85,6 +142,30 @@
       <option value="title_asc">Title (A-Z)</option>
       <option value="title_desc">Title (Z-A)</option>
     </select>
+  </div>
+  <div class="filter-section">
+    {#each filterTags as tag (tag.id)}
+      <span class="tag-badge">
+        {tag.name}
+        <button
+          class="tag-badge-remove"
+          onclick={() => removeFilterTag(tag.id)}
+        >
+          &times;
+        </button>
+      </span>
+    {/each}
+    <TagInput
+      variant="light"
+      placeholder="タグで絞り込み..."
+      onSelectTag={addFilterTag}
+      excludeTagIds={filterTags.map((t) => t.id)}
+    />
+    {#if filterTags.length >= 2}
+      <button class="filter-mode-select" onclick={toggleSearchMode}>
+        {tagSearchMode === "and" ? "AND" : "OR"}
+      </button>
+    {/if}
   </div>
   <span class="work-count">{works.length} works</span>
 </div>

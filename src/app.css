@@ -1021,6 +1021,170 @@ button:disabled {
   border-radius: 4px;
 }
 
+/* Tag badge */
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  background: rgba(57, 108, 216, 0.15);
+  color: #396cd8;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.tag-badge-remove {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+
+.tag-badge-remove:hover {
+  opacity: 1;
+}
+
+/* TagInput */
+.tag-input-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.tag-input-field {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.75rem;
+  font-family: inherit;
+  width: 140px;
+  box-sizing: border-box;
+}
+
+.tag-input-field:focus {
+  outline: none;
+  border-color: #396cd8;
+}
+
+.tag-input-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 300;
+}
+
+.tag-input-option {
+  all: unset;
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.tag-input-option:hover,
+.tag-input-option-highlight {
+  background: rgba(57, 108, 216, 0.1);
+}
+
+.tag-input-create {
+  color: #396cd8;
+  font-style: italic;
+}
+
+/* TagInput dark variant */
+.tag-input-dark .tag-input-field {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.tag-input-dark .tag-input-field::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tag-input-dark .tag-input-field:focus {
+  border-color: #396cd8;
+}
+
+.tag-input-dark .tag-input-dropdown {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+.tag-input-dark .tag-input-option {
+  color: #ddd;
+}
+
+.tag-input-dark .tag-input-option:hover,
+.tag-input-dark .tag-input-option-highlight {
+  background: rgba(57, 108, 216, 0.25);
+}
+
+.tag-input-dark .tag-input-create {
+  color: #5c93e6;
+}
+
+/* TagInput light variant */
+.tag-input-light .tag-input-field {
+  background: #fff;
+}
+
+/* Viewer tag bar */
+.viewer-tag-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  transition: opacity 0.3s;
+}
+
+.viewer-tag-bar .tag-badge {
+  background: rgba(57, 108, 216, 0.3);
+  color: #8ab4f8;
+}
+
+/* Filter section in toolbar */
+.filter-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-mode-select {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #396cd8;
+  background: rgba(57, 108, 216, 0.1);
+  color: #396cd8;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.filter-mode-select:hover {
+  background: rgba(57, 108, 216, 0.2);
+  border-color: #396cd8;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -1218,5 +1382,45 @@ button:disabled {
   .bulk-review-content progress::-webkit-progress-bar,
   .import-content progress::-webkit-progress-bar {
     background-color: #444;
+  }
+
+  .tag-badge {
+    background: rgba(57, 108, 216, 0.25);
+    color: #5c93e6;
+  }
+
+  .tag-input-light .tag-input-field {
+    background: #3a3a3a;
+    color: #f6f6f6;
+    border-color: #555;
+  }
+
+  .tag-input-light .tag-input-dropdown {
+    background: #2a2a2a;
+    border-color: #555;
+  }
+
+  .tag-input-light .tag-input-option {
+    color: #ddd;
+  }
+
+  .tag-input-light .tag-input-option:hover,
+  .tag-input-light .tag-input-option-highlight {
+    background: rgba(57, 108, 216, 0.25);
+  }
+
+  .tag-input-light .tag-input-create {
+    color: #5c93e6;
+  }
+
+  .filter-mode-select {
+    background: rgba(57, 108, 216, 0.2);
+    color: #5c93e6;
+    border-color: #5c93e6;
+  }
+
+  .filter-mode-select:hover {
+    background: rgba(57, 108, 216, 0.3);
+    border-color: #5c93e6;
   }
 }
