@@ -4,8 +4,11 @@
   import SettingsView from "./lib/components/SettingsView.svelte";
   import WorkGrid from "./lib/components/WorkGrid.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
+  import type { Tag, TagSearchMode } from "./lib/types";
 
   let reloadTrigger = $state(0);
+  let filterTags = $state<Tag[]>([]);
+  let tagSearchMode = $state<TagSearchMode>("and");
   let currentView = $state<
     "library" | "viewer" | "settings" | "import" | "bulk-import"
   >("library");
@@ -73,8 +76,12 @@
     </div>
     <WorkGrid
       {reloadTrigger}
+      {filterTags}
+      {tagSearchMode}
       onSelectWork={handleSelectWork}
       onWorksLoaded={handleWorksLoaded}
+      onFilterTagsChange={(tags) => (filterTags = tags)}
+      onTagSearchModeChange={(mode) => (tagSearchMode = mode)}
     />
   </main>
 {/if}
