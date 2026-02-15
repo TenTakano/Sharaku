@@ -237,11 +237,7 @@ pub fn get_work(conn: &Connection, work_id: i64) -> Result<WorkDetail, AppError>
     })
 }
 
-pub fn create_tag(
-    conn: &Connection,
-    name: &str,
-    category: Option<&str>,
-) -> Result<Tag, AppError> {
+pub fn create_tag(conn: &Connection, name: &str, category: Option<&str>) -> Result<Tag, AppError> {
     conn.execute(
         "INSERT INTO tags (name, category) VALUES (?1, ?2)",
         rusqlite::params![name, category],
@@ -308,11 +304,7 @@ pub fn add_tag_to_work(conn: &Connection, work_id: i64, tag_id: i64) -> Result<(
     Ok(())
 }
 
-pub fn remove_tag_from_work(
-    conn: &Connection,
-    work_id: i64,
-    tag_id: i64,
-) -> Result<(), AppError> {
+pub fn remove_tag_from_work(conn: &Connection, work_id: i64, tag_id: i64) -> Result<(), AppError> {
     conn.execute(
         "DELETE FROM works_tags WHERE work_id = ?1 AND tag_id = ?2",
         rusqlite::params![work_id, tag_id],

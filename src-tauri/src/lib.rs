@@ -324,11 +324,7 @@ async fn delete_tag(app: tauri::AppHandle, id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn add_tag_to_work(
-    app: tauri::AppHandle,
-    work_id: i64,
-    tag_id: i64,
-) -> Result<(), String> {
+async fn add_tag_to_work(app: tauri::AppHandle, work_id: i64, tag_id: i64) -> Result<(), String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     tokio::task::spawn_blocking(move || {
         let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
@@ -354,10 +350,7 @@ async fn remove_tag_from_work(
 }
 
 #[tauri::command]
-async fn get_tags_for_work(
-    app: tauri::AppHandle,
-    work_id: i64,
-) -> Result<Vec<Tag>, String> {
+async fn get_tags_for_work(app: tauri::AppHandle, work_id: i64) -> Result<Vec<Tag>, String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     tokio::task::spawn_blocking(move || {
         let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
