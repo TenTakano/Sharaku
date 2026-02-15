@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   release:
@@ -14,11 +14,11 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
+            args: "--target aarch64-apple-darwin"
           - platform: ubuntu-22.04
-            args: ''
+            args: ""
           - platform: windows-latest
-            args: ''
+            args: ""
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -54,8 +54,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v__VERSION__
-          releaseName: 'Sharaku v__VERSION__'
-          releaseBody: 'See the assets to download and install.'
+          releaseName: "Sharaku v__VERSION__"
+          releaseBody: "See the assets to download and install."
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
