@@ -70,14 +70,14 @@
   }
 
   let hasExactMatch = $derived(
-    suggestions.some((t) => t.name.toLowerCase() === query.trim().toLowerCase()),
+    suggestions.some(
+      (t) => t.name.toLowerCase() === query.trim().toLowerCase(),
+    ),
   );
   let showCreate = $derived(
     open && query.trim() && !hasExactMatch && !!onCreateTag,
   );
-  let totalOptions = $derived(
-    suggestions.length + (showCreate ? 1 : 0),
-  );
+  let totalOptions = $derived(suggestions.length + (showCreate ? 1 : 0));
 
   function handleKeydown(e: KeyboardEvent) {
     if (!open && e.key !== "Escape") return;
