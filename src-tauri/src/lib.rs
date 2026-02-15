@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
-use db::{WorkDetail, WorkSummary};
+use db::{Tag, WorkDetail, WorkSummary};
 use importer::{
     BulkImportProgress, BulkImportSummary, DiscoverProgress, DiscoveredFolder, ImportResult,
     ParsedMetadata,
@@ -266,6 +266,115 @@ async fn relocate_works(
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn search_tags(
+    app: tauri::AppHandle,
+    query: String,
+    category: Option<String>,
+) -> Result<Vec<Tag>, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::search_tags(&conn, &query, category.as_deref()).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn create_tag(
+    app: tauri::AppHandle,
+    name: String,
+    category: Option<String>,
+) -> Result<Tag, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::create_tag(&conn, &name, category.as_deref()).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn update_tag(
+    app: tauri::AppHandle,
+    id: i64,
+    name: String,
+    category: Option<String>,
+) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::update_tag(&conn, id, &name, category.as_deref()).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn delete_tag(app: tauri::AppHandle, id: i64) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::delete_tag(&conn, id).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn add_tag_to_work(app: tauri::AppHandle, work_id: i64, tag_id: i64) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::add_tag_to_work(&conn, work_id, tag_id).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn remove_tag_from_work(
+    app: tauri::AppHandle,
+    work_id: i64,
+    tag_id: i64,
+) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::remove_tag_from_work(&conn, work_id, tag_id).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn get_tags_for_work(app: tauri::AppHandle, work_id: i64) -> Result<Vec<Tag>, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::get_tags_for_work(&conn, work_id).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn search_works_by_tags(
+    app: tauri::AppHandle,
+    tag_ids: Vec<i64>,
+    mode: String,
+) -> Result<Vec<WorkSummary>, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = db::open_db(&app_data_dir).map_err(|e| e.to_string())?;
+        db::search_works_by_tags(&conn, &tag_ids, &mode).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -333,6 +442,14 @@ pub fn run() {
             bulk_import,
             preview_relocation,
             relocate_works,
+            search_tags,
+            create_tag,
+            update_tag,
+            delete_tag,
+            add_tag_to_work,
+            remove_tag_from_work,
+            get_tags_for_work,
+            search_works_by_tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
