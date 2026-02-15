@@ -145,7 +145,7 @@
   </div>
   <div class="filter-section">
     {#each filterTags as tag (tag.id)}
-      <span class="tag-badge">
+      <span class="tag-badge" data-category={tag.category}>
         {tag.name}
         <button
           class="tag-badge-remove"
