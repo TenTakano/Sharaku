@@ -80,7 +80,11 @@ async fn create_library(
         let store = library::LibraryStore::new(&app_data_dir);
         let lib = store.add(&name, &path).map_err(|e| e.to_string())?;
         let library_root = PathBuf::from(&lib.path);
-        db::open_db(&library_root).map_err(|e| e.to_string())?;
+        if let Err(e) = db::open_db(&library_root) {
+            let _ = store.remove(&lib.id);
+            return Err(e.to_string());
+        }
+        store.set_active(&lib.id).map_err(|e| e.to_string())?;
         Ok::<Library, String>(lib)
     })
     .await
