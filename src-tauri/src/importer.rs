@@ -256,7 +256,7 @@ pub fn discover_image_folders(
             .to_string();
 
         let path_str = dir_path.to_string_lossy().to_string();
-        let already_registered = db::path_exists(&conn, &path_str)?;
+        let already_registered = db::path_exists(conn, &path_str)?;
         let parsed_metadata = parse_folder_name(&folder_name);
 
         folders.push(DiscoveredFolder {
