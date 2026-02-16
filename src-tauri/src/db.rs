@@ -10,6 +10,7 @@ pub fn open_db(library_root: &Path) -> Result<Connection, AppError> {
     std::fs::create_dir_all(library_root)?;
     let db_path = library_root.join("sharaku.db");
     let conn = Connection::open(db_path)?;
+    conn.busy_timeout(std::time::Duration::from_secs(5))?;
     init_db(&conn)?;
     Ok(conn)
 }

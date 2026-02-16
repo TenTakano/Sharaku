@@ -1,5 +1,6 @@
 use super::*;
 use rusqlite::Connection;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 fn test_conn() -> Connection {
     let conn = Connection::open_in_memory().unwrap();
@@ -417,4 +418,52 @@ fn search_works_by_tags_and_mode_deduplicates_ids() {
 
     let result = search_works_by_tags(&conn, &[tag.id, tag.id], "and").unwrap();
     assert_eq!(result.len(), 1);
+}
+
+// --- database is locked reproduction ---
+
+fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!("sharaku_test_{}_{}", prefix, ts))
+}
+
+/// Reproduce "database is locked" error:
+/// An external process (e.g. GNOME tracker-miner-fs) briefly holds an exclusive
+/// lock on the newly created database file while open_db tries to run migrations.
+#[test]
+fn open_db_succeeds_despite_brief_external_lock() {
+    let dir = unique_temp_dir("locked");
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let db_path = dir.join("sharaku.db");
+
+    // Simulate an external process holding an exclusive lock on the db file
+    let blocker = Connection::open(&db_path).unwrap();
+    blocker.execute_batch("BEGIN EXCLUSIVE").unwrap();
+
+    let dir_clone = dir.clone();
+    let handle = std::thread::spawn(move || open_db(&dir_clone));
+
+    // Release the lock after 200ms (well within the busy_timeout window)
+    std::thread::sleep(Duration::from_millis(200));
+    blocker.execute_batch("ROLLBACK").unwrap();
+    drop(blocker);
+
+    let result = handle.join().unwrap();
+    assert!(
+        result.is_ok(),
+        "open_db should succeed after lock is released, but got: {:?}",
+        result.err()
+    );
+
+    // Verify the database is usable
+    let conn = result.unwrap();
+    let works = list_works(&conn, "title", "asc").unwrap();
+    assert_eq!(works.len(), 0);
+
+    drop(conn);
+    let _ = std::fs::remove_dir_all(&dir);
 }

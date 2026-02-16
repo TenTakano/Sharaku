@@ -10,8 +10,9 @@ mod thumbnail;
 mod viewer;
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
+use rusqlite::Connection;
 use tauri::Manager;
 
 use db::{Tag, WorkDetail, WorkSummary};
@@ -24,24 +25,14 @@ use relocator::{RelocationPreview, RelocationProgress};
 use serde::Serialize;
 use template::WorkMetadata;
 
-pub struct AppState {
-    app_data_dir: PathBuf,
-    active_library_path: Mutex<Option<PathBuf>>,
+struct ActiveLibrary {
+    path: PathBuf,
+    conn: Connection,
 }
 
-impl AppState {
-    fn active_library_root(&self) -> Option<PathBuf> {
-        self.active_library_path.lock().unwrap().clone()
-    }
-
-    fn set_active_library(&self, path: Option<PathBuf>) {
-        *self.active_library_path.lock().unwrap() = path;
-    }
-
-    fn require_library_root(&self) -> Result<PathBuf, String> {
-        self.active_library_root()
-            .ok_or_else(|| "ライブラリが選択されていません".to_string())
-    }
+pub struct AppState {
+    app_data_dir: PathBuf,
+    active_library: Arc<Mutex<Option<ActiveLibrary>>>,
 }
 
 // --- Library CRUD commands ---
@@ -76,57 +67,76 @@ async fn create_library(
     path: String,
 ) -> Result<Library, String> {
     let app_data_dir = state.app_data_dir.clone();
-    let library = tokio::task::spawn_blocking(move || {
+    let db = state.active_library.clone();
+    tokio::task::spawn_blocking(move || {
         let store = library::LibraryStore::new(&app_data_dir);
         let lib = store.add(&name, &path).map_err(|e| e.to_string())?;
         let library_root = PathBuf::from(&lib.path);
-        if let Err(e) = db::open_db(&library_root) {
-            let _ = store.remove(&lib.id);
-            return Err(e.to_string());
+        match db::open_db(&library_root) {
+            Ok(conn) => {
+                store.set_active(&lib.id).map_err(|e| e.to_string())?;
+                *db.lock().unwrap() = Some(ActiveLibrary {
+                    path: library_root,
+                    conn,
+                });
+                Ok(lib)
+            }
+            Err(e) => {
+                let _ = store.remove(&lib.id);
+                Err(e.to_string())
+            }
         }
-        store.set_active(&lib.id).map_err(|e| e.to_string())?;
-        Ok::<Library, String>(lib)
     })
     .await
-    .map_err(|e| e.to_string())??;
-
-    state.set_active_library(Some(PathBuf::from(&library.path)));
-    Ok(library)
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 async fn switch_library(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let app_data_dir = state.app_data_dir.clone();
-    let library_path = tokio::task::spawn_blocking(move || {
+    let db = state.active_library.clone();
+    tokio::task::spawn_blocking(move || {
         let store = library::LibraryStore::new(&app_data_dir);
-        store.set_active(&id).map_err(|e| e.to_string())?;
         let lib = store
             .find_by_id(&id)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "ライブラリが見つかりません".to_string())?;
-        Ok::<String, String>(lib.path)
+        let library_root = PathBuf::from(&lib.path);
+        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
+        store.set_active(&id).map_err(|e| e.to_string())?;
+        *db.lock().unwrap() = Some(ActiveLibrary {
+            path: library_root,
+            conn,
+        });
+        Ok(())
     })
     .await
-    .map_err(|e| e.to_string())??;
-
-    state.set_active_library(Some(PathBuf::from(library_path)));
-    Ok(())
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 async fn remove_library(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let app_data_dir = state.app_data_dir.clone();
-    let new_active_path = tokio::task::spawn_blocking(move || {
+    let db = state.active_library.clone();
+    tokio::task::spawn_blocking(move || {
         let store = library::LibraryStore::new(&app_data_dir);
         store.remove(&id).map_err(|e| e.to_string())?;
         let active = store.active_library().map_err(|e| e.to_string())?;
-        Ok::<Option<String>, String>(active.map(|lib| lib.path))
+        let new_active = match active {
+            Some(lib) => {
+                let library_root = PathBuf::from(&lib.path);
+                db::open_db(&library_root).ok().map(|conn| ActiveLibrary {
+                    path: library_root,
+                    conn,
+                })
+            }
+            None => None,
+        };
+        *db.lock().unwrap() = new_active;
+        Ok(())
     })
     .await
-    .map_err(|e| e.to_string())??;
-
-    state.set_active_library(new_active_path.map(PathBuf::from));
-    Ok(())
+    .map_err(|e| e.to_string())?
 }
 
 // --- Existing commands (migrated to AppState) ---
@@ -137,10 +147,11 @@ async fn list_works(
     sort_by: String,
     sort_order: String,
 ) -> Result<Vec<WorkSummary>, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::list_works(&conn, &sort_by, &sort_order).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::list_works(&lib.conn, &sort_by, &sort_order).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -148,10 +159,11 @@ async fn list_works(
 
 #[tauri::command]
 async fn get_thumbnail(state: tauri::State<'_, AppState>, work_id: i64) -> Result<Vec<u8>, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::get_thumbnail(&conn, work_id).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::get_thumbnail(&lib.conn, work_id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -159,10 +171,11 @@ async fn get_thumbnail(state: tauri::State<'_, AppState>, work_id: i64) -> Resul
 
 #[tauri::command]
 async fn get_work(state: tauri::State<'_, AppState>, work_id: i64) -> Result<WorkDetail, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::get_work(&conn, work_id).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::get_work(&lib.conn, work_id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -178,14 +191,16 @@ struct AppSettings {
 
 #[tauri::command]
 async fn get_settings(state: tauri::State<'_, AppState>) -> Result<AppSettings, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
         let directory_template =
-            settings::get_directory_template(&conn).map_err(|e| e.to_string())?;
-        let type_label_image = settings::get_type_label_image(&conn).map_err(|e| e.to_string())?;
+            settings::get_directory_template(&lib.conn).map_err(|e| e.to_string())?;
+        let type_label_image =
+            settings::get_type_label_image(&lib.conn).map_err(|e| e.to_string())?;
         let type_label_folder =
-            settings::get_type_label_folder(&conn).map_err(|e| e.to_string())?;
+            settings::get_type_label_folder(&lib.conn).map_err(|e| e.to_string())?;
         Ok(AppSettings {
             directory_template,
             type_label_image,
@@ -205,10 +220,11 @@ async fn set_directory_template(
     if !trimmed.is_empty() {
         template::validate_template(&trimmed).map_err(|e| e.to_string())?;
     }
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        settings::set_directory_template(&conn, &trimmed).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        settings::set_directory_template(&lib.conn, &trimmed).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -230,11 +246,12 @@ async fn set_type_labels(
     if image_label.is_empty() || folder_label.is_empty() {
         return Err("ラベルは空にできません".to_string());
     }
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        settings::set_type_label_image(&conn, &image_label).map_err(|e| e.to_string())?;
-        settings::set_type_label_folder(&conn, &folder_label).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        settings::set_type_label_image(&lib.conn, &image_label).map_err(|e| e.to_string())?;
+        settings::set_type_label_folder(&lib.conn, &folder_label).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -246,10 +263,11 @@ async fn preview_template(
     template: String,
 ) -> Result<String, String> {
     template::validate_template(&template).map_err(|e| e.to_string())?;
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        let folder_label = settings::get_type_label_folder(&conn).map_err(|e| e.to_string())?;
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        let folder_label = settings::get_type_label_folder(&lib.conn).map_err(|e| e.to_string())?;
         let mut metadata = template::sample_metadata();
         metadata.work_type = Some(folder_label);
         Ok(template::render_template(&template, &metadata))
@@ -268,14 +286,15 @@ async fn preview_import_path(
     state: tauri::State<'_, AppState>,
     metadata: WorkMetadata,
 ) -> Result<String, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        let template_str = settings::get_directory_template(&conn)
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        let template_str = settings::get_directory_template(&lib.conn)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "ディレクトリテンプレートが設定されていません".to_string())?;
         Ok(importer::preview_import_path(
-            &library_root,
+            &lib.path,
             &template_str,
             &metadata,
         ))
@@ -289,9 +308,11 @@ async fn import_work(
     state: tauri::State<'_, AppState>,
     request: importer::ImportRequest,
 ) -> Result<ImportResult, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        importer::import_work(&request, &library_root).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        importer::import_work(&request, &lib.conn, &lib.path).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -303,11 +324,12 @@ async fn discover_folders(
     root_path: String,
     on_progress: tauri::ipc::Channel<DiscoverProgress>,
 ) -> Result<Vec<DiscoveredFolder>, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     let root = PathBuf::from(root_path);
     tokio::task::spawn_blocking(move || {
-        importer::discover_image_folders(&root, &library_root, &on_progress)
-            .map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        importer::discover_image_folders(&root, &lib.conn, &on_progress).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -319,9 +341,12 @@ async fn bulk_import(
     requests: Vec<importer::ImportRequest>,
     on_progress: tauri::ipc::Channel<BulkImportProgress>,
 ) -> Result<BulkImportSummary, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        importer::bulk_import(&requests, &library_root, &on_progress).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        importer::bulk_import(&requests, &lib.conn, &lib.path, &on_progress)
+            .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -334,10 +359,11 @@ async fn preview_relocation(
 ) -> Result<Vec<RelocationPreview>, String> {
     let trimmed = new_template.trim().to_string();
     template::validate_template(&trimmed).map_err(|e| e.to_string())?;
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        relocator::preview_relocation(&conn, &library_root, &trimmed).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        relocator::preview_relocation(&lib.conn, &lib.path, &trimmed).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -351,9 +377,11 @@ async fn relocate_works(
 ) -> Result<(), String> {
     let trimmed = new_template.trim().to_string();
     template::validate_template(&trimmed).map_err(|e| e.to_string())?;
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        relocator::execute_relocation(&library_root, &trimmed, &on_progress)
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        relocator::execute_relocation(&lib.conn, &lib.path, &trimmed, &on_progress)
             .map_err(|e| e.to_string())
     })
     .await
@@ -366,10 +394,11 @@ async fn search_tags(
     query: String,
     category: Option<String>,
 ) -> Result<Vec<Tag>, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::search_tags(&conn, &query, category.as_deref()).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::search_tags(&lib.conn, &query, category.as_deref()).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -381,10 +410,11 @@ async fn create_tag(
     name: String,
     category: Option<String>,
 ) -> Result<Tag, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::create_tag(&conn, &name, category.as_deref()).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::create_tag(&lib.conn, &name, category.as_deref()).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -397,10 +427,11 @@ async fn update_tag(
     name: String,
     category: Option<String>,
 ) -> Result<(), String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::update_tag(&conn, id, &name, category.as_deref()).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::update_tag(&lib.conn, id, &name, category.as_deref()).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -408,10 +439,11 @@ async fn update_tag(
 
 #[tauri::command]
 async fn delete_tag(state: tauri::State<'_, AppState>, id: i64) -> Result<(), String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::delete_tag(&conn, id).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::delete_tag(&lib.conn, id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -423,10 +455,11 @@ async fn add_tag_to_work(
     work_id: i64,
     tag_id: i64,
 ) -> Result<(), String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::add_tag_to_work(&conn, work_id, tag_id).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::add_tag_to_work(&lib.conn, work_id, tag_id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -438,10 +471,11 @@ async fn remove_tag_from_work(
     work_id: i64,
     tag_id: i64,
 ) -> Result<(), String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::remove_tag_from_work(&conn, work_id, tag_id).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::remove_tag_from_work(&lib.conn, work_id, tag_id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -452,10 +486,11 @@ async fn get_tags_for_work(
     state: tauri::State<'_, AppState>,
     work_id: i64,
 ) -> Result<Vec<Tag>, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::get_tags_for_work(&conn, work_id).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::get_tags_for_work(&lib.conn, work_id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -467,10 +502,11 @@ async fn search_works_by_tags(
     tag_ids: Vec<i64>,
     mode: String,
 ) -> Result<Vec<WorkSummary>, String> {
-    let library_root = state.require_library_root()?;
+    let db = state.active_library.clone();
     tokio::task::spawn_blocking(move || {
-        let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
-        db::search_works_by_tags(&conn, &tag_ids, &mode).map_err(|e| e.to_string())
+        let guard = db.lock().unwrap();
+        let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
+        db::search_works_by_tags(&lib.conn, &tag_ids, &mode).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -486,15 +522,16 @@ pub fn run() {
             let app_data_dir = app.path().app_data_dir()?;
 
             let store = library::LibraryStore::new(&app_data_dir);
-            let active_path = store
-                .active_library()
-                .ok()
-                .flatten()
-                .map(|lib| PathBuf::from(lib.path));
+            let active_library = store.active_library().ok().flatten().and_then(|lib| {
+                let path = PathBuf::from(&lib.path);
+                db::open_db(&path)
+                    .ok()
+                    .map(|conn| ActiveLibrary { path, conn })
+            });
 
             app.manage(AppState {
                 app_data_dir,
-                active_library_path: Mutex::new(active_path),
+                active_library: Arc::new(Mutex::new(active_library)),
             });
 
             Ok(())
@@ -504,10 +541,9 @@ pub fn run() {
             match viewer::parse_view_uri(&uri) {
                 Some((work_id, page_index)) => {
                     let state = ctx.app_handle().state::<AppState>();
-                    match state.active_library_root() {
-                        Some(library_root) => {
-                            viewer::handle_view_request(&library_root, work_id, page_index)
-                        }
+                    let guard = state.active_library.lock().unwrap();
+                    match guard.as_ref() {
+                        Some(lib) => viewer::handle_view_request(&lib.conn, work_id, page_index),
                         None => tauri::http::Response::builder()
                             .status(500)
                             .body(Vec::new())
