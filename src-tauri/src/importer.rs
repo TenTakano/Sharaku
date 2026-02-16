@@ -101,7 +101,11 @@ pub fn preview_import_path(
     path.to_string_lossy().to_string()
 }
 
-pub fn import_work(request: &ImportRequest, library_root: &Path) -> Result<ImportResult, AppError> {
+pub fn import_work(
+    request: &ImportRequest,
+    conn: &rusqlite::Connection,
+    library_root: &Path,
+) -> Result<ImportResult, AppError> {
     let source = Path::new(&request.source_path);
     if !source.is_dir() {
         return Err(AppError::ImportError(
@@ -116,13 +120,11 @@ pub fn import_work(request: &ImportRequest, library_root: &Path) -> Result<Impor
         ));
     }
 
-    let conn = db::open_db(library_root)?;
-
-    let template_str = settings::get_directory_template(&conn)?.ok_or_else(|| {
+    let template_str = settings::get_directory_template(conn)?.ok_or_else(|| {
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
 
-    let type_label = settings::resolve_type_label(&conn, "folder")?;
+    let type_label = settings::resolve_type_label(conn, "folder")?;
     let metadata = WorkMetadata {
         title: request.title.clone(),
         artist: request.artist.clone(),
@@ -159,7 +161,7 @@ pub fn import_work(request: &ImportRequest, library_root: &Path) -> Result<Impor
     let page_count = images.len();
 
     if let Err(e) = db::insert_work(
-        &conn,
+        conn,
         &WorkRecord {
             title: &request.title,
             path: &dest_str,
@@ -225,10 +227,9 @@ pub enum DiscoverProgress {
 
 pub fn discover_image_folders(
     root: &Path,
-    library_root: &Path,
+    conn: &rusqlite::Connection,
     on_progress: &Channel<DiscoverProgress>,
 ) -> Result<Vec<DiscoveredFolder>, AppError> {
-    let conn = db::open_db(library_root)?;
     let mut folders = Vec::new();
     let mut scanned_dirs = 0usize;
 
@@ -318,6 +319,7 @@ pub struct BulkImportSummary {
 
 pub fn bulk_import(
     requests: &[ImportRequest],
+    conn: &rusqlite::Connection,
     library_root: &Path,
     on_progress: &Channel<BulkImportProgress>,
 ) -> Result<BulkImportSummary, AppError> {
@@ -334,7 +336,7 @@ pub fn bulk_import(
             title: request.title.clone(),
         });
 
-        match import_work(request, library_root) {
+        match import_work(request, conn, library_root) {
             Ok(_) => succeeded += 1,
             Err(e) => {
                 let _ = on_progress.send(BulkImportProgress::Error {

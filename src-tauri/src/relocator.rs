@@ -116,14 +116,13 @@ pub fn preview_relocation(
 }
 
 pub fn execute_relocation(
+    conn: &rusqlite::Connection,
     library_root: &Path,
     new_template: &str,
     on_progress: &Channel<RelocationProgress>,
 ) -> Result<(), AppError> {
-    let conn = db::open_db(library_root)?;
-
-    let works = db::list_folder_works(&conn)?;
-    let type_label = settings::get_type_label_folder(&conn)?;
+    let works = db::list_folder_works(conn)?;
+    let type_label = settings::get_type_label_folder(conn)?;
     let plan = compute_relocation_plan(&works, library_root, new_template, &type_label);
 
     let total = plan.len();
@@ -150,7 +149,7 @@ pub fn execute_relocation(
 
         match copy_work_files(old_path, new_path) {
             Ok(()) => {
-                if let Err(e) = db::update_work_path(&conn, item.work_id, &item.new_path) {
+                if let Err(e) = db::update_work_path(conn, item.work_id, &item.new_path) {
                     let _ = on_progress.send(RelocationProgress::Error {
                         message: format!("DB更新失敗 ({}): {}", item.title, e),
                     });
@@ -172,7 +171,7 @@ pub fn execute_relocation(
         }
     }
 
-    settings::set_directory_template(&conn, new_template)?;
+    settings::set_directory_template(conn, new_template)?;
 
     let _ = on_progress.send(RelocationProgress::Completed {
         relocated,

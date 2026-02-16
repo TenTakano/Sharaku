@@ -10,6 +10,7 @@ pub fn open_db(library_root: &Path) -> Result<Connection, AppError> {
     std::fs::create_dir_all(library_root)?;
     let db_path = library_root.join("sharaku.db");
     let conn = Connection::open(db_path)?;
+    conn.busy_timeout(std::time::Duration::from_secs(5))?;
     init_db(&conn)?;
     Ok(conn)
 }
@@ -57,7 +58,9 @@ fn apply_migration_003(conn: &Connection) -> Result<(), AppError> {
     };
 
     if needs_migration {
-        conn.execute_batch(include_str!("../migrations/003_allow_folder_work_type.sql"))?;
+        conn.execute_batch(include_str!(
+            "../migrations/003_allow_folder_work_type.sql"
+        ))?;
     }
     Ok(())
 }

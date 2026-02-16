@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use rusqlite::Connection;
+
 use crate::db;
 use crate::importer;
 
@@ -15,11 +17,11 @@ pub fn parse_view_uri(uri: &str) -> Option<(i64, usize)> {
 }
 
 pub fn handle_view_request(
-    app_data_dir: &Path,
+    conn: &Connection,
     work_id: i64,
     page_index: usize,
 ) -> tauri::http::Response<Vec<u8>> {
-    match load_image(app_data_dir, work_id, page_index) {
+    match load_image(conn, work_id, page_index) {
         Ok((data, content_type)) => tauri::http::Response::builder()
             .status(200)
             .header("Content-Type", content_type)
@@ -33,12 +35,11 @@ pub fn handle_view_request(
 }
 
 fn load_image(
-    app_data_dir: &Path,
+    conn: &Connection,
     work_id: i64,
     page_index: usize,
 ) -> Result<(Vec<u8>, &'static str), u16> {
-    let conn = db::open_db(app_data_dir).map_err(|_| 500u16)?;
-    let work = db::get_work(&conn, work_id).map_err(|_| 404u16)?;
+    let work = db::get_work(conn, work_id).map_err(|_| 404u16)?;
 
     if work.work_type == "folder" {
         let images = importer::list_images_in_folder(Path::new(&work.path)).map_err(|e| {

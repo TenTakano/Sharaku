@@ -103,9 +103,7 @@ fn execute_moves_files_and_updates_db() {
     let conn = db::open_db(&library_root).unwrap();
     crate::settings::set_directory_template(&conn, "{title}").unwrap();
     insert_folder_work(&conn, "MyWork", &old_dir.to_string_lossy(), Some("Artist"));
-    drop(conn);
 
-    let conn = db::open_db(&library_root).unwrap();
     let works = db::list_folder_works(&conn).unwrap();
     let plan = compute_relocation_plan(&works, &library_root, "{artist}/{title}", "Folder");
     assert_eq!(plan.len(), 1);
