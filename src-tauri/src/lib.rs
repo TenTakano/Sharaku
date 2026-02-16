@@ -125,12 +125,10 @@ async fn remove_library(state: tauri::State<'_, AppState>, id: String) -> Result
         let new_active = match active {
             Some(lib) => {
                 let library_root = PathBuf::from(&lib.path);
-                db::open_db(&library_root)
-                    .ok()
-                    .map(|conn| ActiveLibrary {
-                        path: library_root,
-                        conn,
-                    })
+                db::open_db(&library_root).ok().map(|conn| ActiveLibrary {
+                    path: library_root,
+                    conn,
+                })
             }
             None => None,
         };
@@ -269,8 +267,7 @@ async fn preview_template(
     tokio::task::spawn_blocking(move || {
         let guard = db.lock().unwrap();
         let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
-        let folder_label =
-            settings::get_type_label_folder(&lib.conn).map_err(|e| e.to_string())?;
+        let folder_label = settings::get_type_label_folder(&lib.conn).map_err(|e| e.to_string())?;
         let mut metadata = template::sample_metadata();
         metadata.work_type = Some(folder_label);
         Ok(template::render_template(&template, &metadata))
@@ -332,8 +329,7 @@ async fn discover_folders(
     tokio::task::spawn_blocking(move || {
         let guard = db.lock().unwrap();
         let lib = guard.as_ref().ok_or("ライブラリが選択されていません")?;
-        importer::discover_image_folders(&root, &lib.conn, &on_progress)
-            .map_err(|e| e.to_string())
+        importer::discover_image_folders(&root, &lib.conn, &on_progress).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -526,14 +522,12 @@ pub fn run() {
             let app_data_dir = app.path().app_data_dir()?;
 
             let store = library::LibraryStore::new(&app_data_dir);
-            let active_library = store
-                .active_library()
-                .ok()
-                .flatten()
-                .and_then(|lib| {
-                    let path = PathBuf::from(&lib.path);
-                    db::open_db(&path).ok().map(|conn| ActiveLibrary { path, conn })
-                });
+            let active_library = store.active_library().ok().flatten().and_then(|lib| {
+                let path = PathBuf::from(&lib.path);
+                db::open_db(&path)
+                    .ok()
+                    .map(|conn| ActiveLibrary { path, conn })
+            });
 
             app.manage(AppState {
                 app_data_dir,
@@ -549,9 +543,7 @@ pub fn run() {
                     let state = ctx.app_handle().state::<AppState>();
                     let guard = state.active_library.lock().unwrap();
                     match guard.as_ref() {
-                        Some(lib) => {
-                            viewer::handle_view_request(&lib.conn, work_id, page_index)
-                        }
+                        Some(lib) => viewer::handle_view_request(&lib.conn, work_id, page_index),
                         None => tauri::http::Response::builder()
                             .status(500)
                             .body(Vec::new())

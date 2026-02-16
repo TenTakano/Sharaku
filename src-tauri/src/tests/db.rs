@@ -467,4 +467,3 @@ fn open_db_succeeds_despite_brief_external_lock() {
     drop(conn);
     let _ = std::fs::remove_dir_all(&dir);
 }
-
