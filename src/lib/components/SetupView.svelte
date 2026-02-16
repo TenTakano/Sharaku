@@ -65,11 +65,7 @@
 
       <label class="setup-name-label">
         ライブラリ名
-        <input
-          class="setup-name-input"
-          type="text"
-          bind:value={libraryName}
-        />
+        <input class="setup-name-input" type="text" bind:value={libraryName} />
       </label>
 
       <button
