@@ -1,7 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { Channel } from "@tauri-apps/api/core";
-  import { open } from "@tauri-apps/plugin-dialog";
   import type {
     AppSettings,
     TemplateValidation,
@@ -11,11 +10,11 @@
 
   interface Props {
     onBack: () => void;
+    libraryPath: string | null;
   }
 
-  let { onBack }: Props = $props();
+  let { onBack, libraryPath }: Props = $props();
 
-  let libraryRoot = $state("");
   let directoryTemplate = $state("");
   let typeLabelImage = $state("");
   let typeLabelFolder = $state("");
@@ -41,7 +40,6 @@
   async function loadSettings() {
     try {
       const settings = await invoke<AppSettings>("get_settings");
-      libraryRoot = settings.libraryRoot ?? "";
       directoryTemplate = settings.directoryTemplate ?? "";
       savedDirectoryTemplate = directoryTemplate;
       typeLabelImage = settings.typeLabelImage;
@@ -53,27 +51,6 @@
       message = { type: "error", text: `設定の読み込みに失敗しました: ${e}` };
     } finally {
       loading = false;
-    }
-  }
-
-  async function browseLibraryRoot() {
-    const selected = await open({ directory: true });
-    if (selected) {
-      libraryRoot = selected;
-    }
-  }
-
-  async function saveLibraryRoot() {
-    if (!libraryRoot.trim()) return;
-    saving = true;
-    message = null;
-    try {
-      await invoke("set_library_root", { path: libraryRoot.trim() });
-      message = { type: "success", text: "ライブラリルートを保存しました" };
-    } catch (e) {
-      message = { type: "error", text: `保存に失敗しました: ${e}` };
-    } finally {
-      saving = false;
     }
   }
 
@@ -216,30 +193,10 @@
       <section class="settings-section">
         <h2>ライブラリルート</h2>
         <p class="settings-description">
-          作品ファイルを管理するルートディレクトリを指定します。
+          現在のライブラリの保存先ディレクトリです。
         </p>
         <div class="settings-field-row">
-          <input
-            type="text"
-            class="settings-input"
-            bind:value={libraryRoot}
-            placeholder="/path/to/library"
-            disabled={saving}
-          />
-          <button
-            class="settings-browse-btn"
-            onclick={browseLibraryRoot}
-            disabled={saving}
-          >
-            参照...
-          </button>
-          <button
-            class="settings-save-btn"
-            onclick={saveLibraryRoot}
-            disabled={saving || !libraryRoot.trim()}
-          >
-            保存
-          </button>
+          <code class="settings-library-path">{libraryPath ?? "未設定"}</code>
         </div>
       </section>
 

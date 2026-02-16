@@ -32,6 +32,12 @@ export interface Tag {
   category: string | null;
 }
 
+export interface Library {
+  id: string;
+  name: string;
+  path: string;
+}
+
 export type TagSearchMode = "and" | "or";
 
 export type SortField = "title" | "created_at";
@@ -42,7 +48,6 @@ export type FitMode = "screen" | "width" | "height";
 export type SlideshowMode = "page" | "work";
 
 export interface AppSettings {
-  libraryRoot: string | null;
   directoryTemplate: string | null;
   typeLabelImage: string;
   typeLabelFolder: string;

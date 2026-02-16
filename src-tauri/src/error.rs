@@ -25,4 +25,10 @@ pub enum AppError {
 
     #[error("Relocation error: {0}")]
     RelocationError(String),
+
+    #[error("Library error: {0}")]
+    LibraryError(String),
+
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
 }

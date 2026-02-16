@@ -3,7 +3,6 @@ use std::path::Path;
 use rusqlite::Connection;
 
 use crate::db::{self, WorkRecord};
-use crate::settings;
 
 use super::*;
 
@@ -101,16 +100,12 @@ fn execute_moves_files_and_updates_db() {
     std::fs::write(old_dir.join("01.jpg"), b"image_data").unwrap();
     std::fs::write(old_dir.join("02.png"), b"image_data2").unwrap();
 
-    let app_data_dir = temp.join("app_data");
-    std::fs::create_dir_all(&app_data_dir).unwrap();
-
-    let conn = db::open_db(&app_data_dir).unwrap();
-    settings::set_library_root(&conn, &library_root.to_string_lossy()).unwrap();
-    settings::set_directory_template(&conn, "{title}").unwrap();
+    let conn = db::open_db(&library_root).unwrap();
+    crate::settings::set_directory_template(&conn, "{title}").unwrap();
     insert_folder_work(&conn, "MyWork", &old_dir.to_string_lossy(), Some("Artist"));
     drop(conn);
 
-    let conn = db::open_db(&app_data_dir).unwrap();
+    let conn = db::open_db(&library_root).unwrap();
     let works = db::list_folder_works(&conn).unwrap();
     let plan = compute_relocation_plan(&works, &library_root, "{artist}/{title}", "Folder");
     assert_eq!(plan.len(), 1);
