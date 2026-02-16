@@ -3,6 +3,7 @@
   import BulkImportView from "./lib/components/BulkImportView.svelte";
   import ImportView from "./lib/components/ImportView.svelte";
   import LibrarySwitcher from "./lib/components/LibrarySwitcher.svelte";
+  import SetupView from "./lib/components/SetupView.svelte";
   import SettingsView from "./lib/components/SettingsView.svelte";
   import WorkGrid from "./lib/components/WorkGrid.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
@@ -76,6 +77,12 @@
     onBack={handleBackToLibrary}
     onImported={() => reloadTrigger++}
   />
+{:else if libraryLoading}
+  <main class="container">
+    <p class="library-loading">読み込み中...</p>
+  </main>
+{:else if !activeLibrary}
+  <SetupView onComplete={handleLibrarySwitch} />
 {:else}
   <main class="container">
     <div class="app-header">
@@ -84,43 +91,31 @@
       <button
         class="import-header-btn"
         onclick={() => (currentView = "import")}
-        disabled={!activeLibrary}
       >
         + 取り込み
       </button>
       <button
         class="import-header-btn"
         onclick={() => (currentView = "bulk-import")}
-        disabled={!activeLibrary}
       >
         一括取り込み
       </button>
       <button
         class="settings-btn"
         onclick={() => (currentView = "settings")}
-        disabled={!activeLibrary}
         title="設定"
       >
         ⚙
       </button>
     </div>
-    {#if libraryLoading}
-      <p class="library-loading">読み込み中...</p>
-    {:else if !activeLibrary}
-      <div class="no-library-message">
-        <p>ライブラリが選択されていません。</p>
-        <p>上部のドロップダウンからライブラリを追加してください。</p>
-      </div>
-    {:else}
-      <WorkGrid
-        {reloadTrigger}
-        {filterTags}
-        {tagSearchMode}
-        onSelectWork={handleSelectWork}
-        onWorksLoaded={handleWorksLoaded}
-        onFilterTagsChange={(tags) => (filterTags = tags)}
-        onTagSearchModeChange={(mode) => (tagSearchMode = mode)}
-      />
-    {/if}
+    <WorkGrid
+      {reloadTrigger}
+      {filterTags}
+      {tagSearchMode}
+      onSelectWork={handleSelectWork}
+      onWorksLoaded={handleWorksLoaded}
+      onFilterTagsChange={(tags) => (filterTags = tags)}
+      onTagSearchModeChange={(mode) => (tagSearchMode = mode)}
+    />
   </main>
 {/if}
