@@ -95,10 +95,7 @@ async fn create_library(
 }
 
 #[tauri::command]
-async fn switch_library(
-    state: tauri::State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+async fn switch_library(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let app_data_dir = state.app_data_dir.clone();
     let library_path = tokio::task::spawn_blocking(move || {
         let store = library::LibraryStore::new(&app_data_dir);
@@ -117,10 +114,7 @@ async fn switch_library(
 }
 
 #[tauri::command]
-async fn remove_library(
-    state: tauri::State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+async fn remove_library(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
     let app_data_dir = state.app_data_dir.clone();
     let new_active_path = tokio::task::spawn_blocking(move || {
         let store = library::LibraryStore::new(&app_data_dir);
@@ -153,10 +147,7 @@ async fn list_works(
 }
 
 #[tauri::command]
-async fn get_thumbnail(
-    state: tauri::State<'_, AppState>,
-    work_id: i64,
-) -> Result<Vec<u8>, String> {
+async fn get_thumbnail(state: tauri::State<'_, AppState>, work_id: i64) -> Result<Vec<u8>, String> {
     let library_root = state.require_library_root()?;
     tokio::task::spawn_blocking(move || {
         let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
@@ -167,10 +158,7 @@ async fn get_thumbnail(
 }
 
 #[tauri::command]
-async fn get_work(
-    state: tauri::State<'_, AppState>,
-    work_id: i64,
-) -> Result<WorkDetail, String> {
+async fn get_work(state: tauri::State<'_, AppState>, work_id: i64) -> Result<WorkDetail, String> {
     let library_root = state.require_library_root()?;
     tokio::task::spawn_blocking(move || {
         let conn = db::open_db(&library_root).map_err(|e| e.to_string())?;
