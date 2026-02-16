@@ -546,6 +546,103 @@ button:disabled {
   line-height: 1.8;
 }
 
+/* Setup view */
+.setup-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 16px;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.setup-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.setup-subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin: 0 0 16px;
+}
+
+.setup-step-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.setup-step-description {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0 0 8px;
+}
+
+.setup-primary-btn {
+  padding: 10px 32px;
+  font-size: 1rem;
+  background-color: #396cd8;
+  color: #fff;
+  border-color: #396cd8;
+}
+
+.setup-primary-btn:hover:not(:disabled) {
+  background-color: #2e5bb8;
+}
+
+.setup-primary-btn:disabled {
+  opacity: 0.5;
+}
+
+.setup-select-btn {
+  padding: 8px 20px;
+  font-size: 0.875rem;
+}
+
+.setup-path-display {
+  font-size: 0.875rem;
+  color: #555;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 8px 16px;
+  border-radius: 6px;
+  word-break: break-all;
+  max-width: 480px;
+  text-align: center;
+}
+
+.setup-name-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.setup-name-input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  width: 280px;
+  box-sizing: border-box;
+}
+
+.setup-name-input:focus {
+  outline: none;
+  border-color: #396cd8;
+}
+
+.setup-error {
+  font-size: 0.875rem;
+  color: #c62828;
+  margin: 0;
+}
+
 .library-loading {
   color: #888;
   text-align: center;
@@ -1742,6 +1839,30 @@ button:disabled {
 
   .no-library-message {
     color: #999;
+  }
+
+  .setup-subtitle,
+  .setup-step-description {
+    color: #aaa;
+  }
+
+  .setup-path-display {
+    color: #ccc;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .setup-name-label {
+    color: #aaa;
+  }
+
+  .setup-name-input {
+    background: #3a3a3a;
+    color: #f6f6f6;
+    border-color: #555;
+  }
+
+  .setup-error {
+    color: #ef5350;
   }
 
   .settings-library-path {
