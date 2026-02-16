@@ -65,7 +65,10 @@
     onNavigateWork={handleNavigateWork}
   />
 {:else if currentView === "settings"}
-  <SettingsView onBack={handleBackToLibrary} libraryPath={activeLibrary?.path ?? null} />
+  <SettingsView
+    onBack={handleBackToLibrary}
+    libraryPath={activeLibrary?.path ?? null}
+  />
 {:else if currentView === "import"}
   <ImportView onBack={handleBackToLibrary} onImported={() => reloadTrigger++} />
 {:else if currentView === "bulk-import"}
