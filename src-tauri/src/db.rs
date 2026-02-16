@@ -6,9 +6,9 @@ use serde::Serialize;
 
 use crate::error::AppError;
 
-pub fn open_db(app_data_dir: &Path) -> Result<Connection, AppError> {
-    std::fs::create_dir_all(app_data_dir)?;
-    let db_path = app_data_dir.join("sharaku.db");
+pub fn open_db(library_root: &Path) -> Result<Connection, AppError> {
+    std::fs::create_dir_all(library_root)?;
+    let db_path = library_root.join("sharaku.db");
     let conn = Connection::open(db_path)?;
     init_db(&conn)?;
     Ok(conn)

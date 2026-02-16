@@ -19,21 +19,12 @@ pub fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(), AppE
     Ok(())
 }
 
-const KEY_LIBRARY_ROOT: &str = "library_root";
 const KEY_DIRECTORY_TEMPLATE: &str = "directory_template";
 const KEY_TYPE_LABEL_IMAGE: &str = "type_label_image";
 const KEY_TYPE_LABEL_FOLDER: &str = "type_label_folder";
 
 const DEFAULT_TYPE_LABEL_IMAGE: &str = "Image";
 const DEFAULT_TYPE_LABEL_FOLDER: &str = "Folder";
-
-pub fn get_library_root(conn: &Connection) -> Result<Option<String>, AppError> {
-    get_setting(conn, KEY_LIBRARY_ROOT)
-}
-
-pub fn set_library_root(conn: &Connection, path: &str) -> Result<(), AppError> {
-    set_setting(conn, KEY_LIBRARY_ROOT, path)
-}
 
 pub fn get_directory_template(conn: &Connection) -> Result<Option<String>, AppError> {
     get_setting(conn, KEY_DIRECTORY_TEMPLATE)

@@ -116,18 +116,15 @@ pub fn preview_relocation(
 }
 
 pub fn execute_relocation(
-    app_data_dir: &Path,
+    library_root: &Path,
     new_template: &str,
     on_progress: &Channel<RelocationProgress>,
 ) -> Result<(), AppError> {
-    let conn = db::open_db(app_data_dir)?;
-    let library_root = settings::get_library_root(&conn)?
-        .ok_or_else(|| AppError::RelocationError("ライブラリルートが設定されていません".into()))?;
-    let library_root = PathBuf::from(&library_root);
+    let conn = db::open_db(library_root)?;
 
     let works = db::list_folder_works(&conn)?;
     let type_label = settings::get_type_label_folder(&conn)?;
-    let plan = compute_relocation_plan(&works, &library_root, new_template, &type_label);
+    let plan = compute_relocation_plan(&works, library_root, new_template, &type_label);
 
     let total = plan.len();
     let _ = on_progress.send(RelocationProgress::Started { total });
@@ -162,7 +159,7 @@ pub fn execute_relocation(
                     continue;
                 }
                 remove_work_files(old_path);
-                cleanup_empty_ancestors(old_path, &library_root);
+                cleanup_empty_ancestors(old_path, library_root);
                 relocated += 1;
             }
             Err(e) => {

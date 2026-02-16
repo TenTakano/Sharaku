@@ -32,14 +32,6 @@ fn set_setting_overwrites_existing() {
 }
 
 #[test]
-fn library_root_helpers() {
-    let conn = test_conn();
-    assert_eq!(get_library_root(&conn).unwrap(), None);
-    set_library_root(&conn, "/my/library").unwrap();
-    assert_eq!(get_library_root(&conn).unwrap(), Some("/my/library".into()));
-}
-
-#[test]
 fn directory_template_helpers() {
     let conn = test_conn();
     assert_eq!(get_directory_template(&conn).unwrap(), None);

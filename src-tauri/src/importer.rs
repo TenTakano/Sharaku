@@ -101,7 +101,7 @@ pub fn preview_import_path(
     path.to_string_lossy().to_string()
 }
 
-pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<ImportResult, AppError> {
+pub fn import_work(request: &ImportRequest, library_root: &Path) -> Result<ImportResult, AppError> {
     let source = Path::new(&request.source_path);
     if !source.is_dir() {
         return Err(AppError::ImportError(
@@ -116,10 +116,8 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
         ));
     }
 
-    let conn = db::open_db(app_data_dir)?;
+    let conn = db::open_db(library_root)?;
 
-    let library_root = settings::get_library_root(&conn)?
-        .ok_or_else(|| AppError::ImportError("ライブラリルートが設定されていません".to_string()))?;
     let template_str = settings::get_directory_template(&conn)?.ok_or_else(|| {
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
@@ -135,8 +133,7 @@ pub fn import_work(request: &ImportRequest, app_data_dir: &Path) -> Result<Impor
         work_type: Some(type_label),
     };
 
-    let dest =
-        template::resolve_unique_work_path(Path::new(&library_root), &template_str, &metadata);
+    let dest = template::resolve_unique_work_path(library_root, &template_str, &metadata);
 
     if paths_overlap(source, &dest) {
         return Err(AppError::ImportError(
@@ -228,10 +225,10 @@ pub enum DiscoverProgress {
 
 pub fn discover_image_folders(
     root: &Path,
-    app_data_dir: &Path,
+    library_root: &Path,
     on_progress: &Channel<DiscoverProgress>,
 ) -> Result<Vec<DiscoveredFolder>, AppError> {
-    let conn = db::open_db(app_data_dir)?;
+    let conn = db::open_db(library_root)?;
     let mut folders = Vec::new();
     let mut scanned_dirs = 0usize;
 
@@ -321,7 +318,7 @@ pub struct BulkImportSummary {
 
 pub fn bulk_import(
     requests: &[ImportRequest],
-    app_data_dir: &Path,
+    library_root: &Path,
     on_progress: &Channel<BulkImportProgress>,
 ) -> Result<BulkImportSummary, AppError> {
     let total = requests.len();
@@ -337,7 +334,7 @@ pub fn bulk_import(
             title: request.title.clone(),
         });
 
-        match import_work(request, app_data_dir) {
+        match import_work(request, library_root) {
             Ok(_) => succeeded += 1,
             Err(e) => {
                 let _ = on_progress.send(BulkImportProgress::Error {
