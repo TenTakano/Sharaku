@@ -104,6 +104,7 @@ pub fn preview_import_path(
 pub fn import_work(
     request: &ImportRequest,
     conn: &rusqlite::Connection,
+    library_id: &str,
     library_root: &Path,
 ) -> Result<ImportResult, AppError> {
     let source = Path::new(&request.source_path);
@@ -120,11 +121,11 @@ pub fn import_work(
         ));
     }
 
-    let template_str = settings::get_directory_template(conn)?.ok_or_else(|| {
+    let template_str = settings::get_directory_template(conn, library_id)?.ok_or_else(|| {
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
 
-    let type_label = settings::resolve_type_label(conn, "folder")?;
+    let type_label = settings::resolve_type_label(conn, library_id, "folder")?;
     let metadata = WorkMetadata {
         title: request.title.clone(),
         artist: request.artist.clone(),
@@ -151,7 +152,6 @@ pub fn import_work(
         let _ = std::fs::remove_dir_all(dest);
     };
 
-    // Always copy first (even in Move mode) to avoid data loss on failure
     if let Err(e) = copy_images_to_dest(&images, &dest) {
         rollback(&dest);
         return Err(e);
@@ -163,6 +163,7 @@ pub fn import_work(
     if let Err(e) = db::insert_work(
         conn,
         &WorkRecord {
+            library_id,
             title: &request.title,
             path: &dest_str,
             work_type: "folder",
@@ -179,7 +180,6 @@ pub fn import_work(
         return Err(e);
     }
 
-    // Delete source files only after successful DB registration
     if request.mode == ImportMode::Move {
         for image in &images {
             let _ = std::fs::remove_file(image);
@@ -228,6 +228,7 @@ pub enum DiscoverProgress {
 pub fn discover_image_folders(
     root: &Path,
     conn: &rusqlite::Connection,
+    library_id: &str,
     on_progress: &Channel<DiscoverProgress>,
 ) -> Result<Vec<DiscoveredFolder>, AppError> {
     let mut folders = Vec::new();
@@ -256,7 +257,7 @@ pub fn discover_image_folders(
             .to_string();
 
         let path_str = dir_path.to_string_lossy().to_string();
-        let already_registered = db::path_exists(conn, &path_str)?;
+        let already_registered = db::path_exists(conn, library_id, &path_str)?;
         let parsed_metadata = parse_folder_name(&folder_name);
 
         folders.push(DiscoveredFolder {
@@ -320,6 +321,7 @@ pub struct BulkImportSummary {
 pub fn bulk_import(
     requests: &[ImportRequest],
     conn: &rusqlite::Connection,
+    library_id: &str,
     library_root: &Path,
     on_progress: &Channel<BulkImportProgress>,
 ) -> Result<BulkImportSummary, AppError> {
@@ -336,7 +338,7 @@ pub fn bulk_import(
             title: request.title.clone(),
         });
 
-        match import_work(request, conn, library_root) {
+        match import_work(request, conn, library_id, library_root) {
             Ok(_) => succeeded += 1,
             Err(e) => {
                 let _ = on_progress.send(BulkImportProgress::Error {

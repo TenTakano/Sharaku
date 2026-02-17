@@ -6,9 +6,9 @@ use serde::Serialize;
 
 use crate::error::AppError;
 
-pub fn open_db(library_root: &Path) -> Result<Connection, AppError> {
-    std::fs::create_dir_all(library_root)?;
-    let db_path = library_root.join("sharaku.db");
+pub fn open_db(app_data_dir: &Path) -> Result<Connection, AppError> {
+    std::fs::create_dir_all(app_data_dir)?;
+    let db_path = app_data_dir.join("sharaku.db");
     let conn = Connection::open(db_path)?;
     conn.busy_timeout(std::time::Duration::from_secs(5))?;
     init_db(&conn)?;
@@ -16,59 +16,26 @@ pub fn open_db(library_root: &Path) -> Result<Connection, AppError> {
 }
 
 #[cfg(test)]
-pub fn init_db_for_test(conn: &Connection) -> Result<(), AppError> {
-    init_db(conn)
+pub fn open_db_in_memory() -> Result<Connection, AppError> {
+    let conn = Connection::open_in_memory()?;
+    init_db(&conn)?;
+    Ok(conn)
 }
 
 fn init_db(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
-    conn.execute_batch(include_str!("../migrations/001_create_initial_tables.sql"))?;
-    apply_migration_002(conn)?;
-    apply_migration_003(conn)?;
+    conn.execute_batch(include_str!("../migrations/004_unified_local_db.sql"))?;
     Ok(())
 }
 
-fn apply_migration_002(conn: &Connection) -> Result<(), AppError> {
-    let columns = ["artist", "year", "genre", "circle", "origin"];
-    for col in columns {
-        let sql = match col {
-            "year" => format!("ALTER TABLE works ADD COLUMN {col} INTEGER"),
-            _ => format!("ALTER TABLE works ADD COLUMN {col} TEXT"),
-        };
-        match conn.execute_batch(&sql) {
-            Ok(()) => {}
-            Err(e) if e.to_string().contains("duplicate column name") => {}
-            Err(e) => return Err(AppError::Database(e)),
-        }
-    }
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
-    )?;
-    Ok(())
-}
-
-fn apply_migration_003(conn: &Connection) -> Result<(), AppError> {
-    let needs_migration = match conn.query_row(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='works'",
-        [],
-        |row| row.get::<_, String>(0),
-    ) {
-        Ok(sql) => !sql.contains("folder"),
-        Err(e) => return Err(AppError::Database(e)),
-    };
-
-    if needs_migration {
-        conn.execute_batch(include_str!("../migrations/003_allow_folder_work_type.sql"))?;
-    }
-    Ok(())
-}
-
-pub fn path_exists(conn: &Connection, path: &str) -> Result<bool, AppError> {
-    let mut stmt = conn.prepare_cached("SELECT 1 FROM works WHERE path = ?1")?;
-    Ok(stmt.exists([path])?)
+pub fn path_exists(conn: &Connection, library_id: &str, path: &str) -> Result<bool, AppError> {
+    let mut stmt =
+        conn.prepare_cached("SELECT 1 FROM works WHERE library_id = ?1 AND path = ?2")?;
+    Ok(stmt.exists(rusqlite::params![library_id, path])?)
 }
 
 pub struct WorkRecord<'a> {
+    pub library_id: &'a str,
     pub title: &'a str,
     pub path: &'a str,
     pub work_type: &'a str,
@@ -83,8 +50,9 @@ pub struct WorkRecord<'a> {
 
 pub fn insert_work(conn: &Connection, record: &WorkRecord) -> Result<(), AppError> {
     conn.execute(
-        "INSERT INTO works (title, path, type, page_count, thumbnail, artist, year, genre, circle, origin) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        "INSERT INTO works (library_id, title, path, type, page_count, thumbnail, artist, year, genre, circle, origin) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         rusqlite::params![
+            record.library_id,
             record.title,
             record.path,
             record.work_type,
@@ -136,6 +104,7 @@ pub struct WorkDetail {
 
 pub fn list_works(
     conn: &Connection,
+    library_id: &str,
     sort_by: &str,
     sort_order: &str,
 ) -> Result<Vec<WorkSummary>, AppError> {
@@ -148,11 +117,11 @@ pub fn list_works(
         _ => "DESC",
     };
     let sql = format!(
-        "SELECT id, title, type, page_count, created_at FROM works ORDER BY {} {}",
+        "SELECT id, title, type, page_count, created_at FROM works WHERE library_id = ?1 ORDER BY {} {}",
         column, order
     );
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map([], |row| {
+    let rows = stmt.query_map([library_id], |row| {
         Ok(WorkSummary {
             id: row.get(0)?,
             title: row.get(1)?,
@@ -179,11 +148,11 @@ pub fn get_thumbnail(conn: &Connection, work_id: i64) -> Result<Vec<u8>, AppErro
     thumb.ok_or(AppError::NotFound)
 }
 
-pub fn list_folder_works(conn: &Connection) -> Result<Vec<WorkDetail>, AppError> {
+pub fn list_folder_works(conn: &Connection, library_id: &str) -> Result<Vec<WorkDetail>, AppError> {
     let mut stmt = conn.prepare_cached(
-        "SELECT id, title, path, type, page_count, created_at, artist, year, genre, circle, origin FROM works WHERE type = 'folder'",
+        "SELECT id, title, path, type, page_count, created_at, artist, year, genre, circle, origin FROM works WHERE library_id = ?1 AND type = 'folder'",
     )?;
-    let rows = stmt.query_map([], |row| {
+    let rows = stmt.query_map([library_id], |row| {
         Ok(WorkDetail {
             id: row.get(0)?,
             title: row.get(1)?,
@@ -238,10 +207,15 @@ pub fn get_work(conn: &Connection, work_id: i64) -> Result<WorkDetail, AppError>
     })
 }
 
-pub fn create_tag(conn: &Connection, name: &str, category: Option<&str>) -> Result<Tag, AppError> {
+pub fn create_tag(
+    conn: &Connection,
+    library_id: &str,
+    name: &str,
+    category: Option<&str>,
+) -> Result<Tag, AppError> {
     conn.execute(
-        "INSERT INTO tags (name, category) VALUES (?1, ?2)",
-        rusqlite::params![name, category],
+        "INSERT INTO tags (library_id, name, category) VALUES (?1, ?2, ?3)",
+        rusqlite::params![library_id, name, category],
     )?;
     Ok(Tag {
         id: conn.last_insert_rowid(),
@@ -276,14 +250,15 @@ pub fn delete_tag(conn: &Connection, id: i64) -> Result<(), AppError> {
 
 pub fn search_tags(
     conn: &Connection,
+    library_id: &str,
     query: &str,
     category: Option<&str>,
 ) -> Result<Vec<Tag>, AppError> {
     let pattern = format!("%{query}%");
     let mut stmt = conn.prepare(
-        "SELECT id, name, category FROM tags WHERE name LIKE ?1 AND (?2 IS NULL OR category = ?2) ORDER BY name LIMIT 50",
+        "SELECT id, name, category FROM tags WHERE library_id = ?1 AND name LIKE ?2 AND (?3 IS NULL OR category = ?3) ORDER BY name LIMIT 50",
     )?;
-    let rows = stmt.query_map(rusqlite::params![pattern, category], |row| {
+    let rows = stmt.query_map(rusqlite::params![library_id, pattern, category], |row| {
         Ok(Tag {
             id: row.get(0)?,
             name: row.get(1)?,
@@ -333,6 +308,7 @@ pub fn get_tags_for_work(conn: &Connection, work_id: i64) -> Result<Vec<Tag>, Ap
 
 pub fn search_works_by_tags(
     conn: &Connection,
+    library_id: &str,
     tag_ids: &[i64],
     mode: &str,
 ) -> Result<Vec<WorkSummary>, AppError> {
@@ -344,7 +320,10 @@ pub fn search_works_by_tags(
     unique_ids.sort_unstable();
     unique_ids.dedup();
 
-    let placeholders: Vec<String> = (1..=unique_ids.len()).map(|i| format!("?{i}")).collect();
+    // Parameter index: ?1 = library_id, then tag IDs start at ?2
+    let placeholders: Vec<String> = (2..=unique_ids.len() + 1)
+        .map(|i| format!("?{i}"))
+        .collect();
     let in_clause = placeholders.join(", ");
 
     let sql = if mode == "and" {
@@ -352,24 +331,27 @@ pub fn search_works_by_tags(
             "SELECT w.id, w.title, w.type, w.page_count, w.created_at \
              FROM works w \
              INNER JOIN works_tags wt ON w.id = wt.work_id \
-             WHERE wt.tag_id IN ({in_clause}) \
+             WHERE w.library_id = ?1 AND wt.tag_id IN ({in_clause}) \
              GROUP BY w.id \
              HAVING COUNT(DISTINCT wt.tag_id) = ?{} \
              ORDER BY w.created_at DESC",
-            unique_ids.len() + 1
+            unique_ids.len() + 2
         )
     } else {
         format!(
             "SELECT DISTINCT w.id, w.title, w.type, w.page_count, w.created_at \
              FROM works w \
              INNER JOIN works_tags wt ON w.id = wt.work_id \
-             WHERE wt.tag_id IN ({in_clause}) \
+             WHERE w.library_id = ?1 AND wt.tag_id IN ({in_clause}) \
              ORDER BY w.created_at DESC"
         )
     };
 
     let mut params: Vec<Box<dyn rusqlite::types::ToSql>> =
-        unique_ids.iter().map(|id| Box::new(*id) as _).collect();
+        vec![Box::new(library_id.to_string()) as _];
+    for id in &unique_ids {
+        params.push(Box::new(*id) as _);
+    }
     if mode == "and" {
         params.push(Box::new(unique_ids.len() as i64));
     }
