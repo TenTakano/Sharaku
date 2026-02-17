@@ -102,11 +102,12 @@ fn make_unique_path(base: &Path, used_paths: &std::collections::HashSet<String>)
 
 pub fn preview_relocation(
     conn: &rusqlite::Connection,
+    library_id: &str,
     library_root: &Path,
     new_template: &str,
 ) -> Result<Vec<RelocationPreview>, AppError> {
-    let works = db::list_folder_works(conn)?;
-    let type_label = settings::get_type_label_folder(conn)?;
+    let works = db::list_folder_works(conn, library_id)?;
+    let type_label = settings::get_type_label_folder(conn, library_id)?;
     Ok(compute_relocation_plan(
         &works,
         library_root,
@@ -117,12 +118,13 @@ pub fn preview_relocation(
 
 pub fn execute_relocation(
     conn: &rusqlite::Connection,
+    library_id: &str,
     library_root: &Path,
     new_template: &str,
     on_progress: &Channel<RelocationProgress>,
 ) -> Result<(), AppError> {
-    let works = db::list_folder_works(conn)?;
-    let type_label = settings::get_type_label_folder(conn)?;
+    let works = db::list_folder_works(conn, library_id)?;
+    let type_label = settings::get_type_label_folder(conn, library_id)?;
     let plan = compute_relocation_plan(&works, library_root, new_template, &type_label);
 
     let total = plan.len();
@@ -171,7 +173,7 @@ pub fn execute_relocation(
         }
     }
 
-    settings::set_directory_template(conn, new_template)?;
+    settings::set_directory_template(conn, library_id, new_template)?;
 
     let _ = on_progress.send(RelocationProgress::Completed {
         relocated,
