@@ -158,8 +158,16 @@ fn migrates_tags_with_null_category() {
     let conn = new_conn_with_library("lib1", dir.to_str().unwrap());
 
     let old = create_old_db(&dir);
-    old.execute("INSERT INTO tags (name, category) VALUES ('tag1', 'genre')", []).unwrap();
-    old.execute("INSERT INTO tags (name, category) VALUES ('tag2', NULL)", []).unwrap();
+    old.execute(
+        "INSERT INTO tags (name, category) VALUES ('tag1', 'genre')",
+        [],
+    )
+    .unwrap();
+    old.execute(
+        "INSERT INTO tags (name, category) VALUES ('tag2', NULL)",
+        [],
+    )
+    .unwrap();
     drop(old);
 
     let errors = super::migrate_per_library_dbs(&conn);
@@ -187,8 +195,10 @@ fn migrates_works_tags() {
         "INSERT INTO works (title, path, type, page_count, thumbnail) VALUES ('W1', '/p1', 'image', 1, X'AA')",
         [],
     ).unwrap();
-    old.execute("INSERT INTO tags (name, category) VALUES ('t1', NULL)", []).unwrap();
-    old.execute("INSERT INTO works_tags (work_id, tag_id) VALUES (1, 1)", []).unwrap();
+    old.execute("INSERT INTO tags (name, category) VALUES ('t1', NULL)", [])
+        .unwrap();
+    old.execute("INSERT INTO works_tags (work_id, tag_id) VALUES (1, 1)", [])
+        .unwrap();
     drop(old);
 
     let errors = super::migrate_per_library_dbs(&conn);
@@ -208,8 +218,16 @@ fn migrates_settings() {
     let conn = new_conn_with_library("lib1", dir.to_str().unwrap());
 
     let old = create_old_db(&dir);
-    old.execute("INSERT INTO settings (key, value) VALUES ('directory_template', '{title}')", []).unwrap();
-    old.execute("INSERT INTO settings (key, value) VALUES ('type_label_image', 'Img')", []).unwrap();
+    old.execute(
+        "INSERT INTO settings (key, value) VALUES ('directory_template', '{title}')",
+        [],
+    )
+    .unwrap();
+    old.execute(
+        "INSERT INTO settings (key, value) VALUES ('type_label_image', 'Img')",
+        [],
+    )
+    .unwrap();
     drop(old);
 
     let errors = super::migrate_per_library_dbs(&conn);
@@ -234,21 +252,24 @@ fn migrates_playlists_and_items() {
         "INSERT INTO works (title, path, type, page_count, thumbnail) VALUES ('W1', '/p1', 'image', 1, X'AA')",
         [],
     ).unwrap();
-    old.execute(
-        "INSERT INTO playlists (name) VALUES ('My Playlist')",
-        [],
-    ).unwrap();
+    old.execute("INSERT INTO playlists (name) VALUES ('My Playlist')", [])
+        .unwrap();
     old.execute(
         "INSERT INTO playlist_items (playlist_id, work_id, position) VALUES (1, 1, 0)",
         [],
-    ).unwrap();
+    )
+    .unwrap();
     drop(old);
 
     let errors = super::migrate_per_library_dbs(&conn);
     assert!(errors.is_empty());
 
     let count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM playlists WHERE library_id = 'lib1'", [], |r| r.get(0))
+        .query_row(
+            "SELECT COUNT(*) FROM playlists WHERE library_id = 'lib1'",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
     assert_eq!(count, 1);
 
@@ -270,8 +291,10 @@ fn idempotent_no_duplicates_on_second_run() {
         "INSERT INTO works (title, path, type, page_count, thumbnail) VALUES ('W1', '/p1', 'image', 1, X'AA')",
         [],
     ).unwrap();
-    old.execute("INSERT INTO tags (name, category) VALUES ('t1', NULL)", []).unwrap();
-    old.execute("INSERT INTO works_tags (work_id, tag_id) VALUES (1, 1)", []).unwrap();
+    old.execute("INSERT INTO tags (name, category) VALUES ('t1', NULL)", [])
+        .unwrap();
+    old.execute("INSERT INTO works_tags (work_id, tag_id) VALUES (1, 1)", [])
+        .unwrap();
     drop(old);
 
     let errors1 = super::migrate_per_library_dbs(&conn);
@@ -406,8 +429,10 @@ fn handles_duplicate_works_by_path() {
         "INSERT INTO works (title, path, type, page_count, thumbnail) VALUES ('Old', '/p1', 'image', 1, X'AA')",
         [],
     ).unwrap();
-    old.execute("INSERT INTO tags (name, category) VALUES ('t1', NULL)", []).unwrap();
-    old.execute("INSERT INTO works_tags (work_id, tag_id) VALUES (1, 1)", []).unwrap();
+    old.execute("INSERT INTO tags (name, category) VALUES ('t1', NULL)", [])
+        .unwrap();
+    old.execute("INSERT INTO works_tags (work_id, tag_id) VALUES (1, 1)", [])
+        .unwrap();
     drop(old);
 
     let errors = super::migrate_per_library_dbs(&conn);

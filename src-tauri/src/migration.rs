@@ -39,7 +39,11 @@ pub fn migrate_per_library_dbs(conn: &Connection) -> Vec<MigrationError> {
     errors
 }
 
-fn migrate_single_library(conn: &Connection, library_id: &str, library_path: &str) -> Result<(), String> {
+fn migrate_single_library(
+    conn: &Connection,
+    library_id: &str,
+    library_path: &str,
+) -> Result<(), String> {
     let already_migrated = settings::get_setting(conn, library_id, MIGRATED_FLAG_KEY)
         .map_err(|e| format!("フラグ確認失敗: {e}"))?;
     if already_migrated.is_some() {
@@ -65,11 +69,10 @@ fn migrate_single_library(conn: &Connection, library_id: &str, library_path: &st
     conn.execute_batch("BEGIN")
         .map_err(|e| format!("トランザクション開始失敗: {e}"))?;
 
-    let result = migrate_all_tables(conn, &old_conn, library_id)
-        .and_then(|()| {
-            settings::set_setting(conn, library_id, MIGRATED_FLAG_KEY, "done")
-                .map_err(|e| format!("フラグ設定失敗: {e}"))
-        });
+    let result = migrate_all_tables(conn, &old_conn, library_id).and_then(|()| {
+        settings::set_setting(conn, library_id, MIGRATED_FLAG_KEY, "done")
+            .map_err(|e| format!("フラグ設定失敗: {e}"))
+    });
 
     match result {
         Ok(()) => {
@@ -147,14 +150,25 @@ fn migrate_works(
         .map_err(|e| format!("旧works読み取り失敗: {e}"))?;
 
     for row in rows {
-        let (old_id, title, path, work_type, page_count, thumbnail, created_at, updated_at, artist, year, genre, circle, origin) =
-            row.map_err(|e| format!("旧worksレコード読み取り失敗: {e}"))?;
+        let (
+            old_id,
+            title,
+            path,
+            work_type,
+            page_count,
+            thumbnail,
+            created_at,
+            updated_at,
+            artist,
+            year,
+            genre,
+            circle,
+            origin,
+        ) = row.map_err(|e| format!("旧worksレコード読み取り失敗: {e}"))?;
 
         let existing_id: Option<i64> = conn
             .prepare_cached("SELECT id FROM works WHERE library_id = ?1 AND path = ?2")
-            .and_then(|mut s| {
-                s.query_row(rusqlite::params![library_id, path], |r| r.get(0))
-            })
+            .and_then(|mut s| s.query_row(rusqlite::params![library_id, path], |r| r.get(0)))
             .ok();
 
         if let Some(new_id) = existing_id {
@@ -236,9 +250,7 @@ fn migrate_works_tags(
         .map_err(|e| format!("旧works_tags読み取り失敗: {e}"))?;
 
     let rows = stmt
-        .query_map([], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
-        })
+        .query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)))
         .map_err(|e| format!("旧works_tags読み取り失敗: {e}"))?;
 
     for row in rows {
