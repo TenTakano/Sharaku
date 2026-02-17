@@ -2,6 +2,7 @@ mod db;
 mod error;
 mod importer;
 mod library;
+mod migration;
 mod relocator;
 mod scanner;
 mod settings;
@@ -635,6 +636,14 @@ pub fn run() {
 
             let conn = db::open_db(&app_data_dir).expect("Failed to open database");
             migrate_libraries_json(&conn, &app_data_dir);
+
+            let migration_errors = migration::migrate_per_library_dbs(&conn);
+            for err in &migration_errors {
+                eprintln!(
+                    "Warning: データ移行に失敗 (library: {}, path: {}): {}",
+                    err.library_id, err.library_path, err.message
+                );
+            }
 
             let active_library =
                 library::active_library(&conn)
