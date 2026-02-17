@@ -21,7 +21,9 @@ pub fn init_db_for_test(conn: &Connection) -> Result<(), AppError> {
 }
 
 fn init_db(conn: &Connection) -> Result<(), AppError> {
-    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
+    // CIFS/SMB上ではWALモードの.db-shm(mmap)が動作しないためDELETEモードを採用。
+    // DB接続はArc<Mutex>で一元管理しておりWALの同時読み書き性能は不要。
+    conn.execute_batch("PRAGMA journal_mode=DELETE; PRAGMA foreign_keys=ON;")?;
     conn.execute_batch(include_str!("../migrations/001_create_initial_tables.sql"))?;
     apply_migration_002(conn)?;
     apply_migration_003(conn)?;
