@@ -292,6 +292,42 @@ fn search_tags_empty_query_returns_all() {
     assert_eq!(tags.len(), 2);
 }
 
+// --- list_tags ---
+
+#[test]
+fn list_tags_returns_all_sorted_by_category_and_name() {
+    let conn = test_conn();
+    create_tag(&conn, TEST_LIBRARY_ID, "sci-fi", Some("genre")).unwrap();
+    create_tag(&conn, TEST_LIBRARY_ID, "monet", Some("artist")).unwrap();
+    create_tag(&conn, TEST_LIBRARY_ID, "fantasy", Some("genre")).unwrap();
+    create_tag(&conn, TEST_LIBRARY_ID, "uncategorized", None).unwrap();
+
+    let tags = list_tags(&conn, TEST_LIBRARY_ID).unwrap();
+    assert_eq!(tags.len(), 4);
+    // NULL category sorts first in SQLite, then "artist", then "genre"
+    assert_eq!(tags[0].name, "uncategorized");
+    assert_eq!(tags[1].name, "monet");
+    assert_eq!(tags[2].name, "fantasy");
+    assert_eq!(tags[3].name, "sci-fi");
+}
+
+#[test]
+fn list_tags_empty_library() {
+    let conn = test_conn();
+    let tags = list_tags(&conn, TEST_LIBRARY_ID).unwrap();
+    assert!(tags.is_empty());
+}
+
+#[test]
+fn list_tags_no_limit() {
+    let conn = test_conn();
+    for i in 0..60 {
+        create_tag(&conn, TEST_LIBRARY_ID, &format!("tag_{:03}", i), None).unwrap();
+    }
+    let tags = list_tags(&conn, TEST_LIBRARY_ID).unwrap();
+    assert_eq!(tags.len(), 60);
+}
+
 // --- works_tags ---
 
 #[test]

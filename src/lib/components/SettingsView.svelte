@@ -9,11 +9,10 @@
   } from "../types";
 
   interface Props {
-    onBack: () => void;
     libraryPath: string | null;
   }
 
-  let { onBack, libraryPath }: Props = $props();
+  let { libraryPath }: Props = $props();
 
   let directoryTemplate = $state("");
   let typeLabelImage = $state("");
@@ -180,177 +179,167 @@
   });
 </script>
 
-<main class="container">
-  <div class="app-header">
-    <button class="settings-back-btn" onclick={onBack}>← ライブラリ</button>
-    <h1>設定</h1>
-  </div>
+{#if loading}
+  <p class="settings-loading">読み込み中...</p>
+{:else}
+  <div class="settings-content">
+    <section class="settings-section">
+      <h2>ライブラリルート</h2>
+      <p class="settings-description">
+        現在のライブラリの保存先ディレクトリです。
+      </p>
+      <div class="settings-field-row">
+        <code class="settings-library-path">{libraryPath ?? "未設定"}</code>
+      </div>
+    </section>
 
-  {#if loading}
-    <p class="settings-loading">読み込み中...</p>
-  {:else}
-    <div class="settings-content">
-      <section class="settings-section">
-        <h2>ライブラリルート</h2>
-        <p class="settings-description">
-          現在のライブラリの保存先ディレクトリです。
-        </p>
-        <div class="settings-field-row">
-          <code class="settings-library-path">{libraryPath ?? "未設定"}</code>
+    <section class="settings-section">
+      <h2>ディレクトリテンプレート</h2>
+      <p class="settings-description">
+        作品取り込み時のフォルダ配置パターンを指定します。<br />
+        使用可能なプレースホルダー:
+        <code>{"{title}"}</code>, <code>{"{artist}"}</code>,
+        <code>{"{year}"}</code>,
+        <code>{"{genre}"}</code>, <code>{"{circle}"}</code>,
+        <code>{"{origin}"}</code>, <code>{"{type}"}</code>
+      </p>
+      <div class="settings-field-row">
+        <input
+          type="text"
+          class="settings-input"
+          class:settings-input-error={!templateValidation.valid}
+          bind:value={directoryTemplate}
+          oninput={onTemplateInput}
+          placeholder={"{artist}/{title}"}
+          disabled={saving}
+        />
+        <button
+          class="settings-save-btn"
+          onclick={saveDirectoryTemplate}
+          disabled={saving || !templateValidation.valid}
+        >
+          保存
+        </button>
+      </div>
+      {#if !templateValidation.valid && templateValidation.error}
+        <p class="template-error">{templateValidation.error}</p>
+      {/if}
+      {#if templateValidation.valid && templatePreview}
+        <div class="template-preview">
+          <span class="template-preview-label">プレビュー:</span>
+          <code class="template-preview-path">{templatePreview}</code>
         </div>
-      </section>
+      {/if}
+    </section>
 
-      <section class="settings-section">
-        <h2>ディレクトリテンプレート</h2>
-        <p class="settings-description">
-          作品取り込み時のフォルダ配置パターンを指定します。<br />
-          使用可能なプレースホルダー:
-          <code>{"{title}"}</code>, <code>{"{artist}"}</code>,
-          <code>{"{year}"}</code>,
-          <code>{"{genre}"}</code>, <code>{"{circle}"}</code>,
-          <code>{"{origin}"}</code>, <code>{"{type}"}</code>
-        </p>
-        <div class="settings-field-row">
+    <section class="settings-section">
+      <h2>作品種別ラベル</h2>
+      <p class="settings-description">
+        テンプレートの <code>{"{type}"}</code>
+        に使用するラベルをカスタマイズできます。
+      </p>
+      <div class="type-label-fields">
+        <div class="type-label-row">
+          <label class="type-label-name" for="type-label-image">画像作品:</label
+          >
           <input
+            id="type-label-image"
             type="text"
-            class="settings-input"
-            class:settings-input-error={!templateValidation.valid}
-            bind:value={directoryTemplate}
-            oninput={onTemplateInput}
-            placeholder={"{artist}/{title}"}
+            class="settings-input type-label-input"
+            bind:value={typeLabelImage}
+            placeholder="Image"
             disabled={saving}
           />
-          <button
-            class="settings-save-btn"
-            onclick={saveDirectoryTemplate}
-            disabled={saving || !templateValidation.valid}
-          >
-            保存
-          </button>
         </div>
-        {#if !templateValidation.valid && templateValidation.error}
-          <p class="template-error">{templateValidation.error}</p>
-        {/if}
-        {#if templateValidation.valid && templatePreview}
-          <div class="template-preview">
-            <span class="template-preview-label">プレビュー:</span>
-            <code class="template-preview-path">{templatePreview}</code>
-          </div>
-        {/if}
-      </section>
-
-      <section class="settings-section">
-        <h2>作品種別ラベル</h2>
-        <p class="settings-description">
-          テンプレートの <code>{"{type}"}</code>
-          に使用するラベルをカスタマイズできます。
-        </p>
-        <div class="type-label-fields">
-          <div class="type-label-row">
-            <label class="type-label-name" for="type-label-image"
-              >画像作品:</label
-            >
-            <input
-              id="type-label-image"
-              type="text"
-              class="settings-input type-label-input"
-              bind:value={typeLabelImage}
-              placeholder="Image"
-              disabled={saving}
-            />
-          </div>
-          <div class="type-label-row">
-            <label class="type-label-name" for="type-label-folder"
-              >フォルダ作品:</label
-            >
-            <input
-              id="type-label-folder"
-              type="text"
-              class="settings-input type-label-input"
-              bind:value={typeLabelFolder}
-              placeholder="Folder"
-              disabled={saving}
-            />
-          </div>
-          <button
-            class="settings-save-btn"
-            onclick={saveTypeLabels}
-            disabled={saving ||
-              !typeLabelImage.trim() ||
-              !typeLabelFolder.trim()}
+        <div class="type-label-row">
+          <label class="type-label-name" for="type-label-folder"
+            >フォルダ作品:</label
           >
-            保存
-          </button>
+          <input
+            id="type-label-folder"
+            type="text"
+            class="settings-input type-label-input"
+            bind:value={typeLabelFolder}
+            placeholder="Folder"
+            disabled={saving}
+          />
         </div>
-      </section>
-    </div>
-
-    {#if message}
-      <p class="settings-message {message.type}">{message.text}</p>
-    {/if}
-  {/if}
-
-  {#if showRelocationDialog}
-    <div class="relocation-overlay">
-      <div class="relocation-dialog">
-        {#if !relocating}
-          <h2>作品の再配置</h2>
-          <p class="relocation-warning">
-            テンプレートの変更により、{relocationPreviews.length}
-            件の作品ディレクトリが移動されます。
-          </p>
-          <div class="relocation-preview-list">
-            {#each relocationPreviews as item (item.workId)}
-              <div class="relocation-preview-item">
-                <span class="relocation-preview-title">{item.title}</span>
-                <div class="relocation-paths">
-                  <code class="relocation-path-old">{item.oldPath}</code>
-                  <span class="relocation-arrow">→</span>
-                  <code class="relocation-path-new">{item.newPath}</code>
-                </div>
-              </div>
-            {/each}
-          </div>
-          <div class="relocation-actions">
-            <button class="relocation-cancel-btn" onclick={cancelRelocation}>
-              キャンセル
-            </button>
-            <button class="relocation-execute-btn" onclick={executeRelocation}>
-              実行
-            </button>
-          </div>
-        {:else}
-          <h2>再配置中...</h2>
-          {#if relocationProgress}
-            {#if relocationProgress.type === "started"}
-              <p class="relocation-progress">
-                {relocationProgress.total} 件の作品を処理します...
-              </p>
-            {:else if relocationProgress.type === "moving"}
-              <p class="relocation-progress">
-                ({relocationProgress.current}/{relocationProgress.total})
-                {relocationProgress.title}
-              </p>
-              <progress
-                value={relocationProgress.current}
-                max={relocationProgress.total}
-              ></progress>
-            {:else if relocationProgress.type === "completed"}
-              <p class="relocation-progress">
-                完了: {relocationProgress.relocated} 件移動,
-                {relocationProgress.skipped} 件スキップ,
-                {relocationProgress.failed} 件失敗
-              </p>
-            {:else if relocationProgress.type === "error"}
-              <p class="relocation-progress relocation-progress-error">
-                {relocationProgress.message}
-              </p>
-            {/if}
-          {:else}
-            <p class="relocation-progress">準備中...</p>
-          {/if}
-        {/if}
+        <button
+          class="settings-save-btn"
+          onclick={saveTypeLabels}
+          disabled={saving || !typeLabelImage.trim() || !typeLabelFolder.trim()}
+        >
+          保存
+        </button>
       </div>
-    </div>
+    </section>
+  </div>
+
+  {#if message}
+    <p class="settings-message {message.type}">{message.text}</p>
   {/if}
-</main>
+{/if}
+
+{#if showRelocationDialog}
+  <div class="relocation-overlay">
+    <div class="relocation-dialog">
+      {#if !relocating}
+        <h2>作品の再配置</h2>
+        <p class="relocation-warning">
+          テンプレートの変更により、{relocationPreviews.length}
+          件の作品ディレクトリが移動されます。
+        </p>
+        <div class="relocation-preview-list">
+          {#each relocationPreviews as item (item.workId)}
+            <div class="relocation-preview-item">
+              <span class="relocation-preview-title">{item.title}</span>
+              <div class="relocation-paths">
+                <code class="relocation-path-old">{item.oldPath}</code>
+                <span class="relocation-arrow">→</span>
+                <code class="relocation-path-new">{item.newPath}</code>
+              </div>
+            </div>
+          {/each}
+        </div>
+        <div class="relocation-actions">
+          <button class="relocation-cancel-btn" onclick={cancelRelocation}>
+            キャンセル
+          </button>
+          <button class="relocation-execute-btn" onclick={executeRelocation}>
+            実行
+          </button>
+        </div>
+      {:else}
+        <h2>再配置中...</h2>
+        {#if relocationProgress}
+          {#if relocationProgress.type === "started"}
+            <p class="relocation-progress">
+              {relocationProgress.total} 件の作品を処理します...
+            </p>
+          {:else if relocationProgress.type === "moving"}
+            <p class="relocation-progress">
+              ({relocationProgress.current}/{relocationProgress.total})
+              {relocationProgress.title}
+            </p>
+            <progress
+              value={relocationProgress.current}
+              max={relocationProgress.total}
+            ></progress>
+          {:else if relocationProgress.type === "completed"}
+            <p class="relocation-progress">
+              完了: {relocationProgress.relocated} 件移動,
+              {relocationProgress.skipped} 件スキップ,
+              {relocationProgress.failed} 件失敗
+            </p>
+          {:else if relocationProgress.type === "error"}
+            <p class="relocation-progress relocation-progress-error">
+              {relocationProgress.message}
+            </p>
+          {/if}
+        {:else}
+          <p class="relocation-progress">準備中...</p>
+        {/if}
+      {/if}
+    </div>
+  </div>
+{/if}

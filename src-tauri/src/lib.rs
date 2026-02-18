@@ -429,6 +429,21 @@ async fn relocate_works(
 }
 
 #[tauri::command]
+async fn list_tags(state: tauri::State<'_, AppState>) -> Result<Vec<Tag>, String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        let active = guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+        db::list_tags(&guard.conn, &active.id).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn search_tags(
     state: tauri::State<'_, AppState>,
     query: String,
@@ -704,6 +719,7 @@ pub fn run() {
             bulk_import,
             preview_relocation,
             relocate_works,
+            list_tags,
             search_tags,
             create_tag,
             update_tag,

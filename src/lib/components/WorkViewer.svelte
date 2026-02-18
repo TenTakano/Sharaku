@@ -7,11 +7,13 @@
   interface Props {
     workId: number;
     workIds: number[];
+    libraryName: string;
     onBack: () => void;
     onNavigateWork: (workId: number) => void;
   }
 
-  let { workId, workIds, onBack, onNavigateWork }: Props = $props();
+  let { workId, workIds, libraryName, onBack, onNavigateWork }: Props =
+    $props();
 
   let work = $state<WorkDetail | null>(null);
   let error = $state<string | null>(null);
@@ -330,7 +332,7 @@
     class="viewer-header"
     class:viewer-controls-hidden={isFullscreen && !controlsVisible}
   >
-    <button class="viewer-back-btn" onclick={onBack}>← 戻る</button>
+    <button class="viewer-back-btn" onclick={onBack}>← {libraryName}</button>
     {#if work}
       <span class="viewer-title">{work.title}</span>
     {/if}
