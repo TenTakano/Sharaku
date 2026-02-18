@@ -113,13 +113,19 @@ button:disabled {
 
 .sidebar-library-item {
   all: unset;
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
   padding: 6px 8px;
   font-size: 0.8125rem;
   border-radius: 4px;
   cursor: pointer;
   box-sizing: border-box;
+}
+
+.sidebar-library-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -130,8 +136,34 @@ button:disabled {
 }
 
 .sidebar-library-item.active {
-  background: rgba(57, 108, 216, 0.15);
+  border-left: 3px solid #396cd8;
+  border-bottom: 1px solid rgba(57, 108, 216, 0.3);
+  padding-left: 9px;
   font-weight: 600;
+  color: #396cd8;
+}
+
+.sidebar-library-settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 0.875rem;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: #555;
+  opacity: 0.7;
+}
+
+.sidebar-library-settings:hover {
+  background: rgba(0, 0, 0, 0.06);
+  opacity: 1;
+}
+
+.sidebar-library-settings.settings-active {
+  opacity: 1;
   color: #396cd8;
 }
 
@@ -246,40 +278,6 @@ button:disabled {
 .sidebar-tag-item[data-category="series"].selected {
   background: rgba(216, 162, 57, 0.15);
   color: #c88a2e;
-}
-
-/* Sidebar Footer */
-.sidebar-footer {
-  margin-top: auto;
-  padding: 12px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.sidebar-settings-btn {
-  all: unset;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 8px;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  border-radius: 4px;
-  box-sizing: border-box;
-  color: #555;
-}
-
-.sidebar-settings-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.sidebar-settings-btn.active {
-  background: rgba(57, 108, 216, 0.12);
-  color: #396cd8;
-}
-
-.sidebar-settings-icon {
-  font-size: 1rem;
 }
 
 /* Content Area */
@@ -1775,7 +1773,20 @@ button:disabled {
   }
 
   .sidebar-library-item.active {
-    background: rgba(57, 108, 216, 0.25);
+    border-left-color: #5c93e6;
+    border-bottom-color: rgba(92, 147, 230, 0.3);
+    color: #5c93e6;
+  }
+
+  .sidebar-library-settings {
+    color: #ddd;
+  }
+
+  .sidebar-library-settings:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar-library-settings.settings-active {
     color: #5c93e6;
   }
 
@@ -1830,23 +1841,6 @@ button:disabled {
   .sidebar-tag-item[data-category="series"].selected {
     background: rgba(216, 162, 57, 0.25);
     color: #d8a84e;
-  }
-
-  .sidebar-footer {
-    border-top-color: #3a3a3a;
-  }
-
-  .sidebar-settings-btn {
-    color: #aaa;
-  }
-
-  .sidebar-settings-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .sidebar-settings-btn.active {
-    background: rgba(57, 108, 216, 0.2);
-    color: #5c93e6;
   }
 
   /* Context bar dark */

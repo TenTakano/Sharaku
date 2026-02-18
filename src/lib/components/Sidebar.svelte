@@ -145,7 +145,29 @@
           class:active={lib.id === activeLibrary?.id}
           onclick={() => selectLibrary(lib)}
         >
-          {lib.name}
+          <span class="sidebar-library-name">{lib.name}</span>
+          {#if lib.id === activeLibrary?.id}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span
+              class="sidebar-library-settings"
+              class:settings-active={currentView === "settings"}
+              role="button"
+              tabindex="-1"
+              onclick={(e: MouseEvent) => {
+                e.stopPropagation();
+                onNavigate("settings");
+              }}
+              onkeydown={(e: KeyboardEvent) => {
+                if (e.key === "Enter") {
+                  e.stopPropagation();
+                  onNavigate("settings");
+                }
+              }}
+              title="ライブラリ設定"
+            >
+              &#9881;
+            </span>
+          {/if}
         </button>
       {/each}
     </div>
@@ -191,15 +213,4 @@
       </div>
     </div>
   {/if}
-
-  <div class="sidebar-footer">
-    <button
-      class="sidebar-settings-btn"
-      class:active={currentView === "settings"}
-      onclick={() => onNavigate("settings")}
-    >
-      <span class="sidebar-settings-icon">&#9881;</span>
-      設定
-    </button>
-  </div>
 </aside>
