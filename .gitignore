@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 /tmp
+
+# Claude Code
+.claude/settings.local.json
