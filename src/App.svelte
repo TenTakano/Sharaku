@@ -114,18 +114,12 @@
       <div class="context-bar">
         <div class="context-bar-left">
           {#if currentView === "settings"}
-            <button
-              class="context-bar-back"
-              onclick={handleBackToLibrary}
-            >
+            <button class="context-bar-back" onclick={handleBackToLibrary}>
               ←
             </button>
             <h1 class="context-bar-title">設定: {activeLibrary.name}</h1>
           {:else if currentView === "import" || currentView === "bulk-import"}
-            <button
-              class="context-bar-back"
-              onclick={handleBackToLibrary}
-            >
+            <button class="context-bar-back" onclick={handleBackToLibrary}>
               ←
             </button>
             <h1 class="context-bar-title">取り込み: {activeLibrary.name}</h1>
@@ -175,9 +169,7 @@
       </div>
 
       {#if currentView === "settings"}
-        <SettingsView
-          libraryPath={activeLibrary.path}
-        />
+        <SettingsView libraryPath={activeLibrary.path} />
       {:else if currentView === "import"}
         <ImportView
           onBack={handleBackToLibrary}

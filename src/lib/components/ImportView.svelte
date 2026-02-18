@@ -123,9 +123,7 @@
   <div class="import-content">
     <section class="import-section">
       <h2>フォルダを選択</h2>
-      <p class="import-description">
-        取り込む画像フォルダを選択してください。
-      </p>
+      <p class="import-description">取り込む画像フォルダを選択してください。</p>
       <button class="import-select-btn" onclick={selectFolder}>
         フォルダを選択...
       </button>
@@ -242,9 +240,7 @@
       {/if}
 
       <div class="import-actions">
-        <button class="settings-back-btn" onclick={resetForm}>
-          ← 戻る
-        </button>
+        <button class="settings-back-btn" onclick={resetForm}> ← 戻る </button>
         <button
           class="import-execute-btn"
           onclick={executeImport}

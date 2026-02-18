@@ -240,8 +240,7 @@
       </p>
       <div class="type-label-fields">
         <div class="type-label-row">
-          <label class="type-label-name" for="type-label-image"
-            >画像作品:</label
+          <label class="type-label-name" for="type-label-image">画像作品:</label
           >
           <input
             id="type-label-image"
@@ -268,9 +267,7 @@
         <button
           class="settings-save-btn"
           onclick={saveTypeLabels}
-          disabled={saving ||
-            !typeLabelImage.trim() ||
-            !typeLabelFolder.trim()}
+          disabled={saving || !typeLabelImage.trim() || !typeLabelFolder.trim()}
         >
           保存
         </button>

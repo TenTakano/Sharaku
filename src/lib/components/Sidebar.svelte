@@ -149,11 +149,7 @@
         </button>
       {/each}
     </div>
-    <button
-      class="sidebar-add-library"
-      onclick={addLibrary}
-      disabled={adding}
-    >
+    <button class="sidebar-add-library" onclick={addLibrary} disabled={adding}>
       + ライブラリを追加
     </button>
   </div>
@@ -172,7 +168,9 @@
                 {isCategoryExpanded(group.category) ? "\u25BC" : "\u25B6"}
               </span>
               {group.displayName}
-              <span class="sidebar-tag-category-count">({group.tags.length})</span>
+              <span class="sidebar-tag-category-count"
+                >({group.tags.length})</span
+              >
             </button>
             {#if isCategoryExpanded(group.category)}
               <div class="sidebar-tag-list">

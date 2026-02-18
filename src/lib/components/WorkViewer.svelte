@@ -12,7 +12,8 @@
     onNavigateWork: (workId: number) => void;
   }
 
-  let { workId, workIds, libraryName, onBack, onNavigateWork }: Props = $props();
+  let { workId, workIds, libraryName, onBack, onNavigateWork }: Props =
+    $props();
 
   let work = $state<WorkDetail | null>(null);
   let error = $state<string | null>(null);

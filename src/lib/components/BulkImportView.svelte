@@ -247,10 +247,7 @@
                     value={getTitle(i)}
                     disabled={folder.alreadyRegistered}
                     oninput={(e) =>
-                      editedTitles.set(
-                        i,
-                        (e.target as HTMLInputElement).value,
-                      )}
+                      editedTitles.set(i, (e.target as HTMLInputElement).value)}
                   />
                 </td>
                 <td>
