@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
+  import { SvelteSet } from "svelte/reactivity";
   import type { Library, Tag } from "../types";
 
   interface Props {
@@ -23,7 +24,7 @@
 
   let libraries = $state<Library[]>([]);
   let tags = $state<Tag[]>([]);
-  let expandedCategories = $state<Set<string>>(new Set());
+  let expandedCategories = new SvelteSet<string>();
   let adding = $state(false);
 
   interface TagsByCategory {
@@ -33,6 +34,7 @@
   }
 
   let tagsByCategory = $derived.by(() => {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable in $derived, not reactive state
     const map = new Map<string | null, Tag[]>();
     for (const tag of tags) {
       const key = tag.category ?? null;
@@ -106,13 +108,11 @@
 
   function toggleCategory(category: string | null) {
     const key = category ?? "__null__";
-    const next = new Set(expandedCategories);
-    if (next.has(key)) {
-      next.delete(key);
+    if (expandedCategories.has(key)) {
+      expandedCategories.delete(key);
     } else {
-      next.add(key);
+      expandedCategories.add(key);
     }
-    expandedCategories = next;
   }
 
   function isCategoryExpanded(category: string | null): boolean {
@@ -147,7 +147,6 @@
         >
           <span class="sidebar-library-name">{lib.name}</span>
           {#if lib.id === activeLibrary?.id}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
             <span
               class="sidebar-library-settings"
               class:settings-active={currentView === "settings"}
