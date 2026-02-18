@@ -272,6 +272,24 @@ pub fn search_tags(
     Ok(tags)
 }
 
+pub fn list_tags(conn: &Connection, library_id: &str) -> Result<Vec<Tag>, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, category FROM tags WHERE library_id = ?1 ORDER BY category, name",
+    )?;
+    let rows = stmt.query_map([library_id], |row| {
+        Ok(Tag {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            category: row.get(2)?,
+        })
+    })?;
+    let mut tags = Vec::new();
+    for row in rows {
+        tags.push(row?);
+    }
+    Ok(tags)
+}
+
 pub fn add_tag_to_work(conn: &Connection, work_id: i64, tag_id: i64) -> Result<(), AppError> {
     conn.execute(
         "INSERT OR IGNORE INTO works_tags (work_id, tag_id) VALUES (?1, ?2)",

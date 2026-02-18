@@ -165,188 +165,181 @@
   }
 </script>
 
-<main class="container">
-  <div class="app-header">
-    <button class="settings-back-btn" onclick={onBack}>← ライブラリ</button>
-    <h1>一括取り込み</h1>
+{#if step === "discover"}
+  <div class="import-content">
+    <section class="import-section">
+      <h2>探索するフォルダを選択</h2>
+      <p class="import-description">
+        ルートフォルダを選択すると、画像を含むサブフォルダを自動検出します。
+      </p>
+      <button
+        class="import-select-btn"
+        onclick={selectRootAndDiscover}
+        disabled={discovering}
+      >
+        {discovering ? "探索中..." : "フォルダを選択..."}
+      </button>
+      {#if discoverStatus}
+        <p class="bulk-discover-status">{discoverStatus}</p>
+      {/if}
+    </section>
   </div>
+{:else if step === "review"}
+  <div class="bulk-review-content">
+    <section class="import-section">
+      <h2>取り込み対象の確認</h2>
+      <p class="import-description">
+        {folders.length} フォルダ検出 / {selected.size} 件選択中
+      </p>
 
-  {#if step === "discover"}
-    <div class="import-content">
-      <section class="import-section">
-        <h2>探索するフォルダを選択</h2>
-        <p class="import-description">
-          ルートフォルダを選択すると、画像を含むサブフォルダを自動検出します。
-        </p>
-        <button
-          class="import-select-btn"
-          onclick={selectRootAndDiscover}
-          disabled={discovering}
-        >
-          {discovering ? "探索中..." : "フォルダを選択..."}
-        </button>
-        {#if discoverStatus}
-          <p class="bulk-discover-status">{discoverStatus}</p>
-        {/if}
-      </section>
-    </div>
-  {:else if step === "review"}
-    <div class="bulk-review-content">
-      <section class="import-section">
-        <h2>取り込み対象の確認</h2>
-        <p class="import-description">
-          {folders.length} フォルダ検出 / {selected.size} 件選択中
-        </p>
-
-        <div class="bulk-toolbar">
-          <label class="bulk-select-all">
-            <input
-              type="checkbox"
-              checked={selected.size === selectableCount && selectableCount > 0}
-              onchange={toggleAll}
-            />
-            すべて選択
+      <div class="bulk-toolbar">
+        <label class="bulk-select-all">
+          <input
+            type="checkbox"
+            checked={selected.size === selectableCount && selectableCount > 0}
+            onchange={toggleAll}
+          />
+          すべて選択
+        </label>
+        <div class="import-mode-select">
+          <label class="import-mode-option">
+            <input type="radio" bind:group={mode} value="copy" />
+            コピー
           </label>
-          <div class="import-mode-select">
-            <label class="import-mode-option">
-              <input type="radio" bind:group={mode} value="copy" />
-              コピー
-            </label>
-            <label class="import-mode-option">
-              <input type="radio" bind:group={mode} value="move" />
-              移動
-            </label>
-          </div>
+          <label class="import-mode-option">
+            <input type="radio" bind:group={mode} value="move" />
+            移動
+          </label>
         </div>
+      </div>
 
-        <div class="bulk-table-wrapper">
-          <table class="bulk-table">
-            <thead>
-              <tr>
-                <th class="bulk-th-check"></th>
-                <th class="bulk-th-folder">フォルダ</th>
-                <th class="bulk-th-count">画像数</th>
-                <th class="bulk-th-title">タイトル</th>
-                <th class="bulk-th-artist">アーティスト</th>
-                <th class="bulk-th-status">状態</th>
+      <div class="bulk-table-wrapper">
+        <table class="bulk-table">
+          <thead>
+            <tr>
+              <th class="bulk-th-check"></th>
+              <th class="bulk-th-folder">フォルダ</th>
+              <th class="bulk-th-count">画像数</th>
+              <th class="bulk-th-title">タイトル</th>
+              <th class="bulk-th-artist">アーティスト</th>
+              <th class="bulk-th-status">状態</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each folders as folder, i (folder.path)}
+              <tr class:bulk-row-disabled={folder.alreadyRegistered}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(i)}
+                    disabled={folder.alreadyRegistered}
+                    onchange={() => toggleSelect(i)}
+                  />
+                </td>
+                <td class="bulk-cell-folder" title={folder.path}>
+                  {folder.folderName}
+                </td>
+                <td class="bulk-cell-count">{folder.imageCount}</td>
+                <td>
+                  <input
+                    type="text"
+                    class="bulk-inline-input"
+                    value={getTitle(i)}
+                    disabled={folder.alreadyRegistered}
+                    oninput={(e) =>
+                      editedTitles.set(
+                        i,
+                        (e.target as HTMLInputElement).value,
+                      )}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    class="bulk-inline-input"
+                    value={getArtist(i)}
+                    disabled={folder.alreadyRegistered}
+                    oninput={(e) =>
+                      editedArtists.set(
+                        i,
+                        (e.target as HTMLInputElement).value,
+                      )}
+                  />
+                </td>
+                <td class="bulk-cell-status">
+                  {#if folder.alreadyRegistered}
+                    <span class="bulk-registered">登録済み</span>
+                  {:else}
+                    <span class="bulk-new">新規</span>
+                  {/if}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {#each folders as folder, i (folder.path)}
-                <tr class:bulk-row-disabled={folder.alreadyRegistered}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(i)}
-                      disabled={folder.alreadyRegistered}
-                      onchange={() => toggleSelect(i)}
-                    />
-                  </td>
-                  <td class="bulk-cell-folder" title={folder.path}>
-                    {folder.folderName}
-                  </td>
-                  <td class="bulk-cell-count">{folder.imageCount}</td>
-                  <td>
-                    <input
-                      type="text"
-                      class="bulk-inline-input"
-                      value={getTitle(i)}
-                      disabled={folder.alreadyRegistered}
-                      oninput={(e) =>
-                        editedTitles.set(
-                          i,
-                          (e.target as HTMLInputElement).value,
-                        )}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      class="bulk-inline-input"
-                      value={getArtist(i)}
-                      disabled={folder.alreadyRegistered}
-                      oninput={(e) =>
-                        editedArtists.set(
-                          i,
-                          (e.target as HTMLInputElement).value,
-                        )}
-                    />
-                  </td>
-                  <td class="bulk-cell-status">
-                    {#if folder.alreadyRegistered}
-                      <span class="bulk-registered">登録済み</span>
-                    {:else}
-                      <span class="bulk-new">新規</span>
-                    {/if}
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
+            {/each}
+          </tbody>
+        </table>
+      </div>
 
-        <div class="import-actions">
-          <button class="settings-back-btn" onclick={resetToDiscover}>
-            ← 戻る
-          </button>
-          <button
-            class="import-execute-btn"
-            onclick={executeImport}
-            disabled={selected.size === 0}
-          >
-            {selected.size} 件を取り込み
-          </button>
+      <div class="import-actions">
+        <button class="settings-back-btn" onclick={resetToDiscover}>
+          ← 戻る
+        </button>
+        <button
+          class="import-execute-btn"
+          onclick={executeImport}
+          disabled={selected.size === 0}
+        >
+          {selected.size} 件を取り込み
+        </button>
+      </div>
+    </section>
+  </div>
+{:else if step === "importing"}
+  <div class="import-content">
+    <section class="import-section">
+      <h2>取り込み中</h2>
+      {#if importProgress && importProgress.type === "importing"}
+        <p class="bulk-progress-text">
+          {importProgress.current} / {importProgress.total}: {importProgress.title}
+        </p>
+        <progress max={importProgress.total} value={importProgress.current}
+        ></progress>
+      {:else if importProgress && importProgress.type === "started"}
+        <p class="bulk-progress-text">
+          {importProgress.total} 件の取り込みを開始...
+        </p>
+        <progress max={importProgress.total} value={0}></progress>
+      {:else}
+        <p class="import-loading">準備中...</p>
+      {/if}
+    </section>
+  </div>
+{:else if step === "done"}
+  <div class="import-content">
+    <section class="import-section">
+      <h2>取り込み完了</h2>
+      {#if summary}
+        <p class="import-success">
+          成功: {summary.succeeded} 件 / 失敗: {summary.failed} 件
+        </p>
+      {/if}
+      {#if importErrors.length > 0}
+        <div class="bulk-error-list">
+          <h3>エラー詳細</h3>
+          <ul>
+            {#each importErrors as err, i (i)}
+              <li><strong>{err.title}</strong>: {err.message}</li>
+            {/each}
+          </ul>
         </div>
-      </section>
-    </div>
-  {:else if step === "importing"}
-    <div class="import-content">
-      <section class="import-section">
-        <h2>取り込み中</h2>
-        {#if importProgress && importProgress.type === "importing"}
-          <p class="bulk-progress-text">
-            {importProgress.current} / {importProgress.total}: {importProgress.title}
-          </p>
-          <progress max={importProgress.total} value={importProgress.current}
-          ></progress>
-        {:else if importProgress && importProgress.type === "started"}
-          <p class="bulk-progress-text">
-            {importProgress.total} 件の取り込みを開始...
-          </p>
-          <progress max={importProgress.total} value={0}></progress>
-        {:else}
-          <p class="import-loading">準備中...</p>
-        {/if}
-      </section>
-    </div>
-  {:else if step === "done"}
-    <div class="import-content">
-      <section class="import-section">
-        <h2>取り込み完了</h2>
-        {#if summary}
-          <p class="import-success">
-            成功: {summary.succeeded} 件 / 失敗: {summary.failed} 件
-          </p>
-        {/if}
-        {#if importErrors.length > 0}
-          <div class="bulk-error-list">
-            <h3>エラー詳細</h3>
-            <ul>
-              {#each importErrors as err, i (i)}
-                <li><strong>{err.title}</strong>: {err.message}</li>
-              {/each}
-            </ul>
-          </div>
-        {/if}
-        <div class="import-actions">
-          <button class="settings-back-btn" onclick={handleDone}>
-            ← ライブラリへ戻る
-          </button>
-          <button class="import-select-btn" onclick={resetToDiscover}>
-            続けて取り込む
-          </button>
-        </div>
-      </section>
-    </div>
-  {/if}
-</main>
+      {/if}
+      <div class="import-actions">
+        <button class="settings-back-btn" onclick={handleDone}>
+          ← ライブラリへ戻る
+        </button>
+        <button class="import-select-btn" onclick={resetToDiscover}>
+          続けて取り込む
+        </button>
+      </div>
+    </section>
+  </div>
+{/if}
