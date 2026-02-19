@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
   import BulkImportView from "./lib/components/BulkImportView.svelte";
   import ImportView from "./lib/components/ImportView.svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
@@ -19,7 +20,8 @@
   let workIds = $state<number[]>([]);
   let activeLibrary = $state<Library | null>(null);
   let libraryLoading = $state(true);
-  let importDropdownOpen = $state(false);
+  let dragging = $state(false);
+  let importSourcePath = $state<string | undefined>(undefined);
 
   async function loadActiveLibrary() {
     try {
@@ -54,11 +56,15 @@
   function handleBackToLibrary() {
     currentView = "library";
     selectedWorkId = null;
+    importSourcePath = undefined;
+  }
+
+  function handleBackToSettings() {
+    currentView = "settings";
   }
 
   function handleSidebarNavigate(view: string) {
     currentView = view as typeof currentView;
-    importDropdownOpen = false;
   }
 
   function handleSidebarTagSelect(tag: Tag) {
@@ -73,16 +79,39 @@
     }
   }
 
-  function toggleImportDropdown() {
-    importDropdownOpen = !importDropdownOpen;
-  }
-
-  function closeImportDropdown() {
-    importDropdownOpen = false;
+  async function resolveFolderPath(path: string): Promise<string> {
+    return invoke<string>("resolve_drop_path", { path });
   }
 
   $effect(() => {
     loadActiveLibrary();
+  });
+
+  $effect(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent((event) => {
+      if (currentView !== "library") return;
+      if (event.payload.type === "enter") {
+        dragging = true;
+      } else if (event.payload.type === "leave") {
+        dragging = false;
+      } else if (event.payload.type === "drop") {
+        dragging = false;
+        const paths = event.payload.paths;
+        if (paths.length > 0) {
+          resolveFolderPath(paths[0])
+            .then((folderPath) => {
+              importSourcePath = folderPath;
+              currentView = "import";
+            })
+            .catch((e) => {
+              console.error("Drop path resolution failed:", e);
+            });
+        }
+      }
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   });
 </script>
 
@@ -118,66 +147,38 @@
               ←
             </button>
             <h1 class="context-bar-title">設定: {activeLibrary.name}</h1>
-          {:else if currentView === "import" || currentView === "bulk-import"}
+          {:else if currentView === "import"}
             <button class="context-bar-back" onclick={handleBackToLibrary}>
               ←
             </button>
             <h1 class="context-bar-title">取り込み: {activeLibrary.name}</h1>
+          {:else if currentView === "bulk-import"}
+            <button class="context-bar-back" onclick={handleBackToSettings}>
+              ←
+            </button>
+            <h1 class="context-bar-title">
+              一括取り込み: {activeLibrary.name}
+            </h1>
           {:else}
             <h1 class="context-bar-title">{activeLibrary.name}</h1>
           {/if}
         </div>
-        {#if currentView === "library"}
-          <div class="context-bar-actions">
-            <div class="import-dropdown-wrapper">
-              <button
-                class="context-bar-import-btn"
-                onclick={toggleImportDropdown}
-              >
-                + 取り込み ▾
-              </button>
-              {#if importDropdownOpen}
-                <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-                <div
-                  class="import-dropdown-overlay"
-                  onclick={closeImportDropdown}
-                ></div>
-                <div class="import-dropdown-menu">
-                  <button
-                    class="import-dropdown-item"
-                    onclick={() => {
-                      currentView = "import";
-                      closeImportDropdown();
-                    }}
-                  >
-                    単体取り込み
-                  </button>
-                  <button
-                    class="import-dropdown-item"
-                    onclick={() => {
-                      currentView = "bulk-import";
-                      closeImportDropdown();
-                    }}
-                  >
-                    一括取り込み
-                  </button>
-                </div>
-              {/if}
-            </div>
-          </div>
-        {/if}
       </div>
 
       {#if currentView === "settings"}
-        <SettingsView libraryPath={activeLibrary.path} />
+        <SettingsView
+          libraryPath={activeLibrary.path}
+          onNavigate={handleSidebarNavigate}
+        />
       {:else if currentView === "import"}
         <ImportView
+          initialSourcePath={importSourcePath}
           onBack={handleBackToLibrary}
           onImported={() => reloadTrigger++}
         />
       {:else if currentView === "bulk-import"}
         <BulkImportView
-          onBack={handleBackToLibrary}
+          onBack={handleBackToSettings}
           onImported={() => reloadTrigger++}
         />
       {:else}
@@ -190,6 +191,14 @@
           onFilterTagsChange={(tags) => (filterTags = tags)}
           onTagSearchModeChange={(mode) => (tagSearchMode = mode)}
         />
+      {/if}
+
+      {#if dragging && currentView === "library"}
+        <div class="drop-overlay">
+          <div class="drop-overlay-content">
+            ここにフォルダをドロップして取り込み
+          </div>
+        </div>
       {/if}
     </main>
   </div>

@@ -9,11 +9,12 @@
   } from "../types";
 
   interface Props {
+    initialSourcePath?: string;
     onBack: () => void;
     onImported: () => void;
   }
 
-  let { onBack, onImported }: Props = $props();
+  let { initialSourcePath, onBack, onImported }: Props = $props();
 
   type Step = "select" | "metadata" | "importing" | "done" | "error";
 
@@ -117,6 +118,32 @@
     result = null;
     errorMessage = "";
   }
+
+  async function loadFromPath(path: string) {
+    sourcePath = path;
+    const sep = path.includes("\\") ? "\\" : "/";
+    const folderName = path.split(sep).pop() ?? path;
+
+    try {
+      const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
+        folderName,
+      });
+      title = parsed.title;
+      artist = parsed.artist ?? "";
+    } catch {
+      title = folderName;
+      artist = "";
+    }
+
+    step = "metadata";
+    updatePreview();
+  }
+
+  $effect(() => {
+    if (initialSourcePath) {
+      loadFromPath(initialSourcePath);
+    }
+  });
 </script>
 
 {#if step === "select"}

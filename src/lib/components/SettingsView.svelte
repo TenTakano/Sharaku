@@ -10,9 +10,10 @@
 
   interface Props {
     libraryPath: string | null;
+    onNavigate: (view: string) => void;
   }
 
-  let { libraryPath }: Props = $props();
+  let { libraryPath, onNavigate }: Props = $props();
 
   let directoryTemplate = $state("");
   let typeLabelImage = $state("");
@@ -272,6 +273,19 @@
           保存
         </button>
       </div>
+    </section>
+
+    <section class="settings-section">
+      <h2>一括取り込み</h2>
+      <p class="settings-description">
+        フォルダを探索して、複数の作品を一括で取り込みます。
+      </p>
+      <button
+        class="settings-bulk-import-btn"
+        onclick={() => onNavigate("bulk-import")}
+      >
+        一括取り込みを開始
+      </button>
     </section>
   </div>
 
