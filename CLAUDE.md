@@ -21,23 +21,24 @@ npm run tauri dev
 `npm run dev` はViteのみ起動し、Tauriアプリは立ち上がらない。
 
 `npm run tauri dev` は内部で以下を順に実行する:
+
 1. Vite開発サーバー起動（ポート1420）
 2. Rustコンパイル（初回は数分かかる）
 3. Tauriウィンドウ起動
 
 ### その他のコマンド
 
-| コマンド | 説明 |
-|---|---|
-| `npm run tauri dev` | 開発サーバー + アプリ起動 |
-| `npm run build` | フロントエンドビルド |
-| `npm run tauri build` | リリースビルド |
-| `npm run check` | Svelte/TypeScript 型チェック |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier フォーマット |
-| `cargo check --manifest-path src-tauri/Cargo.toml` | Rustコンパイルチェック |
-| `cargo test --manifest-path src-tauri/Cargo.toml` | Rustテスト |
-| `cargo clippy --manifest-path src-tauri/Cargo.toml` | Rust lint |
+| コマンド                                            | 説明                         |
+| --------------------------------------------------- | ---------------------------- |
+| `npm run tauri dev`                                 | 開発サーバー + アプリ起動    |
+| `npm run build`                                     | フロントエンドビルド         |
+| `npm run tauri build`                               | リリースビルド               |
+| `npm run check`                                     | Svelte/TypeScript 型チェック |
+| `npm run lint`                                      | ESLint                       |
+| `npm run format`                                    | Prettier フォーマット        |
+| `cargo check --manifest-path src-tauri/Cargo.toml`  | Rustコンパイルチェック       |
+| `cargo test --manifest-path src-tauri/Cargo.toml`   | Rustテスト                   |
+| `cargo clippy --manifest-path src-tauri/Cargo.toml` | Rust lint                    |
 
 ## UI 確認
 
