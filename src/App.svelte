@@ -156,7 +156,9 @@
             <button class="context-bar-back" onclick={handleBackToSettings}>
               ←
             </button>
-            <h1 class="context-bar-title">一括取り込み: {activeLibrary.name}</h1>
+            <h1 class="context-bar-title">
+              一括取り込み: {activeLibrary.name}
+            </h1>
           {:else}
             <h1 class="context-bar-title">{activeLibrary.name}</h1>
           {/if}
