@@ -290,6 +290,7 @@ button:disabled {
   padding: 0 24px 16px;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
 }
 
 /* Context Bar */
@@ -336,60 +337,33 @@ button:disabled {
   flex-shrink: 0;
 }
 
-/* Import dropdown */
-.import-dropdown-wrapper {
-  position: relative;
-}
-
-.context-bar-import-btn {
-  padding: 6px 14px;
-  font-size: 0.875rem;
-  background-color: #396cd8;
-  color: #fff;
-  border-color: #396cd8;
-}
-
-.context-bar-import-btn:hover {
-  background-color: #2e5bb8;
-  border-color: #2e5bb8;
-}
-
-.import-dropdown-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-}
-
-.import-dropdown-menu {
+/* D&D drop overlay */
+.drop-overlay {
   position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  min-width: 160px;
-  background: #fff;
-  border: 1px solid #ddd;
+  inset: 0;
+  background: rgba(57, 108, 216, 0.12);
+  border: 3px dashed #396cd8;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 100;
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
 }
 
-.import-dropdown-item {
-  all: unset;
-  display: block;
-  padding: 8px 14px;
+.drop-overlay-content {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #396cd8;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 16px 32px;
+  border-radius: 8px;
+}
+
+/* Settings bulk import button */
+.settings-bulk-import-btn {
+  padding: 8px 16px;
   font-size: 0.875rem;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.import-dropdown-item:hover {
-  background: rgba(57, 108, 216, 0.08);
-}
-
-.import-dropdown-item + .import-dropdown-item {
-  border-top: 1px solid #eee;
 }
 
 /* ============================
@@ -1853,27 +1827,14 @@ button:disabled {
     border-color: #5c93e6;
   }
 
-  .context-bar-import-btn {
-    background-color: #396cd8;
-    color: #fff;
+  .drop-overlay {
+    background: rgba(57, 108, 216, 0.18);
+    border-color: #5c93e6;
   }
 
-  .import-dropdown-menu {
-    background: #3a3a3a;
-    border-color: #555;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  }
-
-  .import-dropdown-item {
-    color: #ddd;
-  }
-
-  .import-dropdown-item:hover {
-    background: rgba(57, 108, 216, 0.2);
-  }
-
-  .import-dropdown-item + .import-dropdown-item {
-    border-top-color: #555;
+  .drop-overlay-content {
+    color: #5c93e6;
+    background: rgba(47, 47, 47, 0.9);
   }
 
   /* Sort controls */

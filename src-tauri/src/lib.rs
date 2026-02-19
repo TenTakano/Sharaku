@@ -284,6 +284,25 @@ async fn preview_template(
 }
 
 #[tauri::command]
+async fn resolve_drop_path(path: String) -> Result<String, String> {
+    let p = std::path::Path::new(&path);
+    let folder = if p.is_dir() {
+        p.to_path_buf()
+    } else {
+        p.parent()
+            .ok_or_else(|| "親ディレクトリを取得できません".to_string())?
+            .to_path_buf()
+    };
+    if !folder.is_dir() {
+        return Err("有効なディレクトリではありません".to_string());
+    }
+    folder
+        .to_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "パスの変換に失敗しました".to_string())
+}
+
+#[tauri::command]
 async fn parse_folder_name(folder_name: String) -> Result<ParsedMetadata, String> {
     Ok(importer::parse_folder_name(&folder_name))
 }
@@ -719,6 +738,7 @@ pub fn run() {
             set_type_labels,
             validate_template,
             preview_template,
+            resolve_drop_path,
             parse_folder_name,
             preview_import_path,
             import_work,
