@@ -647,7 +647,14 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            let app_data_dir = app.path().app_data_dir()?;
+            let app_data_dir = {
+                let base = app.path().app_data_dir()?;
+                if cfg!(debug_assertions) {
+                    base.with_file_name("com.sharaku.viewer.dev")
+                } else {
+                    base
+                }
+            };
 
             let conn = db::open_db(&app_data_dir).expect("Failed to open database");
             migrate_libraries_json(&conn, &app_data_dir);
