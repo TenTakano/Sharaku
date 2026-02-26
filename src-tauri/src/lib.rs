@@ -646,8 +646,7 @@ async fn delete_orphan_works(
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
-        integrity::delete_orphan_works(&guard.conn, &active.id, &ids)
-            .map_err(|e| e.to_string())
+        integrity::delete_orphan_works(&guard.conn, &active.id, &ids).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?

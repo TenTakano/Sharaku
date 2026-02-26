@@ -348,7 +348,8 @@
         DBレコードとファイルシステムの不整合を検出します。
       </p>
       <p class="settings-description integrity-warning">
-        ※ ネットワークドライブが未接続の場合、正常なレコードが孤立として検出される可能性があります。
+        ※
+        ネットワークドライブが未接続の場合、正常なレコードが孤立として検出される可能性があります。
       </p>
       <button
         class="settings-bulk-import-btn"
@@ -389,13 +390,15 @@
         </p>
       {:else}
         <p class="integrity-summary">
-          全作品数: {integrityReport.totalWorks} 件 /
-          孤立レコード: {integrityReport.orphanWorks.length} 件 /
-          未登録フォルダ: {integrityReport.unregisteredEntries.length} 件
+          全作品数: {integrityReport.totalWorks} 件 / 孤立レコード: {integrityReport
+            .orphanWorks.length} 件 / 未登録フォルダ: {integrityReport
+            .unregisteredEntries.length} 件
         </p>
 
         {#if integrityReport.orphanWorks.length > 0}
-          <h3 class="integrity-section-title">孤立レコード（ファイルが存在しないDBレコード）</h3>
+          <h3 class="integrity-section-title">
+            孤立レコード（ファイルが存在しないDBレコード）
+          </h3>
           <div class="integrity-list">
             {#each integrityReport.orphanWorks as work (work.id)}
               <div class="integrity-list-item">
@@ -407,12 +410,16 @@
         {/if}
 
         {#if integrityReport.unregisteredEntries.length > 0}
-          <h3 class="integrity-section-title">未登録フォルダ（DBに登録されていないフォルダ）</h3>
+          <h3 class="integrity-section-title">
+            未登録フォルダ（DBに登録されていないフォルダ）
+          </h3>
           <div class="integrity-list">
             {#each integrityReport.unregisteredEntries as entry (entry.path)}
               <div class="integrity-list-item">
                 <span class="integrity-item-title">{entry.folderName}</span>
-                <span class="integrity-item-detail">画像: {entry.imageCount} 枚</span>
+                <span class="integrity-item-detail"
+                  >画像: {entry.imageCount} 枚</span
+                >
                 <code class="integrity-item-path">{entry.path}</code>
               </div>
             {/each}
@@ -421,7 +428,11 @@
       {/if}
 
       <div class="integrity-actions">
-        <button class="integrity-close-btn" onclick={closeIntegrityDialog} disabled={deletingOrphans}>
+        <button
+          class="integrity-close-btn"
+          onclick={closeIntegrityDialog}
+          disabled={deletingOrphans}
+        >
           閉じる
         </button>
         {#if integrityReport.orphanWorks.length > 0}

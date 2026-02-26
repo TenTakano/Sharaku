@@ -404,9 +404,7 @@ pub fn list_work_paths(
     conn: &Connection,
     library_id: &str,
 ) -> Result<Vec<WorkPathEntry>, AppError> {
-    let mut stmt = conn.prepare(
-        "SELECT id, title, path, type FROM works WHERE library_id = ?1",
-    )?;
+    let mut stmt = conn.prepare("SELECT id, title, path, type FROM works WHERE library_id = ?1")?;
     let rows = stmt.query_map([library_id], |row| {
         Ok(WorkPathEntry {
             id: row.get(0)?,
@@ -432,8 +430,7 @@ pub fn delete_works_by_ids(
     }
     let mut total_deleted = 0usize;
     for chunk in ids.chunks(500) {
-        let placeholders: Vec<String> =
-            (2..=chunk.len() + 1).map(|i| format!("?{i}")).collect();
+        let placeholders: Vec<String> = (2..=chunk.len() + 1).map(|i| format!("?{i}")).collect();
         let sql = format!(
             "DELETE FROM works WHERE library_id = ?1 AND id IN ({})",
             placeholders.join(", ")
