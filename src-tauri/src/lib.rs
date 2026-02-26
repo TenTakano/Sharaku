@@ -1,6 +1,7 @@
 mod db;
 mod error;
 mod importer;
+mod integrity;
 mod library;
 mod migration;
 mod relocator;
@@ -21,6 +22,7 @@ use importer::{
     BulkImportProgress, BulkImportSummary, DiscoverProgress, DiscoveredFolder, ImportResult,
     ParsedMetadata,
 };
+use integrity::{IntegrityCheckProgress, IntegrityReport};
 use library::Library;
 use relocator::{RelocationPreview, RelocationProgress};
 use serde::Serialize;
@@ -613,6 +615,44 @@ async fn search_works_by_tags(
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn check_integrity(
+    state: tauri::State<'_, AppState>,
+    on_progress: tauri::ipc::Channel<IntegrityCheckProgress>,
+) -> Result<IntegrityReport, String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        let active = guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+        integrity::check_integrity(&guard.conn, &active.id, &active.path, &on_progress)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn delete_orphan_works(
+    state: tauri::State<'_, AppState>,
+    ids: Vec<i64>,
+) -> Result<usize, String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        let active = guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+        integrity::delete_orphan_works(&guard.conn, &active.id, &ids)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn migrate_libraries_json(conn: &Connection, app_data_dir: &std::path::Path) {
     let json_path = app_data_dir.join("libraries.json");
     if !json_path.exists() {
@@ -755,6 +795,8 @@ pub fn run() {
             remove_tag_from_work,
             get_tags_for_work,
             search_works_by_tags,
+            check_integrity,
+            delete_orphan_works,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -201,7 +201,7 @@ fn count_direct_images_only_counts_immediate() {
     std::fs::create_dir_all(&sub).unwrap();
     std::fs::write(sub.join("c.jpg"), b"fake").unwrap();
 
-    assert_eq!(count_direct_images(&dir), 2);
+    assert_eq!(crate::scanner::count_direct_images(&dir), 2);
 
     std::fs::remove_dir_all(&dir).unwrap();
 }
@@ -212,7 +212,7 @@ fn count_direct_images_empty_dir() {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
 
-    assert_eq!(count_direct_images(&dir), 0);
+    assert_eq!(crate::scanner::count_direct_images(&dir), 0);
 
     std::fs::remove_dir_all(&dir).unwrap();
 }

@@ -125,3 +125,27 @@ export interface BulkImportSummary {
   succeeded: number;
   failed: number;
 }
+
+export interface OrphanWork {
+  id: number;
+  title: string;
+  path: string;
+  workType: string;
+}
+
+export interface UnregisteredEntry {
+  path: string;
+  folderName: string;
+  imageCount: number;
+}
+
+export interface IntegrityReport {
+  totalWorks: number;
+  orphanWorks: OrphanWork[];
+  unregisteredEntries: UnregisteredEntry[];
+}
+
+export type IntegrityCheckProgress =
+  | { type: "checkingWorks"; checked: number; total: number }
+  | { type: "scanningDirectory"; scannedDirs: number }
+  | { type: "completed" };

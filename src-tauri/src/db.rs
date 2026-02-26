@@ -391,6 +391,64 @@ pub fn search_works_by_tags(
     Ok(works)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkPathEntry {
+    pub id: i64,
+    pub title: String,
+    pub path: String,
+    pub work_type: String,
+}
+
+pub fn list_work_paths(
+    conn: &Connection,
+    library_id: &str,
+) -> Result<Vec<WorkPathEntry>, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, title, path, type FROM works WHERE library_id = ?1",
+    )?;
+    let rows = stmt.query_map([library_id], |row| {
+        Ok(WorkPathEntry {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            path: row.get(2)?,
+            work_type: row.get(3)?,
+        })
+    })?;
+    let mut entries = Vec::new();
+    for row in rows {
+        entries.push(row?);
+    }
+    Ok(entries)
+}
+
+pub fn delete_works_by_ids(
+    conn: &Connection,
+    library_id: &str,
+    ids: &[i64],
+) -> Result<usize, AppError> {
+    if ids.is_empty() {
+        return Ok(0);
+    }
+    let mut total_deleted = 0usize;
+    for chunk in ids.chunks(500) {
+        let placeholders: Vec<String> =
+            (2..=chunk.len() + 1).map(|i| format!("?{i}")).collect();
+        let sql = format!(
+            "DELETE FROM works WHERE library_id = ?1 AND id IN ({})",
+            placeholders.join(", ")
+        );
+        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> =
+            vec![Box::new(library_id.to_string()) as _];
+        for id in chunk {
+            params.push(Box::new(*id) as _);
+        }
+        let deleted = conn.execute(&sql, params_from_iter(params.iter()))?;
+        total_deleted += deleted;
+    }
+    Ok(total_deleted)
+}
+
 #[cfg(test)]
 #[path = "tests/db.rs"]
 mod tests;

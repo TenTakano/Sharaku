@@ -9,6 +9,20 @@ pub(crate) fn is_image_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+pub(crate) fn count_direct_images(dir: &Path) -> usize {
+    std::fs::read_dir(dir)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    e.file_type().map(|ft| ft.is_file()).unwrap_or(false)
+                        && is_image_file(&e.path())
+                })
+                .count()
+        })
+        .unwrap_or(0)
+}
+
 #[cfg(test)]
 #[path = "tests/scanner.rs"]
 mod tests;

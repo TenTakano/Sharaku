@@ -245,7 +245,7 @@ pub fn discover_image_folders(
         }
 
         let dir_path = entry.path();
-        let image_count = count_direct_images(dir_path);
+        let image_count = scanner::count_direct_images(dir_path);
         if image_count == 0 {
             continue;
         }
@@ -273,20 +273,6 @@ pub fn discover_image_folders(
         found: folders.len(),
     });
     Ok(folders)
-}
-
-fn count_direct_images(dir: &Path) -> usize {
-    std::fs::read_dir(dir)
-        .map(|entries| {
-            entries
-                .filter_map(|e| e.ok())
-                .filter(|e| {
-                    e.file_type().map(|ft| ft.is_file()).unwrap_or(false)
-                        && scanner::is_image_file(&e.path())
-                })
-                .count()
-        })
-        .unwrap_or(0)
 }
 
 #[derive(Serialize, Clone)]
