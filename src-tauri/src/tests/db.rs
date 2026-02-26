@@ -474,6 +474,96 @@ fn search_works_by_tags_and_mode_deduplicates_ids() {
     assert_eq!(result.len(), 1);
 }
 
+// --- list_work_paths ---
+
+#[test]
+fn list_work_paths_returns_all_works() {
+    let conn = test_conn();
+    insert_work(&conn, &sample_record("A", "/a.jpg")).unwrap();
+    insert_work(&conn, &sample_folder_record("B", "/b")).unwrap();
+
+    let entries = list_work_paths(&conn, TEST_LIBRARY_ID).unwrap();
+    assert_eq!(entries.len(), 2);
+    let titles: Vec<&str> = entries.iter().map(|e| e.title.as_str()).collect();
+    assert!(titles.contains(&"A"));
+    assert!(titles.contains(&"B"));
+}
+
+#[test]
+fn list_work_paths_empty_library() {
+    let conn = test_conn();
+    let entries = list_work_paths(&conn, TEST_LIBRARY_ID).unwrap();
+    assert!(entries.is_empty());
+}
+
+#[test]
+fn list_work_paths_includes_correct_fields() {
+    let conn = test_conn();
+    insert_work(&conn, &sample_folder_record("Folder Work", "/some/path")).unwrap();
+
+    let entries = list_work_paths(&conn, TEST_LIBRARY_ID).unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].title, "Folder Work");
+    assert_eq!(entries[0].path, "/some/path");
+    assert_eq!(entries[0].work_type, "folder");
+    assert!(entries[0].id > 0);
+}
+
+// --- delete_works_by_ids ---
+
+#[test]
+fn delete_works_by_ids_removes_works() {
+    let conn = test_conn();
+    insert_work(&conn, &sample_record("A", "/a.jpg")).unwrap();
+    insert_work(&conn, &sample_record("B", "/b.jpg")).unwrap();
+    insert_work(&conn, &sample_record("C", "/c.jpg")).unwrap();
+
+    let works = list_works(&conn, TEST_LIBRARY_ID, "title", "asc").unwrap();
+    let ids: Vec<i64> = works.iter().take(2).map(|w| w.id).collect();
+
+    let deleted = delete_works_by_ids(&conn, TEST_LIBRARY_ID, &ids).unwrap();
+    assert_eq!(deleted, 2);
+
+    let remaining = list_works(&conn, TEST_LIBRARY_ID, "title", "asc").unwrap();
+    assert_eq!(remaining.len(), 1);
+    assert_eq!(remaining[0].title, "C");
+}
+
+#[test]
+fn delete_works_by_ids_empty_ids() {
+    let conn = test_conn();
+    insert_work(&conn, &sample_record("A", "/a.jpg")).unwrap();
+
+    let deleted = delete_works_by_ids(&conn, TEST_LIBRARY_ID, &[]).unwrap();
+    assert_eq!(deleted, 0);
+
+    let works = list_works(&conn, TEST_LIBRARY_ID, "title", "asc").unwrap();
+    assert_eq!(works.len(), 1);
+}
+
+#[test]
+fn delete_works_by_ids_nonexistent_ids() {
+    let conn = test_conn();
+    let deleted = delete_works_by_ids(&conn, TEST_LIBRARY_ID, &[9999, 8888]).unwrap();
+    assert_eq!(deleted, 0);
+}
+
+#[test]
+fn delete_works_by_ids_cascades_tags() {
+    let conn = test_conn();
+    insert_work(&conn, &sample_record("W", "/w.jpg")).unwrap();
+    let works = list_works(&conn, TEST_LIBRARY_ID, "title", "asc").unwrap();
+    let tag = create_tag(&conn, TEST_LIBRARY_ID, "test_tag", None).unwrap();
+    add_tag_to_work(&conn, works[0].id, tag.id).unwrap();
+
+    let deleted = delete_works_by_ids(&conn, TEST_LIBRARY_ID, &[works[0].id]).unwrap();
+    assert_eq!(deleted, 1);
+
+    // works_tags entry should be cascade-deleted
+    let tags = get_tags_for_work(&conn, works[0].id).unwrap();
+    assert!(tags.is_empty());
+}
+
 // --- database is locked reproduction ---
 
 fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {

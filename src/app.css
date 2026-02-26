@@ -1432,6 +1432,129 @@ button:disabled {
   border-radius: 4px;
 }
 
+/* Integrity check */
+
+.integrity-warning {
+  color: #e65100;
+  font-size: 0.8125rem;
+}
+
+.integrity-progress {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 8px;
+}
+
+.integrity-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.integrity-dialog {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 640px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.integrity-dialog h2 {
+  font-size: 1.125rem;
+  margin: 0 0 12px;
+}
+
+.integrity-no-issues {
+  font-size: 0.9375rem;
+  color: #2e7d32;
+  margin: 8px 0 12px;
+}
+
+.integrity-summary {
+  font-size: 0.875rem;
+  color: #555;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.integrity-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 8px 0 6px;
+}
+
+.integrity-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 30vh;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.integrity-list-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.integrity-list-item:last-child {
+  border-bottom: none;
+}
+
+.integrity-item-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.integrity-item-detail {
+  font-size: 0.75rem;
+  color: #888;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.integrity-item-path {
+  font-size: 0.75rem;
+  color: #666;
+  display: block;
+  word-break: break-all;
+}
+
+.integrity-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.integrity-close-btn {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
+.integrity-delete-btn {
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  background-color: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+.integrity-delete-btn:hover:not(:disabled) {
+  background-color: #b71c1c;
+}
+
 /* Tag remove confirmation dialog */
 .tag-confirm-overlay {
   position: fixed;

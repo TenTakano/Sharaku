@@ -6,6 +6,8 @@
     TemplateValidation,
     RelocationPreview,
     RelocationProgress,
+    IntegrityReport,
+    IntegrityCheckProgress,
   } from "../types";
 
   interface Props {
@@ -33,6 +35,12 @@
 
   let savedDirectoryTemplate = $state("");
   let relocationPreviews = $state<RelocationPreview[]>([]);
+
+  let integrityChecking = $state(false);
+  let integrityProgress = $state<IntegrityCheckProgress | null>(null);
+  let integrityReport = $state<IntegrityReport | null>(null);
+  let showIntegrityDialog = $state(false);
+  let deletingOrphans = $state(false);
   let showRelocationDialog = $state(false);
   let relocating = $state(false);
   let relocationProgress = $state<RelocationProgress | null>(null);
@@ -175,6 +183,52 @@
     }, 300);
   }
 
+  async function runIntegrityCheck() {
+    integrityChecking = true;
+    integrityProgress = null;
+    integrityReport = null;
+    try {
+      const channel = new Channel<IntegrityCheckProgress>();
+      channel.onmessage = (progress) => {
+        integrityProgress = progress;
+      };
+      const report = await invoke<IntegrityReport>("check_integrity", {
+        onProgress: channel,
+      });
+      integrityReport = report;
+      showIntegrityDialog = true;
+    } catch (e) {
+      message = { type: "error", text: `整合チェックに失敗しました: ${e}` };
+    } finally {
+      integrityChecking = false;
+      integrityProgress = null;
+    }
+  }
+
+  function closeIntegrityDialog() {
+    showIntegrityDialog = false;
+    integrityReport = null;
+  }
+
+  async function deleteOrphanWorks() {
+    if (!integrityReport || integrityReport.orphanWorks.length === 0) return;
+    deletingOrphans = true;
+    try {
+      const ids = integrityReport.orphanWorks.map((w) => w.id);
+      const deleted = await invoke<number>("delete_orphan_works", { ids });
+      message = {
+        type: "success",
+        text: `${deleted} 件の孤立レコードを削除しました`,
+      };
+      showIntegrityDialog = false;
+      integrityReport = null;
+    } catch (e) {
+      message = { type: "error", text: `削除に失敗しました: ${e}` };
+    } finally {
+      deletingOrphans = false;
+    }
+  }
+
   $effect(() => {
     loadSettings();
   });
@@ -287,11 +341,116 @@
         一括取り込みを開始
       </button>
     </section>
+
+    <section class="settings-section">
+      <h2>ライブラリ整合チェック</h2>
+      <p class="settings-description">
+        DBレコードとファイルシステムの不整合を検出します。
+      </p>
+      <p class="settings-description integrity-warning">
+        ※
+        ネットワークドライブが未接続の場合、正常なレコードが孤立として検出される可能性があります。
+      </p>
+      <button
+        class="settings-bulk-import-btn"
+        onclick={runIntegrityCheck}
+        disabled={integrityChecking}
+      >
+        {#if integrityChecking}
+          チェック中...
+        {:else}
+          整合チェックを実行
+        {/if}
+      </button>
+      {#if integrityChecking && integrityProgress}
+        <p class="integrity-progress">
+          {#if integrityProgress.type === "checkingWorks"}
+            作品レコードを確認中... ({integrityProgress.checked}/{integrityProgress.total})
+          {:else if integrityProgress.type === "scanningDirectory"}
+            ディレクトリを走査中... ({integrityProgress.scannedDirs} フォルダ)
+          {/if}
+        </p>
+      {/if}
+    </section>
   </div>
 
   {#if message}
     <p class="settings-message {message.type}">{message.text}</p>
   {/if}
+{/if}
+
+{#if showIntegrityDialog && integrityReport}
+  <div class="integrity-overlay">
+    <div class="integrity-dialog">
+      <h2>整合チェック結果</h2>
+      {#if integrityReport.orphanWorks.length === 0 && integrityReport.unregisteredEntries.length === 0}
+        <p class="integrity-no-issues">問題は見つかりませんでした。</p>
+        <p class="integrity-summary">
+          全作品数: {integrityReport.totalWorks} 件
+        </p>
+      {:else}
+        <p class="integrity-summary">
+          全作品数: {integrityReport.totalWorks} 件 / 孤立レコード: {integrityReport
+            .orphanWorks.length} 件 / 未登録フォルダ: {integrityReport
+            .unregisteredEntries.length} 件
+        </p>
+
+        {#if integrityReport.orphanWorks.length > 0}
+          <h3 class="integrity-section-title">
+            孤立レコード（ファイルが存在しないDBレコード）
+          </h3>
+          <div class="integrity-list">
+            {#each integrityReport.orphanWorks as work (work.id)}
+              <div class="integrity-list-item">
+                <span class="integrity-item-title">{work.title}</span>
+                <code class="integrity-item-path">{work.path}</code>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        {#if integrityReport.unregisteredEntries.length > 0}
+          <h3 class="integrity-section-title">
+            未登録フォルダ（DBに登録されていないフォルダ）
+          </h3>
+          <div class="integrity-list">
+            {#each integrityReport.unregisteredEntries as entry (entry.path)}
+              <div class="integrity-list-item">
+                <span class="integrity-item-title">{entry.folderName}</span>
+                <span class="integrity-item-detail"
+                  >画像: {entry.imageCount} 枚</span
+                >
+                <code class="integrity-item-path">{entry.path}</code>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      {/if}
+
+      <div class="integrity-actions">
+        <button
+          class="integrity-close-btn"
+          onclick={closeIntegrityDialog}
+          disabled={deletingOrphans}
+        >
+          閉じる
+        </button>
+        {#if integrityReport.orphanWorks.length > 0}
+          <button
+            class="integrity-delete-btn"
+            onclick={deleteOrphanWorks}
+            disabled={deletingOrphans}
+          >
+            {#if deletingOrphans}
+              削除中...
+            {:else}
+              孤立レコードを削除 ({integrityReport.orphanWorks.length}件)
+            {/if}
+          </button>
+        {/if}
+      </div>
+    </div>
+  </div>
 {/if}
 
 {#if showRelocationDialog}
