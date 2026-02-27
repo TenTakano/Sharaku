@@ -8,7 +8,12 @@
   import SettingsView from "./lib/components/SettingsView.svelte";
   import WorkGrid from "./lib/components/WorkGrid.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
-  import type { Library, Tag, TagSearchMode } from "./lib/types";
+  import type {
+    Library,
+    Tag,
+    TagSearchMode,
+    UnregisteredEntry,
+  } from "./lib/types";
 
   let reloadTrigger = $state(0);
   let filterTags = $state<Tag[]>([]);
@@ -22,6 +27,9 @@
   let libraryLoading = $state(true);
   let dragging = $state(false);
   let importSourcePath = $state<string | undefined>(undefined);
+  let pendingBulkImportEntries = $state<UnregisteredEntry[] | undefined>(
+    undefined,
+  );
 
   async function loadActiveLibrary() {
     try {
@@ -61,6 +69,12 @@
 
   function handleBackToSettings() {
     currentView = "settings";
+    pendingBulkImportEntries = undefined;
+  }
+
+  function handleImportUnregistered(entries: UnregisteredEntry[]) {
+    pendingBulkImportEntries = entries;
+    currentView = "bulk-import";
   }
 
   function handleSidebarNavigate(view: string) {
@@ -169,6 +183,7 @@
         <SettingsView
           libraryPath={activeLibrary.path}
           onNavigate={handleSidebarNavigate}
+          onImportUnregistered={handleImportUnregistered}
         />
       {:else if currentView === "import"}
         <ImportView
@@ -178,8 +193,12 @@
         />
       {:else if currentView === "bulk-import"}
         <BulkImportView
+          initialEntries={pendingBulkImportEntries}
           onBack={handleBackToSettings}
-          onImported={() => reloadTrigger++}
+          onImported={() => {
+            reloadTrigger++;
+            pendingBulkImportEntries = undefined;
+          }}
         />
       {:else}
         <WorkGrid
