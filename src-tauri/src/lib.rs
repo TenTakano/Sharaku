@@ -286,6 +286,15 @@ async fn preview_template(
 }
 
 #[tauri::command]
+async fn has_image_subfolders(dir: String) -> Result<bool, String> {
+    let path = std::path::Path::new(&dir);
+    if !path.is_dir() {
+        return Err("有効なディレクトリではありません".to_string());
+    }
+    Ok(scanner::has_image_subfolders(path))
+}
+
+#[tauri::command]
 async fn resolve_drop_path(path: String) -> Result<String, String> {
     let p = std::path::Path::new(&path);
     let folder = if p.is_dir() {
@@ -777,6 +786,7 @@ pub fn run() {
             set_type_labels,
             validate_template,
             preview_template,
+            has_image_subfolders,
             resolve_drop_path,
             parse_folder_name,
             preview_import_path,

@@ -1,4 +1,5 @@
 use std::path::Path;
+use walkdir::WalkDir;
 
 pub(crate) const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "gif", "webp", "bmp"];
 
@@ -21,6 +22,15 @@ pub(crate) fn count_direct_images(dir: &Path) -> usize {
                 .count()
         })
         .unwrap_or(0)
+}
+
+pub(crate) fn has_image_subfolders(dir: &Path) -> bool {
+    WalkDir::new(dir)
+        .min_depth(1)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_dir())
+        .any(|e| count_direct_images(e.path()) > 0)
 }
 
 #[cfg(test)]

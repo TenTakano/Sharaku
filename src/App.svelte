@@ -27,6 +27,7 @@
   let libraryLoading = $state(true);
   let dragging = $state(false);
   let importSourcePath = $state<string | undefined>(undefined);
+  let bulkImportRootPath = $state<string | undefined>(undefined);
   let pendingBulkImportEntries = $state<UnregisteredEntry[] | undefined>(
     undefined,
   );
@@ -70,6 +71,16 @@
   function handleBackToSettings() {
     currentView = "settings";
     pendingBulkImportEntries = undefined;
+    bulkImportRootPath = undefined;
+  }
+
+  function handleBulkImportBack() {
+    if (bulkImportRootPath) {
+      bulkImportRootPath = undefined;
+      currentView = "library";
+    } else {
+      handleBackToSettings();
+    }
   }
 
   function handleImportUnregistered(entries: UnregisteredEntry[]) {
@@ -113,9 +124,19 @@
         const paths = event.payload.paths;
         if (paths.length > 0) {
           resolveFolderPath(paths[0])
-            .then((folderPath) => {
-              importSourcePath = folderPath;
-              currentView = "import";
+            .then(async (folderPath) => {
+              const hasSubs = await invoke<boolean>(
+                "has_image_subfolders",
+                { dir: folderPath },
+              );
+              if (hasSubs) {
+                bulkImportRootPath = folderPath;
+                pendingBulkImportEntries = undefined;
+                currentView = "bulk-import";
+              } else {
+                importSourcePath = folderPath;
+                currentView = "import";
+              }
             })
             .catch((e) => {
               console.error("Drop path resolution failed:", e);
@@ -167,7 +188,7 @@
             </button>
             <h1 class="context-bar-title">取り込み: {activeLibrary.name}</h1>
           {:else if currentView === "bulk-import"}
-            <button class="context-bar-back" onclick={handleBackToSettings}>
+            <button class="context-bar-back" onclick={handleBulkImportBack}>
               ←
             </button>
             <h1 class="context-bar-title">
@@ -194,10 +215,12 @@
       {:else if currentView === "bulk-import"}
         <BulkImportView
           initialEntries={pendingBulkImportEntries}
-          onBack={handleBackToSettings}
+          initialRootPath={bulkImportRootPath}
+          onBack={handleBulkImportBack}
           onImported={() => {
             reloadTrigger++;
             pendingBulkImportEntries = undefined;
+            bulkImportRootPath = undefined;
           }}
         />
       {:else}
