@@ -9,14 +9,17 @@
     ImportRequest,
     BulkImportProgress,
     BulkImportSummary,
+    UnregisteredEntry,
+    ParsedMetadata,
   } from "../types";
 
   interface Props {
+    initialEntries?: UnregisteredEntry[];
     onBack: () => void;
     onImported: () => void;
   }
 
-  let { onBack, onImported }: Props = $props();
+  let { initialEntries, onBack, onImported }: Props = $props();
 
   type Step = "discover" | "review" | "importing" | "done";
 
@@ -163,6 +166,35 @@
     importErrors = [];
     discoverStatus = "";
   }
+
+  async function loadFromEntries(entries: UnregisteredEntry[]) {
+    const parsed = await Promise.all(
+      entries.map((entry) =>
+        invoke<ParsedMetadata>("parse_folder_name", {
+          folderName: entry.folderName,
+        }),
+      ),
+    );
+    folders = entries.map((entry, i) => ({
+      path: entry.path,
+      folderName: entry.folderName,
+      imageCount: entry.imageCount,
+      parsedMetadata: parsed[i],
+      alreadyRegistered: false,
+    }));
+    selected.clear();
+    folders.forEach((_, i) => selected.add(i));
+    editedTitles.clear();
+    editedArtists.clear();
+    mode = "move";
+    step = "review";
+  }
+
+  $effect(() => {
+    if (initialEntries) {
+      loadFromEntries(initialEntries);
+    }
+  });
 </script>
 
 {#if step === "discover"}
@@ -277,7 +309,10 @@
       </div>
 
       <div class="import-actions">
-        <button class="settings-back-btn" onclick={resetToDiscover}>
+        <button
+          class="settings-back-btn"
+          onclick={initialEntries ? onBack : resetToDiscover}
+        >
           ← 戻る
         </button>
         <button

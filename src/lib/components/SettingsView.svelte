@@ -8,14 +8,16 @@
     RelocationProgress,
     IntegrityReport,
     IntegrityCheckProgress,
+    UnregisteredEntry,
   } from "../types";
 
   interface Props {
     libraryPath: string | null;
     onNavigate: (view: string) => void;
+    onImportUnregistered: (entries: UnregisteredEntry[]) => void;
   }
 
-  let { libraryPath, onNavigate }: Props = $props();
+  let { libraryPath, onNavigate, onImportUnregistered }: Props = $props();
 
   let directoryTemplate = $state("");
   let typeLabelImage = $state("");
@@ -446,6 +448,19 @@
             {:else}
               孤立レコードを削除 ({integrityReport.orphanWorks.length}件)
             {/if}
+          </button>
+        {/if}
+        {#if integrityReport.unregisteredEntries.length > 0}
+          <button
+            class="integrity-import-btn"
+            onclick={() => {
+              onImportUnregistered(integrityReport!.unregisteredEntries);
+              closeIntegrityDialog();
+            }}
+            disabled={deletingOrphans}
+          >
+            未登録フォルダを取り込む ({integrityReport.unregisteredEntries
+              .length}件)
           </button>
         {/if}
       </div>
