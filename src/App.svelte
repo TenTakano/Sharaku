@@ -125,10 +125,9 @@
         if (paths.length > 0) {
           resolveFolderPath(paths[0])
             .then(async (folderPath) => {
-              const hasSubs = await invoke<boolean>(
-                "has_image_subfolders",
-                { dir: folderPath },
-              );
+              const hasSubs = await invoke<boolean>("has_image_subfolders", {
+                dir: folderPath,
+              });
               if (hasSubs) {
                 bulkImportRootPath = folderPath;
                 pendingBulkImportEntries = undefined;

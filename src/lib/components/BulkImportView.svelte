@@ -20,8 +20,7 @@
     onImported: () => void;
   }
 
-  let { initialEntries, initialRootPath, onBack, onImported }: Props =
-    $props();
+  let { initialEntries, initialRootPath, onBack, onImported }: Props = $props();
 
   type Step = "discover" | "review" | "importing" | "done";
 
