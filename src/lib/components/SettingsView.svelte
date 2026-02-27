@@ -459,7 +459,8 @@
             }}
             disabled={deletingOrphans}
           >
-            未登録フォルダを取り込む ({integrityReport.unregisteredEntries.length}件)
+            未登録フォルダを取り込む ({integrityReport.unregisteredEntries
+              .length}件)
           </button>
         {/if}
       </div>
