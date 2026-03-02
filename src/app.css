@@ -1,5 +1,8 @@
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  font-family:
+    Inter, Avenir, Helvetica, Arial, "Noto Sans JP", "Noto Sans CJK JP",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo",
+    sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
