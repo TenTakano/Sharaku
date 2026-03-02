@@ -8,7 +8,9 @@
       "Bash(cargo run:*)",
       "Bash(cargo clippy:*)",
       "Bash(cargo remove:*)",
-      "Bash(rustfmt:*)"
+      "Bash(rustfmt:*)",
+      "Bash(scripts/screenshot.sh:*)",
+      "Bash(bash scripts/screenshot.sh:*)"
     ],
     "ask": [
       "Bash(cargo install:*)",

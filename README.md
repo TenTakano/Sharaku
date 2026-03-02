@@ -23,6 +23,20 @@ npm install
 npm run tauri dev
 ```
 
+### スクリーンショットツール（開発用・任意）
+
+UI 確認用のスクリーンショット撮影に使用する。
+
+**Linux:**
+
+```bash
+sudo apt install xdotool imagemagick
+```
+
+**macOS:**
+
+追加インストール不要（`screencapture` / `osascript` は OS 標準）
+
 ## 使い方
 
 ### ライブラリ画面
