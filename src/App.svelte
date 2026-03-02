@@ -19,7 +19,7 @@
   let filterTags = $state<Tag[]>([]);
   let tagSearchMode = $state<TagSearchMode>("and");
   let currentView = $state<
-    "library" | "viewer" | "settings" | "import" | "bulk-import"
+    "library" | "viewer" | "settings" | "import" | "bulk-import" | "add-library"
   >("library");
   let selectedWorkId = $state<number | null>(null);
   let workIds = $state<number[]>([]);
@@ -161,6 +161,12 @@
   <main class="container">
     <p class="library-loading">読み込み中...</p>
   </main>
+{:else if currentView === "add-library"}
+  <SetupView
+    initialStep="mode-select"
+    onComplete={handleLibrarySwitch}
+    onCancel={handleBackToLibrary}
+  />
 {:else if !activeLibrary}
   <SetupView onComplete={handleLibrarySwitch} />
 {:else}

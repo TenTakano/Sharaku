@@ -5,12 +5,15 @@
 
   interface Props {
     onComplete: (library: Library) => void;
+    onCancel?: () => void;
+    initialStep?: "welcome" | "mode-select";
   }
 
-  let { onComplete }: Props = $props();
+  let { onComplete, onCancel, initialStep = "welcome" }: Props = $props();
 
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- initial value from prop, not reactive binding
   let step = $state<"welcome" | "mode-select" | "select" | "name-only">(
-    "welcome",
+    initialStep,
   );
   let selectedMode = $state<ResourceMode>("full");
   let selectedPath = $state<string | null>(null);
@@ -114,9 +117,16 @@
       </label>
     </div>
 
-    <button class="setup-primary-btn" onclick={proceedFromModeSelect}>
-      次へ
-    </button>
+    <div class="setup-btn-row">
+      <button class="setup-primary-btn" onclick={proceedFromModeSelect}>
+        次へ
+      </button>
+      {#if onCancel}
+        <button class="setup-secondary-btn" onclick={onCancel}>
+          キャンセル
+        </button>
+      {/if}
+    </div>
   {:else if step === "select"}
     <h2 class="setup-step-title">ライブラリのディレクトリを選択してください</h2>
     <p class="setup-step-description">
@@ -135,13 +145,20 @@
         <input class="setup-name-input" type="text" bind:value={libraryName} />
       </label>
 
-      <button
-        class="setup-primary-btn"
-        disabled={!libraryName.trim() || creating}
-        onclick={createLibraryFull}
-      >
-        {creating ? "作成中..." : "作成"}
-      </button>
+      <div class="setup-btn-row">
+        <button
+          class="setup-primary-btn"
+          disabled={!libraryName.trim() || creating}
+          onclick={createLibraryFull}
+        >
+          {creating ? "作成中..." : "作成"}
+        </button>
+        {#if onCancel}
+          <button class="setup-secondary-btn" onclick={onCancel}>
+            キャンセル
+          </button>
+        {/if}
+      </div>
     {/if}
 
     {#if error}
@@ -163,13 +180,20 @@
       />
     </label>
 
-    <button
-      class="setup-primary-btn"
-      disabled={!libraryName.trim() || creating}
-      onclick={createLibraryMetadataOnly}
-    >
-      {creating ? "作成中..." : "作成"}
-    </button>
+    <div class="setup-btn-row">
+      <button
+        class="setup-primary-btn"
+        disabled={!libraryName.trim() || creating}
+        onclick={createLibraryMetadataOnly}
+      >
+        {creating ? "作成中..." : "作成"}
+      </button>
+      {#if onCancel}
+        <button class="setup-secondary-btn" onclick={onCancel}>
+          キャンセル
+        </button>
+      {/if}
+    </div>
 
     {#if error}
       <p class="setup-error">{error}</p>
