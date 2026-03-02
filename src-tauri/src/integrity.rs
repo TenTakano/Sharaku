@@ -101,10 +101,7 @@ pub fn check_integrity(
     if resource_mode != "metadata_only" && library_root.is_some() {
         let root = library_root.unwrap();
         let mut scanned_dirs = 0usize;
-        for entry in WalkDir::new(root)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
+        for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
             if !entry.file_type().is_dir() {
                 continue;
             }

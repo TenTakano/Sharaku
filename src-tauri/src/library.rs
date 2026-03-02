@@ -28,11 +28,7 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, AppError> {
     Ok(libs)
 }
 
-pub fn add_library(
-    conn: &Connection,
-    name: &str,
-    path: Option<&str>,
-) -> Result<Library, AppError> {
+pub fn add_library(conn: &Connection, name: &str, path: Option<&str>) -> Result<Library, AppError> {
     if let Some(p) = path {
         let existing: bool = conn
             .prepare_cached("SELECT 1 FROM libraries WHERE path = ?1")?

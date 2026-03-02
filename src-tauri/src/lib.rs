@@ -82,8 +82,8 @@ async fn create_library(
     let db = state.db.clone();
     tokio::task::spawn_blocking(move || {
         let mut guard = db.lock().unwrap();
-        let lib = library::add_library(&guard.conn, &name, path.as_deref())
-            .map_err(|e| e.to_string())?;
+        let lib =
+            library::add_library(&guard.conn, &name, path.as_deref()).map_err(|e| e.to_string())?;
         library::set_active_library(&guard.conn, &lib.id).map_err(|e| e.to_string())?;
         settings::set_resource_mode(&guard.conn, &lib.id, &resource_mode)
             .map_err(|e| e.to_string())?;
@@ -440,14 +440,8 @@ async fn bulk_import(
             .path
             .as_ref()
             .ok_or("ライブラリルートが設定されていません")?;
-        importer::bulk_import(
-            &requests,
-            &guard.conn,
-            &active.id,
-            lib_path,
-            &on_progress,
-        )
-        .map_err(|e| e.to_string())
+        importer::bulk_import(&requests, &guard.conn, &active.id, lib_path, &on_progress)
+            .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -497,14 +491,8 @@ async fn relocate_works(
             .path
             .as_ref()
             .ok_or("ライブラリルートが設定されていません")?;
-        relocator::execute_relocation(
-            &guard.conn,
-            &active.id,
-            lib_path,
-            &trimmed,
-            &on_progress,
-        )
-        .map_err(|e| e.to_string())
+        relocator::execute_relocation(&guard.conn, &active.id, lib_path, &trimmed, &on_progress)
+            .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
