@@ -88,6 +88,14 @@
     currentView = "bulk-import";
   }
 
+  async function handleDeleteLibrary() {
+    activeLibrary = await invoke<Library | null>("get_active_library");
+    if (activeLibrary) {
+      currentView = "library";
+      reloadTrigger++;
+    }
+  }
+
   function handleSidebarNavigate(view: string) {
     currentView = view as typeof currentView;
   }
@@ -207,9 +215,12 @@
 
       {#if currentView === "settings"}
         <SettingsView
+          libraryId={activeLibrary.id}
+          libraryName={activeLibrary.name}
           libraryPath={activeLibrary.path}
           onNavigate={handleSidebarNavigate}
           onImportUnregistered={handleImportUnregistered}
+          onDeleteLibrary={handleDeleteLibrary}
         />
       {:else if currentView === "import"}
         <ImportView

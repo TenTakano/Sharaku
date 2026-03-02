@@ -13,12 +13,22 @@
   } from "../types";
 
   interface Props {
+    libraryId: string;
+    libraryName: string;
     libraryPath: string | null;
     onNavigate: (view: string) => void;
     onImportUnregistered: (entries: UnregisteredEntry[]) => void;
+    onDeleteLibrary: () => void;
   }
 
-  let { libraryPath, onNavigate, onImportUnregistered }: Props = $props();
+  let {
+    libraryId,
+    libraryName,
+    libraryPath,
+    onNavigate,
+    onImportUnregistered,
+    onDeleteLibrary,
+  }: Props = $props();
 
   let resourceMode = $state<ResourceMode>("full");
   let directoryTemplate = $state("");
@@ -243,6 +253,22 @@
     }
   }
 
+  let showDeleteConfirm = $state(false);
+  let deleting = $state(false);
+
+  async function deleteLibrary() {
+    deleting = true;
+    try {
+      await invoke("remove_library", { id: libraryId });
+      showDeleteConfirm = false;
+      onDeleteLibrary();
+    } catch (e) {
+      message = { type: "error", text: `ライブラリの削除に失敗しました: ${e}` };
+    } finally {
+      deleting = false;
+    }
+  }
+
   $effect(() => {
     loadSettings();
   });
@@ -251,188 +277,203 @@
 {#if loading}
   <p class="settings-loading">読み込み中...</p>
 {:else}
-  <div class="settings-content">
-    <section class="settings-section">
-      <h2>ライブラリルート</h2>
-      <p class="settings-description">
-        現在のライブラリの保存先ディレクトリです。
-      </p>
-      <div class="settings-field-row">
-        <code class="settings-library-path">{libraryPath ?? "未設定"}</code>
-      </div>
-    </section>
-
-    <section class="settings-section">
-      <h2>リソース管理モード</h2>
-      <p class="settings-description">作品ファイルの管理方法を選択します。</p>
-      <div class="resource-mode-select">
-        <label class="resource-mode-option">
-          <input
-            type="radio"
-            name="resource-mode"
-            checked={resourceMode === "full"}
-            onchange={() => setResourceMode("full")}
-          />
-          <span class="resource-mode-label">すべて管理</span>
-          <span class="resource-mode-desc"
-            >テンプレートに基づきファイルを配置</span
-          >
-        </label>
-        <label class="resource-mode-option">
-          <input
-            type="radio"
-            name="resource-mode"
-            checked={resourceMode === "metadata_only"}
-            onchange={() => setResourceMode("metadata_only")}
-          />
-          <span class="resource-mode-label">メタデータのみ管理</span>
-          <span class="resource-mode-desc"
-            >ファイルを移動せず、メタデータのみ管理</span
-          >
-        </label>
-      </div>
-    </section>
-
-    <section
-      class="settings-section"
-      class:settings-section-disabled={resourceMode === "metadata_only"}
-    >
-      <h2>ディレクトリテンプレート</h2>
-      <p class="settings-description">
-        作品取り込み時のフォルダ配置パターンを指定します。<br />
-        使用可能なプレースホルダー:
-        <code>{"{title}"}</code>, <code>{"{artist}"}</code>,
-        <code>{"{year}"}</code>,
-        <code>{"{genre}"}</code>, <code>{"{circle}"}</code>,
-        <code>{"{origin}"}</code>, <code>{"{type}"}</code>
-      </p>
-      <div class="settings-field-row">
-        <input
-          type="text"
-          class="settings-input"
-          class:settings-input-error={!templateValidation.valid}
-          bind:value={directoryTemplate}
-          oninput={onTemplateInput}
-          placeholder={"{artist}/{title}"}
-          disabled={saving || resourceMode === "metadata_only"}
-        />
-        <button
-          class="settings-save-btn"
-          onclick={saveDirectoryTemplate}
-          disabled={saving ||
-            !templateValidation.valid ||
-            resourceMode === "metadata_only"}
-        >
-          保存
-        </button>
-      </div>
-      {#if !templateValidation.valid && templateValidation.error}
-        <p class="template-error">{templateValidation.error}</p>
-      {/if}
-      {#if templateValidation.valid && templatePreview}
-        <div class="template-preview">
-          <span class="template-preview-label">プレビュー:</span>
-          <code class="template-preview-path">{templatePreview}</code>
-        </div>
-      {/if}
-    </section>
-
-    <section
-      class="settings-section"
-      class:settings-section-disabled={resourceMode === "metadata_only"}
-    >
-      <h2>作品種別ラベル</h2>
-      <p class="settings-description">
-        テンプレートの <code>{"{type}"}</code>
-        に使用するラベルをカスタマイズできます。
-      </p>
-      <div class="type-label-fields">
-        <div class="type-label-row">
-          <label class="type-label-name" for="type-label-image">画像作品:</label
-          >
-          <input
-            id="type-label-image"
-            type="text"
-            class="settings-input type-label-input"
-            bind:value={typeLabelImage}
-            placeholder="Image"
-            disabled={saving || resourceMode === "metadata_only"}
-          />
-        </div>
-        <div class="type-label-row">
-          <label class="type-label-name" for="type-label-folder"
-            >フォルダ作品:</label
-          >
-          <input
-            id="type-label-folder"
-            type="text"
-            class="settings-input type-label-input"
-            bind:value={typeLabelFolder}
-            placeholder="Folder"
-            disabled={saving || resourceMode === "metadata_only"}
-          />
-        </div>
-        <button
-          class="settings-save-btn"
-          onclick={saveTypeLabels}
-          disabled={saving ||
-            !typeLabelImage.trim() ||
-            !typeLabelFolder.trim() ||
-            resourceMode === "metadata_only"}
-        >
-          保存
-        </button>
-      </div>
-    </section>
-
-    <section class="settings-section">
-      <h2>一括取り込み</h2>
-      <p class="settings-description">
-        フォルダを探索して、複数の作品を一括で取り込みます。
-      </p>
-      <button
-        class="settings-bulk-import-btn"
-        onclick={() => onNavigate("bulk-import")}
-      >
-        一括取り込みを開始
-      </button>
-    </section>
-
-    <section class="settings-section">
-      <h2>ライブラリ整合チェック</h2>
-      <p class="settings-description">
-        DBレコードとファイルシステムの不整合を検出します。
-      </p>
-      <p class="settings-description integrity-warning">
-        ※
-        ネットワークドライブが未接続の場合、正常なレコードが孤立として検出される可能性があります。
-      </p>
-      <button
-        class="settings-bulk-import-btn"
-        onclick={runIntegrityCheck}
-        disabled={integrityChecking}
-      >
-        {#if integrityChecking}
-          チェック中...
-        {:else}
-          整合チェックを実行
-        {/if}
-      </button>
-      {#if integrityChecking && integrityProgress}
-        <p class="integrity-progress">
-          {#if integrityProgress.type === "checkingWorks"}
-            作品レコードを確認中... ({integrityProgress.checked}/{integrityProgress.total})
-          {:else if integrityProgress.type === "scanningDirectory"}
-            ディレクトリを走査中... ({integrityProgress.scannedDirs} フォルダ)
-          {/if}
+  <div class="settings-scroll">
+    <div class="settings-content">
+      <section class="settings-section">
+        <h2>ライブラリルート</h2>
+        <p class="settings-description">
+          現在のライブラリの保存先ディレクトリです。
         </p>
-      {/if}
-    </section>
-  </div>
+        <div class="settings-field-row">
+          <code class="settings-library-path">{libraryPath ?? "未設定"}</code>
+        </div>
+      </section>
 
-  {#if message}
-    <p class="settings-message {message.type}">{message.text}</p>
-  {/if}
+      <section class="settings-section">
+        <h2>リソース管理モード</h2>
+        <p class="settings-description">作品ファイルの管理方法を選択します。</p>
+        <div class="resource-mode-select">
+          <label class="resource-mode-option">
+            <input
+              type="radio"
+              name="resource-mode"
+              checked={resourceMode === "metadata_only"}
+              onchange={() => setResourceMode("metadata_only")}
+            />
+            <span class="resource-mode-label">メタデータのみ管理</span>
+            <span class="resource-mode-desc"
+              >ファイルを移動せず、メタデータのみ管理</span
+            >
+          </label>
+          <label class="resource-mode-option">
+            <input
+              type="radio"
+              name="resource-mode"
+              checked={resourceMode === "full"}
+              onchange={() => setResourceMode("full")}
+            />
+            <span class="resource-mode-label">すべて管理</span>
+            <span class="resource-mode-desc"
+              >テンプレートに基づきファイルを配置</span
+            >
+          </label>
+        </div>
+
+        <div
+          class="resource-mode-sub-settings"
+          class:settings-section-disabled={resourceMode === "metadata_only"}
+        >
+          <div class="settings-subsection">
+            <h3>ディレクトリテンプレート</h3>
+            <p class="settings-description">
+              作品取り込み時のフォルダ配置パターンを指定します。<br />
+              使用可能なプレースホルダー:
+              <code>{"{title}"}</code>, <code>{"{artist}"}</code>,
+              <code>{"{year}"}</code>,
+              <code>{"{genre}"}</code>, <code>{"{circle}"}</code>,
+              <code>{"{origin}"}</code>, <code>{"{type}"}</code>
+            </p>
+            <div class="settings-field-row">
+              <input
+                type="text"
+                class="settings-input"
+                class:settings-input-error={!templateValidation.valid}
+                bind:value={directoryTemplate}
+                oninput={onTemplateInput}
+                placeholder={"{artist}/{title}"}
+                disabled={saving || resourceMode === "metadata_only"}
+              />
+              <button
+                class="settings-save-btn"
+                onclick={saveDirectoryTemplate}
+                disabled={saving ||
+                  !templateValidation.valid ||
+                  resourceMode === "metadata_only"}
+              >
+                保存
+              </button>
+            </div>
+            {#if !templateValidation.valid && templateValidation.error}
+              <p class="template-error">{templateValidation.error}</p>
+            {/if}
+            {#if templateValidation.valid && templatePreview}
+              <div class="template-preview">
+                <span class="template-preview-label">プレビュー:</span>
+                <code class="template-preview-path">{templatePreview}</code>
+              </div>
+            {/if}
+          </div>
+
+          <div class="settings-subsection">
+            <h3>作品種別ラベル</h3>
+            <p class="settings-description">
+              テンプレートの <code>{"{type}"}</code>
+              に使用するラベルをカスタマイズできます。
+            </p>
+            <div class="type-label-fields">
+              <div class="type-label-row">
+                <label class="type-label-name" for="type-label-image"
+                  >画像作品:</label
+                >
+                <input
+                  id="type-label-image"
+                  type="text"
+                  class="settings-input type-label-input"
+                  bind:value={typeLabelImage}
+                  placeholder="Image"
+                  disabled={saving || resourceMode === "metadata_only"}
+                />
+              </div>
+              <div class="type-label-row">
+                <label class="type-label-name" for="type-label-folder"
+                  >フォルダ作品:</label
+                >
+                <input
+                  id="type-label-folder"
+                  type="text"
+                  class="settings-input type-label-input"
+                  bind:value={typeLabelFolder}
+                  placeholder="Folder"
+                  disabled={saving || resourceMode === "metadata_only"}
+                />
+              </div>
+              <button
+                class="settings-save-btn"
+                onclick={saveTypeLabels}
+                disabled={saving ||
+                  !typeLabelImage.trim() ||
+                  !typeLabelFolder.trim() ||
+                  resourceMode === "metadata_only"}
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>一括取り込み</h2>
+        <p class="settings-description">
+          フォルダを探索して、複数の作品を一括で取り込みます。
+        </p>
+        <button
+          class="settings-bulk-import-btn"
+          onclick={() => onNavigate("bulk-import")}
+        >
+          一括取り込みを開始
+        </button>
+      </section>
+
+      <section class="settings-section">
+        <h2>ライブラリ整合チェック</h2>
+        <p class="settings-description">
+          DBレコードとファイルシステムの不整合を検出します。
+        </p>
+        <p class="settings-description integrity-warning">
+          ※
+          ネットワークドライブが未接続の場合、正常なレコードが孤立として検出される可能性があります。
+        </p>
+        <button
+          class="settings-bulk-import-btn"
+          onclick={runIntegrityCheck}
+          disabled={integrityChecking}
+        >
+          {#if integrityChecking}
+            チェック中...
+          {:else}
+            整合チェックを実行
+          {/if}
+        </button>
+        {#if integrityChecking && integrityProgress}
+          <p class="integrity-progress">
+            {#if integrityProgress.type === "checkingWorks"}
+              作品レコードを確認中... ({integrityProgress.checked}/{integrityProgress.total})
+            {:else if integrityProgress.type === "scanningDirectory"}
+              ディレクトリを走査中... ({integrityProgress.scannedDirs} フォルダ)
+            {/if}
+          </p>
+        {/if}
+      </section>
+
+      <section class="settings-section settings-section-danger">
+        <h2>ライブラリを削除</h2>
+        <p class="settings-description">
+          ライブラリの管理情報（作品・タグ等）を削除します。ファイルシステム上のファイルは削除されません。
+        </p>
+        <button
+          class="settings-delete-library-btn"
+          onclick={() => (showDeleteConfirm = true)}
+        >
+          ライブラリを削除
+        </button>
+      </section>
+    </div>
+
+    {#if message}
+      <p class="settings-message {message.type}">{message.text}</p>
+    {/if}
+  </div>
 {/if}
 
 {#if showIntegrityDialog && integrityReport}
@@ -517,6 +558,37 @@
               .length}件)
           </button>
         {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showDeleteConfirm}
+  <div class="delete-library-overlay">
+    <div class="delete-library-dialog">
+      <p>
+        ライブラリ「<strong>{libraryName}</strong>」を削除しますか？<br />
+        管理情報（作品・タグ等）が削除されます。この操作は元に戻せません。
+      </p>
+      <div class="delete-library-actions">
+        <button
+          class="delete-library-cancel"
+          onclick={() => (showDeleteConfirm = false)}
+          disabled={deleting}
+        >
+          キャンセル
+        </button>
+        <button
+          class="delete-library-confirm"
+          onclick={deleteLibrary}
+          disabled={deleting}
+        >
+          {#if deleting}
+            削除中...
+          {:else}
+            削除する
+          {/if}
+        </button>
       </div>
     </div>
   </div>

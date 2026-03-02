@@ -1,5 +1,8 @@
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family:
+    Inter, Avenir, Helvetica, Arial, "Noto Sans JP", "Noto Sans CJK JP",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo",
+    sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
@@ -404,6 +407,11 @@ button:disabled {
   font-size: 0.875rem;
   background: #fff;
   color: #0f0f0f;
+  outline: none;
+}
+
+.sort-control select:focus {
+  border-color: #999;
 }
 
 .work-count {
@@ -897,8 +905,15 @@ button:disabled {
   margin-top: 40px;
 }
 
+.settings-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .settings-content {
   max-width: 640px;
+  padding-bottom: 24px;
 }
 
 .settings-section {
@@ -931,6 +946,26 @@ button:disabled {
 .resource-mode-desc {
   color: #666;
   font-size: 0.8125rem;
+}
+
+.resource-mode-sub-settings {
+  margin-top: 16px;
+  padding-left: 24px;
+  border-left: 2px solid #e0e0e0;
+}
+
+.settings-subsection {
+  margin-bottom: 24px;
+}
+
+.settings-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.settings-subsection h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 8px;
 }
 
 .settings-section h2 {
@@ -979,18 +1014,16 @@ button:disabled {
   white-space: nowrap;
 }
 
-.settings-save-btn {
-  background-color: #396cd8;
-  color: #fff;
-  border-color: #396cd8;
-}
-
 .settings-save-btn:hover:not(:disabled) {
-  background-color: #2e5bb8;
+  border-color: #999;
 }
 
 .settings-save-btn:disabled {
   opacity: 0.5;
+}
+
+.settings-bulk-import-btn:hover:not(:disabled) {
+  border-color: #999;
 }
 
 .settings-input-error {
@@ -1624,6 +1657,81 @@ button:disabled {
   background-color: #0d47a1;
 }
 
+/* Delete library */
+.settings-section-danger {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 20px;
+}
+
+.settings-delete-library-btn {
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  background-color: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+.settings-delete-library-btn:hover:not(:disabled) {
+  background-color: #b71c1c;
+}
+
+.delete-library-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.delete-library-dialog {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.delete-library-dialog p {
+  font-size: 0.875rem;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.delete-library-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.delete-library-cancel {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+}
+
+.delete-library-cancel:hover {
+  border-color: #999;
+}
+
+.delete-library-confirm {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  background-color: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+.delete-library-confirm:hover:not(:disabled) {
+  background-color: #b71c1c;
+  border-color: #b71c1c;
+}
+
+.settings-delete-library-btn:hover:not(:disabled) {
+  border-color: #b71c1c;
+}
+
 /* Tag remove confirmation dialog */
 .tag-confirm-overlay {
   position: fixed;
@@ -2044,9 +2152,14 @@ button:disabled {
   }
 
   .sort-control select {
-    background: #3a3a3a;
+    background-color: #3a3a3a;
     color: #f6f6f6;
     border-color: #555;
+    color-scheme: dark;
+  }
+
+  .sort-control select:focus {
+    border-color: #999;
   }
 
   .work-card img {
@@ -2092,9 +2205,12 @@ button:disabled {
     background: rgba(255, 255, 255, 0.1);
   }
 
-  .settings-save-btn {
-    background-color: #396cd8;
-    color: #fff;
+  .settings-save-btn:hover:not(:disabled) {
+    border-color: #999;
+  }
+
+  .settings-bulk-import-btn:hover:not(:disabled) {
+    border-color: #999;
   }
 
   .import-description {
@@ -2134,6 +2250,28 @@ button:disabled {
 
   .tag-confirm-delete:hover {
     background-color: #c62828;
+  }
+
+  .delete-library-dialog {
+    background: #3a3a3a;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .delete-library-confirm {
+    background-color: #d32f2f;
+    border-color: #d32f2f;
+  }
+
+  .delete-library-confirm:hover:not(:disabled) {
+    background-color: #c62828;
+  }
+
+  .settings-section-danger {
+    border-top-color: #4a4a4a;
+  }
+
+  .resource-mode-sub-settings {
+    border-left-color: #4a4a4a;
   }
 
   .relocation-dialog {
