@@ -1624,6 +1624,72 @@ button:disabled {
   background-color: #0d47a1;
 }
 
+/* Delete library */
+.settings-section-danger {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 20px;
+}
+
+.settings-delete-library-btn {
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  background-color: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+.settings-delete-library-btn:hover:not(:disabled) {
+  background-color: #b71c1c;
+}
+
+.delete-library-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.delete-library-dialog {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.delete-library-dialog p {
+  font-size: 0.875rem;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.delete-library-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.delete-library-cancel {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+}
+
+.delete-library-confirm {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  background-color: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+.delete-library-confirm:hover:not(:disabled) {
+  background-color: #b71c1c;
+}
+
 /* Tag remove confirmation dialog */
 .tag-confirm-overlay {
   position: fixed;

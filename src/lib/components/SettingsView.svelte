@@ -13,12 +13,22 @@
   } from "../types";
 
   interface Props {
+    libraryId: string;
+    libraryName: string;
     libraryPath: string | null;
     onNavigate: (view: string) => void;
     onImportUnregistered: (entries: UnregisteredEntry[]) => void;
+    onDeleteLibrary: () => void;
   }
 
-  let { libraryPath, onNavigate, onImportUnregistered }: Props = $props();
+  let {
+    libraryId,
+    libraryName,
+    libraryPath,
+    onNavigate,
+    onImportUnregistered,
+    onDeleteLibrary,
+  }: Props = $props();
 
   let resourceMode = $state<ResourceMode>("full");
   let directoryTemplate = $state("");
@@ -243,6 +253,22 @@
     }
   }
 
+  let showDeleteConfirm = $state(false);
+  let deleting = $state(false);
+
+  async function deleteLibrary() {
+    deleting = true;
+    try {
+      await invoke("remove_library", { id: libraryId });
+      showDeleteConfirm = false;
+      onDeleteLibrary();
+    } catch (e) {
+      message = { type: "error", text: `ライブラリの削除に失敗しました: ${e}` };
+    } finally {
+      deleting = false;
+    }
+  }
+
   $effect(() => {
     loadSettings();
   });
@@ -398,6 +424,19 @@
       </button>
     </section>
 
+    <section class="settings-section settings-section-danger">
+      <h2>ライブラリを削除</h2>
+      <p class="settings-description">
+        ライブラリとそのすべての作品データを完全に削除します。この操作は元に戻せません。
+      </p>
+      <button
+        class="settings-delete-library-btn"
+        onclick={() => (showDeleteConfirm = true)}
+      >
+        ライブラリを削除
+      </button>
+    </section>
+
     <section class="settings-section">
       <h2>ライブラリ整合チェック</h2>
       <p class="settings-description">
@@ -517,6 +556,37 @@
               .length}件)
           </button>
         {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showDeleteConfirm}
+  <div class="delete-library-overlay">
+    <div class="delete-library-dialog">
+      <p>
+        ライブラリ「<strong>{libraryName}</strong>」を削除しますか？<br />
+        全作品データが削除されます。この操作は元に戻せません。
+      </p>
+      <div class="delete-library-actions">
+        <button
+          class="delete-library-cancel"
+          onclick={() => (showDeleteConfirm = false)}
+          disabled={deleting}
+        >
+          キャンセル
+        </button>
+        <button
+          class="delete-library-confirm"
+          onclick={deleteLibrary}
+          disabled={deleting}
+        >
+          {#if deleting}
+            削除中...
+          {:else}
+            削除する
+          {/if}
+        </button>
       </div>
     </div>
   </div>
