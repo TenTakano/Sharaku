@@ -1,5 +1,7 @@
 use super::*;
+use std::fs;
 use std::path::Path;
+use tempfile::TempDir;
 
 #[test]
 fn recognizes_supported_extensions() {
@@ -40,4 +42,40 @@ fn rejects_hidden_files_without_image_ext() {
 #[test]
 fn accepts_hidden_files_with_image_ext() {
     assert!(is_image_file(Path::new(".photo.jpg")));
+}
+
+#[test]
+fn has_image_subfolders_returns_true_with_images_in_subdirectory() {
+    let tmp = TempDir::new().unwrap();
+    let sub = tmp.path().join("sub");
+    fs::create_dir(&sub).unwrap();
+    fs::write(sub.join("photo.jpg"), b"fake").unwrap();
+
+    assert!(has_image_subfolders(tmp.path()));
+}
+
+#[test]
+fn has_image_subfolders_returns_false_for_empty_subdirectories() {
+    let tmp = TempDir::new().unwrap();
+    fs::create_dir(tmp.path().join("sub")).unwrap();
+
+    assert!(!has_image_subfolders(tmp.path()));
+}
+
+#[test]
+fn has_image_subfolders_ignores_images_in_root() {
+    let tmp = TempDir::new().unwrap();
+    fs::write(tmp.path().join("photo.jpg"), b"fake").unwrap();
+
+    assert!(!has_image_subfolders(tmp.path()));
+}
+
+#[test]
+fn has_image_subfolders_detects_deeply_nested_images() {
+    let tmp = TempDir::new().unwrap();
+    let deep = tmp.path().join("a").join("b").join("c");
+    fs::create_dir_all(&deep).unwrap();
+    fs::write(deep.join("image.png"), b"fake").unwrap();
+
+    assert!(has_image_subfolders(tmp.path()));
 }

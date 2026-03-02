@@ -15,11 +15,12 @@
 
   interface Props {
     initialEntries?: UnregisteredEntry[];
+    initialRootPath?: string;
     onBack: () => void;
     onImported: () => void;
   }
 
-  let { initialEntries, onBack, onImported }: Props = $props();
+  let { initialEntries, initialRootPath, onBack, onImported }: Props = $props();
 
   type Step = "discover" | "review" | "importing" | "done";
 
@@ -35,10 +36,7 @@
   let summary = $state<BulkImportSummary | null>(null);
   let importErrors = $state<{ title: string; message: string }[]>([]);
 
-  async function selectRootAndDiscover() {
-    const rootPath = await open({ directory: true });
-    if (!rootPath) return;
-
+  async function discoverFromPath(rootPath: string) {
     discovering = true;
     discoverStatus = "探索中...";
 
@@ -71,6 +69,12 @@
     } finally {
       discovering = false;
     }
+  }
+
+  async function selectRootAndDiscover() {
+    const rootPath = await open({ directory: true });
+    if (!rootPath) return;
+    await discoverFromPath(rootPath);
   }
 
   function getTitle(index: number): string {
@@ -193,6 +197,8 @@
   $effect(() => {
     if (initialEntries) {
       loadFromEntries(initialEntries);
+    } else if (initialRootPath) {
+      discoverFromPath(initialRootPath);
     }
   });
 </script>
