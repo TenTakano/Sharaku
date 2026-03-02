@@ -82,11 +82,7 @@ pub fn get_resource_mode(conn: &Connection, library_id: &str) -> Result<String, 
     Ok(get_setting(conn, library_id, KEY_RESOURCE_MODE)?.unwrap_or_else(|| "full".into()))
 }
 
-pub fn set_resource_mode(
-    conn: &Connection,
-    library_id: &str,
-    mode: &str,
-) -> Result<(), AppError> {
+pub fn set_resource_mode(conn: &Connection, library_id: &str, mode: &str) -> Result<(), AppError> {
     set_setting(conn, library_id, KEY_RESOURCE_MODE, mode)
 }
 

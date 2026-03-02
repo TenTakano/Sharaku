@@ -212,10 +212,7 @@ async fn get_settings(state: tauri::State<'_, AppState>) -> Result<AppSettings, 
 }
 
 #[tauri::command]
-async fn set_resource_mode(
-    state: tauri::State<'_, AppState>,
-    mode: String,
-) -> Result<(), String> {
+async fn set_resource_mode(state: tauri::State<'_, AppState>, mode: String) -> Result<(), String> {
     if mode != "full" && mode != "metadata_only" {
         return Err("無効なリソース管理モードです".to_string());
     }

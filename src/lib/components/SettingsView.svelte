@@ -264,9 +264,7 @@
 
     <section class="settings-section">
       <h2>リソース管理モード</h2>
-      <p class="settings-description">
-        作品ファイルの管理方法を選択します。
-      </p>
+      <p class="settings-description">作品ファイルの管理方法を選択します。</p>
       <div class="resource-mode-select">
         <label class="resource-mode-option">
           <input
@@ -276,7 +274,9 @@
             onchange={() => setResourceMode("full")}
           />
           <span class="resource-mode-label">すべて管理</span>
-          <span class="resource-mode-desc">テンプレートに基づきファイルを配置</span>
+          <span class="resource-mode-desc"
+            >テンプレートに基づきファイルを配置</span
+          >
         </label>
         <label class="resource-mode-option">
           <input
@@ -286,12 +286,17 @@
             onchange={() => setResourceMode("metadata_only")}
           />
           <span class="resource-mode-label">メタデータのみ管理</span>
-          <span class="resource-mode-desc">ファイルを移動せず、メタデータのみ管理</span>
+          <span class="resource-mode-desc"
+            >ファイルを移動せず、メタデータのみ管理</span
+          >
         </label>
       </div>
     </section>
 
-    <section class="settings-section" class:settings-section-disabled={resourceMode === "metadata_only"}>
+    <section
+      class="settings-section"
+      class:settings-section-disabled={resourceMode === "metadata_only"}
+    >
       <h2>ディレクトリテンプレート</h2>
       <p class="settings-description">
         作品取り込み時のフォルダ配置パターンを指定します。<br />
@@ -314,7 +319,9 @@
         <button
           class="settings-save-btn"
           onclick={saveDirectoryTemplate}
-          disabled={saving || !templateValidation.valid || resourceMode === "metadata_only"}
+          disabled={saving ||
+            !templateValidation.valid ||
+            resourceMode === "metadata_only"}
         >
           保存
         </button>
@@ -330,7 +337,10 @@
       {/if}
     </section>
 
-    <section class="settings-section" class:settings-section-disabled={resourceMode === "metadata_only"}>
+    <section
+      class="settings-section"
+      class:settings-section-disabled={resourceMode === "metadata_only"}
+    >
       <h2>作品種別ラベル</h2>
       <p class="settings-description">
         テンプレートの <code>{"{type}"}</code>
@@ -365,7 +375,10 @@
         <button
           class="settings-save-btn"
           onclick={saveTypeLabels}
-          disabled={saving || !typeLabelImage.trim() || !typeLabelFolder.trim() || resourceMode === "metadata_only"}
+          disabled={saving ||
+            !typeLabelImage.trim() ||
+            !typeLabelFolder.trim() ||
+            resourceMode === "metadata_only"}
         >
           保存
         </button>
