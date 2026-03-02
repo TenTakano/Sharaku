@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
   import { SvelteSet } from "svelte/reactivity";
-  import type { Library, Tag } from "../types";
+  import type { Library, ResourceMode, Tag } from "../types";
 
   interface Props {
     activeLibrary: Library;
@@ -26,9 +26,10 @@
   let tags = $state<Tag[]>([]);
   let expandedCategories = new SvelteSet<string>();
   let adding = $state(false);
-  let showAddMenu = $state(false);
-  let showMetadataInput = $state(false);
-  let metadataLibraryName = $state("");
+  let addStep = $state<null | "mode-select" | "select" | "name-only">(null);
+  let addMode = $state<ResourceMode>("full");
+  let addSelectedPath = $state<string | null>(null);
+  let addLibraryName = $state("");
 
   interface TagsByCategory {
     category: string | null;
@@ -79,58 +80,43 @@
     }
   }
 
-  async function addLibraryFull() {
-    showAddMenu = false;
-    const selected = await open({ directory: true });
-    if (!selected) return;
-
-    adding = true;
-    try {
-      const dirName = selected.split("/").pop() || selected;
-      const lib = await invoke<Library>("create_library", {
-        name: dirName,
-        path: selected,
-        resourceMode: "full",
-      });
-      libraries = [...libraries, lib];
-      onSwitchLibrary(lib);
-    } catch (e) {
-      console.error("ライブラリ追加失敗:", e);
-    } finally {
-      adding = false;
-    }
+  function resetAddForm() {
+    addStep = null;
+    addMode = "full";
+    addSelectedPath = null;
+    addLibraryName = "";
   }
 
-  async function addLibraryMetadataOnly() {
-    const name = metadataLibraryName.trim();
+  function proceedFromModeSelect() {
+    addStep = addMode === "full" ? "select" : "name-only";
+  }
+
+  async function selectDirectory() {
+    const selected = await open({ directory: true });
+    if (!selected) return;
+    addSelectedPath = selected;
+    addLibraryName = selected.split(/[/\\]/).pop() || selected;
+  }
+
+  async function createLibrary() {
+    const name = addLibraryName.trim();
     if (!name) return;
 
     adding = true;
     try {
       const lib = await invoke<Library>("create_library", {
         name,
-        path: null,
-        resourceMode: "metadata_only",
+        path: addStep === "select" ? addSelectedPath : null,
+        resourceMode: addMode,
       });
       libraries = [...libraries, lib];
-      metadataLibraryName = "";
-      showMetadataInput = false;
+      resetAddForm();
       onSwitchLibrary(lib);
     } catch (e) {
       console.error("ライブラリ追加失敗:", e);
     } finally {
       adding = false;
     }
-  }
-
-  function handleAddMenuMetadata() {
-    showAddMenu = false;
-    showMetadataInput = true;
-  }
-
-  function cancelMetadataInput() {
-    showMetadataInput = false;
-    metadataLibraryName = "";
   }
 
   async function selectLibrary(lib: Library) {
@@ -208,46 +194,85 @@
       {/each}
     </div>
     <div class="sidebar-add-library-wrapper">
-      <button
-        class="sidebar-add-library"
-        onclick={() => (showAddMenu = !showAddMenu)}
-        disabled={adding}
-      >
-        + ライブラリを追加
-      </button>
-      {#if showAddMenu}
-        <div class="sidebar-add-menu">
-          <button class="sidebar-add-menu-item" onclick={addLibraryFull}>
-            フォルダを指定して作成
-          </button>
-          <button class="sidebar-add-menu-item" onclick={handleAddMenuMetadata}>
-            メタデータのみで作成
-          </button>
-        </div>
-      {/if}
-      {#if showMetadataInput}
-        <div class="sidebar-metadata-input">
-          <input
-            class="sidebar-metadata-name-input"
-            type="text"
-            bind:value={metadataLibraryName}
-            placeholder="ライブラリ名"
-            onkeydown={(e: KeyboardEvent) => {
-              if (e.key === "Enter") addLibraryMetadataOnly();
-              if (e.key === "Escape") cancelMetadataInput();
-            }}
-          />
-          <div class="sidebar-metadata-input-actions">
-            <button
-              class="sidebar-metadata-input-btn"
-              onclick={addLibraryMetadataOnly}
-              disabled={!metadataLibraryName.trim() || adding}
-            >
-              作成
+      {#if addStep === null}
+        <button
+          class="sidebar-add-library"
+          onclick={() => (addStep = "mode-select")}
+          disabled={adding}
+        >
+          + ライブラリを追加
+        </button>
+      {:else}
+        <div class="sidebar-add-form">
+          {#if addStep === "mode-select"}
+            <div class="sidebar-add-form-title">管理モード</div>
+            <div class="sidebar-add-mode-select">
+              <label class="sidebar-add-mode-option">
+                <input
+                  type="radio"
+                  name="sidebar-resource-mode"
+                  checked={addMode === "full"}
+                  onchange={() => (addMode = "full")}
+                />
+                <span class="sidebar-add-mode-label">すべて管理</span>
+              </label>
+              <label class="sidebar-add-mode-option">
+                <input
+                  type="radio"
+                  name="sidebar-resource-mode"
+                  checked={addMode === "metadata_only"}
+                  onchange={() => (addMode = "metadata_only")}
+                />
+                <span class="sidebar-add-mode-label">メタデータのみ</span>
+              </label>
+            </div>
+          {:else if addStep === "select"}
+            <button class="sidebar-add-select-btn" onclick={selectDirectory}>
+              フォルダを選択
             </button>
+            {#if addSelectedPath}
+              <div class="sidebar-add-path-display">{addSelectedPath}</div>
+            {/if}
+            <input
+              class="sidebar-add-name-input"
+              type="text"
+              bind:value={addLibraryName}
+              placeholder="ライブラリ名"
+              disabled={!addSelectedPath}
+            />
+          {:else if addStep === "name-only"}
+            <input
+              class="sidebar-add-name-input"
+              type="text"
+              bind:value={addLibraryName}
+              placeholder="ライブラリ名"
+              onkeydown={(e: KeyboardEvent) => {
+                if (e.key === "Enter") createLibrary();
+              }}
+            />
+          {/if}
+          <div class="sidebar-add-form-actions">
+            {#if addStep === "mode-select"}
+              <button
+                class="sidebar-add-form-btn"
+                onclick={proceedFromModeSelect}
+              >
+                次へ
+              </button>
+            {:else}
+              <button
+                class="sidebar-add-form-btn"
+                onclick={createLibrary}
+                disabled={!addLibraryName.trim() ||
+                  (addStep === "select" && !addSelectedPath) ||
+                  adding}
+              >
+                {adding ? "作成中..." : "作成"}
+              </button>
+            {/if}
             <button
-              class="sidebar-metadata-input-btn sidebar-metadata-cancel-btn"
-              onclick={cancelMetadataInput}
+              class="sidebar-add-form-btn sidebar-add-cancel-btn"
+              onclick={resetAddForm}
             >
               取消
             </button>
