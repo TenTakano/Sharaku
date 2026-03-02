@@ -897,8 +897,15 @@ button:disabled {
   margin-top: 40px;
 }
 
+.settings-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .settings-content {
   max-width: 640px;
+  padding-bottom: 24px;
 }
 
 .settings-section {
@@ -931,6 +938,26 @@ button:disabled {
 .resource-mode-desc {
   color: #666;
   font-size: 0.8125rem;
+}
+
+.resource-mode-sub-settings {
+  margin-top: 16px;
+  padding-left: 24px;
+  border-left: 2px solid #e0e0e0;
+}
+
+.settings-subsection {
+  margin-bottom: 24px;
+}
+
+.settings-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.settings-subsection h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 8px;
 }
 
 .settings-section h2 {

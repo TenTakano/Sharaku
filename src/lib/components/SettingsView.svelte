@@ -277,6 +277,7 @@
 {#if loading}
   <p class="settings-loading">読み込み中...</p>
 {:else}
+  <div class="settings-scroll">
   <div class="settings-content">
     <section class="settings-section">
       <h2>ライブラリルート</h2>
@@ -296,18 +297,6 @@
           <input
             type="radio"
             name="resource-mode"
-            checked={resourceMode === "full"}
-            onchange={() => setResourceMode("full")}
-          />
-          <span class="resource-mode-label">すべて管理</span>
-          <span class="resource-mode-desc"
-            >テンプレートに基づきファイルを配置</span
-          >
-        </label>
-        <label class="resource-mode-option">
-          <input
-            type="radio"
-            name="resource-mode"
             checked={resourceMode === "metadata_only"}
             onchange={() => setResourceMode("metadata_only")}
           />
@@ -316,98 +305,110 @@
             >ファイルを移動せず、メタデータのみ管理</span
           >
         </label>
-      </div>
-    </section>
-
-    <section
-      class="settings-section"
-      class:settings-section-disabled={resourceMode === "metadata_only"}
-    >
-      <h2>ディレクトリテンプレート</h2>
-      <p class="settings-description">
-        作品取り込み時のフォルダ配置パターンを指定します。<br />
-        使用可能なプレースホルダー:
-        <code>{"{title}"}</code>, <code>{"{artist}"}</code>,
-        <code>{"{year}"}</code>,
-        <code>{"{genre}"}</code>, <code>{"{circle}"}</code>,
-        <code>{"{origin}"}</code>, <code>{"{type}"}</code>
-      </p>
-      <div class="settings-field-row">
-        <input
-          type="text"
-          class="settings-input"
-          class:settings-input-error={!templateValidation.valid}
-          bind:value={directoryTemplate}
-          oninput={onTemplateInput}
-          placeholder={"{artist}/{title}"}
-          disabled={saving || resourceMode === "metadata_only"}
-        />
-        <button
-          class="settings-save-btn"
-          onclick={saveDirectoryTemplate}
-          disabled={saving ||
-            !templateValidation.valid ||
-            resourceMode === "metadata_only"}
-        >
-          保存
-        </button>
-      </div>
-      {#if !templateValidation.valid && templateValidation.error}
-        <p class="template-error">{templateValidation.error}</p>
-      {/if}
-      {#if templateValidation.valid && templatePreview}
-        <div class="template-preview">
-          <span class="template-preview-label">プレビュー:</span>
-          <code class="template-preview-path">{templatePreview}</code>
-        </div>
-      {/if}
-    </section>
-
-    <section
-      class="settings-section"
-      class:settings-section-disabled={resourceMode === "metadata_only"}
-    >
-      <h2>作品種別ラベル</h2>
-      <p class="settings-description">
-        テンプレートの <code>{"{type}"}</code>
-        に使用するラベルをカスタマイズできます。
-      </p>
-      <div class="type-label-fields">
-        <div class="type-label-row">
-          <label class="type-label-name" for="type-label-image">画像作品:</label
-          >
+        <label class="resource-mode-option">
           <input
-            id="type-label-image"
-            type="text"
-            class="settings-input type-label-input"
-            bind:value={typeLabelImage}
-            placeholder="Image"
-            disabled={saving || resourceMode === "metadata_only"}
+            type="radio"
+            name="resource-mode"
+            checked={resourceMode === "full"}
+            onchange={() => setResourceMode("full")}
           />
-        </div>
-        <div class="type-label-row">
-          <label class="type-label-name" for="type-label-folder"
-            >フォルダ作品:</label
+          <span class="resource-mode-label">すべて管理</span>
+          <span class="resource-mode-desc"
+            >テンプレートに基づきファイルを配置</span
           >
-          <input
-            id="type-label-folder"
-            type="text"
-            class="settings-input type-label-input"
-            bind:value={typeLabelFolder}
-            placeholder="Folder"
-            disabled={saving || resourceMode === "metadata_only"}
-          />
+        </label>
+      </div>
+
+      <div
+        class="resource-mode-sub-settings"
+        class:settings-section-disabled={resourceMode === "metadata_only"}
+      >
+        <div class="settings-subsection">
+          <h3>ディレクトリテンプレート</h3>
+          <p class="settings-description">
+            作品取り込み時のフォルダ配置パターンを指定します。<br />
+            使用可能なプレースホルダー:
+            <code>{"{title}"}</code>, <code>{"{artist}"}</code>,
+            <code>{"{year}"}</code>,
+            <code>{"{genre}"}</code>, <code>{"{circle}"}</code>,
+            <code>{"{origin}"}</code>, <code>{"{type}"}</code>
+          </p>
+          <div class="settings-field-row">
+            <input
+              type="text"
+              class="settings-input"
+              class:settings-input-error={!templateValidation.valid}
+              bind:value={directoryTemplate}
+              oninput={onTemplateInput}
+              placeholder={"{artist}/{title}"}
+              disabled={saving || resourceMode === "metadata_only"}
+            />
+            <button
+              class="settings-save-btn"
+              onclick={saveDirectoryTemplate}
+              disabled={saving ||
+                !templateValidation.valid ||
+                resourceMode === "metadata_only"}
+            >
+              保存
+            </button>
+          </div>
+          {#if !templateValidation.valid && templateValidation.error}
+            <p class="template-error">{templateValidation.error}</p>
+          {/if}
+          {#if templateValidation.valid && templatePreview}
+            <div class="template-preview">
+              <span class="template-preview-label">プレビュー:</span>
+              <code class="template-preview-path">{templatePreview}</code>
+            </div>
+          {/if}
         </div>
-        <button
-          class="settings-save-btn"
-          onclick={saveTypeLabels}
-          disabled={saving ||
-            !typeLabelImage.trim() ||
-            !typeLabelFolder.trim() ||
-            resourceMode === "metadata_only"}
-        >
-          保存
-        </button>
+
+        <div class="settings-subsection">
+          <h3>作品種別ラベル</h3>
+          <p class="settings-description">
+            テンプレートの <code>{"{type}"}</code>
+            に使用するラベルをカスタマイズできます。
+          </p>
+          <div class="type-label-fields">
+            <div class="type-label-row">
+              <label class="type-label-name" for="type-label-image"
+                >画像作品:</label
+              >
+              <input
+                id="type-label-image"
+                type="text"
+                class="settings-input type-label-input"
+                bind:value={typeLabelImage}
+                placeholder="Image"
+                disabled={saving || resourceMode === "metadata_only"}
+              />
+            </div>
+            <div class="type-label-row">
+              <label class="type-label-name" for="type-label-folder"
+                >フォルダ作品:</label
+              >
+              <input
+                id="type-label-folder"
+                type="text"
+                class="settings-input type-label-input"
+                bind:value={typeLabelFolder}
+                placeholder="Folder"
+                disabled={saving || resourceMode === "metadata_only"}
+              />
+            </div>
+            <button
+              class="settings-save-btn"
+              onclick={saveTypeLabels}
+              disabled={saving ||
+                !typeLabelImage.trim() ||
+                !typeLabelFolder.trim() ||
+                resourceMode === "metadata_only"}
+            >
+              保存
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -472,6 +473,7 @@
   {#if message}
     <p class="settings-message {message.type}">{message.text}</p>
   {/if}
+  </div>
 {/if}
 
 {#if showIntegrityDialog && integrityReport}
