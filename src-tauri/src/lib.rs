@@ -89,7 +89,7 @@ async fn create_library(
             .map_err(|e| e.to_string())?;
         guard.active_library = Some(ActiveLibrary {
             id: lib.id.clone(),
-            path: lib.path.as_ref().map(|p| PathBuf::from(p)),
+            path: lib.path.as_ref().map(PathBuf::from),
         });
         Ok(lib)
     })
@@ -108,7 +108,7 @@ async fn switch_library(state: tauri::State<'_, AppState>, id: String) -> Result
         library::set_active_library(&guard.conn, &id).map_err(|e| e.to_string())?;
         guard.active_library = Some(ActiveLibrary {
             id: lib.id,
-            path: lib.path.map(|p| PathBuf::from(p)),
+            path: lib.path.map(PathBuf::from),
         });
         Ok(())
     })
@@ -125,7 +125,7 @@ async fn remove_library(state: tauri::State<'_, AppState>, id: String) -> Result
         let active = library::active_library(&guard.conn).map_err(|e| e.to_string())?;
         guard.active_library = active.map(|lib| ActiveLibrary {
             id: lib.id,
-            path: lib.path.map(|p| PathBuf::from(p)),
+            path: lib.path.map(PathBuf::from),
         });
         Ok(())
     })
@@ -785,7 +785,7 @@ pub fn run() {
                     .flatten()
                     .map(|lib| ActiveLibrary {
                         id: lib.id,
-                        path: lib.path.map(|p| PathBuf::from(p)),
+                        path: lib.path.map(PathBuf::from),
                     });
 
             app.manage(AppState {

@@ -98,8 +98,7 @@ pub fn check_integrity(
     // Phase 2: unregistered entry detection (skipped in metadata_only mode or when no library root)
     let resource_mode = settings::get_resource_mode(conn, library_id)?;
     let mut unregistered_entries = Vec::new();
-    if resource_mode != "metadata_only" && library_root.is_some() {
-        let root = library_root.unwrap();
+    if let (Some(root), true) = (library_root, resource_mode != "metadata_only") {
         let mut scanned_dirs = 0usize;
         for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
             if !entry.file_type().is_dir() {
