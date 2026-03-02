@@ -47,7 +47,10 @@ export type FitMode = "screen" | "width" | "height";
 
 export type SlideshowMode = "page" | "work";
 
+export type ResourceMode = "full" | "metadata_only";
+
 export interface AppSettings {
+  resourceMode: ResourceMode;
   directoryTemplate: string | null;
   typeLabelImage: string;
   typeLabelFolder: string;

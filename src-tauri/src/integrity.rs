@@ -9,6 +9,7 @@ use walkdir::WalkDir;
 use crate::db;
 use crate::error::AppError;
 use crate::scanner;
+use crate::settings;
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -94,44 +95,48 @@ pub fn check_integrity(
         }
     }
 
-    // Phase 2: unregistered entry detection
+    // Phase 2: unregistered entry detection (skipped in metadata_only mode)
+    let resource_mode = settings::get_resource_mode(conn, library_id)?;
     let mut unregistered_entries = Vec::new();
-    let mut scanned_dirs = 0usize;
-    for entry in WalkDir::new(library_root)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        if !entry.file_type().is_dir() {
-            continue;
+    if resource_mode != "metadata_only" {
+        let mut scanned_dirs = 0usize;
+        for entry in WalkDir::new(library_root)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            if !entry.file_type().is_dir() {
+                continue;
+            }
+
+            scanned_dirs += 1;
+            if scanned_dirs.is_multiple_of(50) {
+                let _ =
+                    on_progress.send(IntegrityCheckProgress::ScanningDirectory { scanned_dirs });
+            }
+
+            let dir_path = entry.path();
+            let path_str = dir_path.to_string_lossy().to_string();
+            if registered_dirs.contains(&path_str) {
+                continue;
+            }
+
+            let image_count = scanner::count_direct_images(dir_path);
+            if image_count == 0 {
+                continue;
+            }
+
+            let folder_name = dir_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+
+            unregistered_entries.push(UnregisteredEntry {
+                path: path_str,
+                folder_name,
+                image_count,
+            });
         }
-
-        scanned_dirs += 1;
-        if scanned_dirs.is_multiple_of(50) {
-            let _ = on_progress.send(IntegrityCheckProgress::ScanningDirectory { scanned_dirs });
-        }
-
-        let dir_path = entry.path();
-        let path_str = dir_path.to_string_lossy().to_string();
-        if registered_dirs.contains(&path_str) {
-            continue;
-        }
-
-        let image_count = scanner::count_direct_images(dir_path);
-        if image_count == 0 {
-            continue;
-        }
-
-        let folder_name = dir_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
-
-        unregistered_entries.push(UnregisteredEntry {
-            path: path_str,
-            folder_name,
-            image_count,
-        });
     }
 
     let _ = on_progress.send(IntegrityCheckProgress::Completed);

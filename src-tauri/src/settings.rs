@@ -32,6 +32,7 @@ pub fn set_setting(
 const KEY_DIRECTORY_TEMPLATE: &str = "directory_template";
 const KEY_TYPE_LABEL_IMAGE: &str = "type_label_image";
 const KEY_TYPE_LABEL_FOLDER: &str = "type_label_folder";
+const KEY_RESOURCE_MODE: &str = "resource_mode";
 
 const DEFAULT_TYPE_LABEL_IMAGE: &str = "Image";
 const DEFAULT_TYPE_LABEL_FOLDER: &str = "Folder";
@@ -75,6 +76,14 @@ pub fn set_type_label_folder(
     label: &str,
 ) -> Result<(), AppError> {
     set_setting(conn, library_id, KEY_TYPE_LABEL_FOLDER, label)
+}
+
+pub fn get_resource_mode(conn: &Connection, library_id: &str) -> Result<String, AppError> {
+    Ok(get_setting(conn, library_id, KEY_RESOURCE_MODE)?.unwrap_or_else(|| "full".into()))
+}
+
+pub fn set_resource_mode(conn: &Connection, library_id: &str, mode: &str) -> Result<(), AppError> {
+    set_setting(conn, library_id, KEY_RESOURCE_MODE, mode)
 }
 
 pub fn resolve_type_label(

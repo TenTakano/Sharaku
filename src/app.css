@@ -876,6 +876,34 @@ button:disabled {
   margin-bottom: 32px;
 }
 
+.settings-section-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.resource-mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resource-mode-option {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.resource-mode-label {
+  font-weight: 500;
+}
+
+.resource-mode-desc {
+  color: #666;
+  font-size: 0.8125rem;
+}
+
 .settings-section h2 {
   font-size: 1rem;
   margin: 0 0 8px;
