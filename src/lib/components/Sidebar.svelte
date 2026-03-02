@@ -1,6 +1,5 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { open } from "@tauri-apps/plugin-dialog";
   import { SvelteSet } from "svelte/reactivity";
   import type { Library, Tag } from "../types";
 
@@ -25,7 +24,6 @@
   let libraries = $state<Library[]>([]);
   let tags = $state<Tag[]>([]);
   let expandedCategories = new SvelteSet<string>();
-  let adding = $state(false);
 
   interface TagsByCategory {
     category: string | null;
@@ -73,26 +71,6 @@
       if (currentId === tagLoadId) {
         tags = [];
       }
-    }
-  }
-
-  async function addLibrary() {
-    const selected = await open({ directory: true });
-    if (!selected) return;
-
-    adding = true;
-    try {
-      const dirName = selected.split("/").pop() || selected;
-      const lib = await invoke<Library>("create_library", {
-        name: dirName,
-        path: selected,
-      });
-      libraries = [...libraries, lib];
-      onSwitchLibrary(lib);
-    } catch (e) {
-      console.error("ライブラリ追加失敗:", e);
-    } finally {
-      adding = false;
     }
   }
 
@@ -170,7 +148,10 @@
         </button>
       {/each}
     </div>
-    <button class="sidebar-add-library" onclick={addLibrary} disabled={adding}>
+    <button
+      class="sidebar-add-library"
+      onclick={() => onNavigate("add-library")}
+    >
       + ライブラリを追加
     </button>
   </div>

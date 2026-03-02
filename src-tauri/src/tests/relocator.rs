@@ -11,7 +11,7 @@ const TEST_LIBRARY_ID: &str = "test_lib_relocator";
 
 fn setup_test_db() -> Connection {
     let conn = db::open_db_in_memory().unwrap();
-    library::add_library(&conn, "Test", "/test").ok();
+    library::add_library(&conn, "Test", Some("/test")).ok();
     conn.execute(
         "UPDATE libraries SET id = ?1 WHERE id = (SELECT id FROM libraries LIMIT 1)",
         [TEST_LIBRARY_ID],

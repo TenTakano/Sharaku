@@ -9,7 +9,7 @@ use crate::error::AppError;
 pub struct Library {
     pub id: String,
     pub name: String,
-    pub path: String,
+    pub path: Option<String>,
 }
 
 pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, AppError> {
@@ -18,7 +18,7 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, AppError> {
         Ok(Library {
             id: row.get(0)?,
             name: row.get(1)?,
-            path: row.get(2)?,
+            path: row.get::<_, Option<String>>(2)?,
         })
     })?;
     let mut libs = Vec::new();
@@ -28,14 +28,16 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, AppError> {
     Ok(libs)
 }
 
-pub fn add_library(conn: &Connection, name: &str, path: &str) -> Result<Library, AppError> {
-    let existing: bool = conn
-        .prepare_cached("SELECT 1 FROM libraries WHERE path = ?1")?
-        .exists([path])?;
-    if existing {
-        return Err(AppError::LibraryError(
-            "同じパスのライブラリが既に存在します".to_string(),
-        ));
+pub fn add_library(conn: &Connection, name: &str, path: Option<&str>) -> Result<Library, AppError> {
+    if let Some(p) = path {
+        let existing: bool = conn
+            .prepare_cached("SELECT 1 FROM libraries WHERE path = ?1")?
+            .exists([p])?;
+        if existing {
+            return Err(AppError::LibraryError(
+                "同じパスのライブラリが既に存在します".to_string(),
+            ));
+        }
     }
 
     let id = generate_id();
@@ -54,7 +56,7 @@ pub fn add_library(conn: &Connection, name: &str, path: &str) -> Result<Library,
     Ok(Library {
         id,
         name: name.to_string(),
-        path: path.to_string(),
+        path: path.map(|s| s.to_string()),
     })
 }
 
@@ -87,7 +89,7 @@ pub fn find_library_by_id(conn: &Connection, id: &str) -> Result<Option<Library>
             Ok(Library {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                path: row.get(2)?,
+                path: row.get::<_, Option<String>>(2)?,
             })
         })
         .optional();
@@ -105,7 +107,7 @@ pub fn active_library(conn: &Connection) -> Result<Option<Library>, AppError> {
             Ok(Library {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                path: row.get(2)?,
+                path: row.get::<_, Option<String>>(2)?,
             })
         })
         .optional();
