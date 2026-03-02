@@ -425,19 +425,6 @@
       </button>
     </section>
 
-    <section class="settings-section settings-section-danger">
-      <h2>ライブラリを削除</h2>
-      <p class="settings-description">
-        ライブラリとそのすべての作品データを完全に削除します。この操作は元に戻せません。
-      </p>
-      <button
-        class="settings-delete-library-btn"
-        onclick={() => (showDeleteConfirm = true)}
-      >
-        ライブラリを削除
-      </button>
-    </section>
-
     <section class="settings-section">
       <h2>ライブラリ整合チェック</h2>
       <p class="settings-description">
@@ -467,6 +454,19 @@
           {/if}
         </p>
       {/if}
+    </section>
+
+    <section class="settings-section settings-section-danger">
+      <h2>ライブラリを削除</h2>
+      <p class="settings-description">
+        ライブラリの管理情報（作品・タグ等）を削除します。ファイルシステム上のファイルは削除されません。
+      </p>
+      <button
+        class="settings-delete-library-btn"
+        onclick={() => (showDeleteConfirm = true)}
+      >
+        ライブラリを削除
+      </button>
     </section>
   </div>
 
@@ -568,7 +568,7 @@
     <div class="delete-library-dialog">
       <p>
         ライブラリ「<strong>{libraryName}</strong>」を削除しますか？<br />
-        全作品データが削除されます。この操作は元に戻せません。
+        管理情報（作品・タグ等）が削除されます。この操作は元に戻せません。
       </p>
       <div class="delete-library-actions">
         <button

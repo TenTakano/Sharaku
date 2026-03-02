@@ -1,5 +1,5 @@
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Inter, Avenir, Helvetica, Arial, "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
@@ -404,6 +404,11 @@ button:disabled {
   font-size: 0.875rem;
   background: #fff;
   color: #0f0f0f;
+  outline: none;
+}
+
+.sort-control select:focus {
+  border-color: #999;
 }
 
 .work-count {
@@ -1006,18 +1011,16 @@ button:disabled {
   white-space: nowrap;
 }
 
-.settings-save-btn {
-  background-color: #396cd8;
-  color: #fff;
-  border-color: #396cd8;
-}
-
 .settings-save-btn:hover:not(:disabled) {
-  background-color: #2e5bb8;
+  border-color: #999;
 }
 
 .settings-save-btn:disabled {
   opacity: 0.5;
+}
+
+.settings-bulk-import-btn:hover:not(:disabled) {
+  border-color: #999;
 }
 
 .settings-input-error {
@@ -1705,6 +1708,10 @@ button:disabled {
   font-size: 0.8125rem;
 }
 
+.delete-library-cancel:hover {
+  border-color: #999;
+}
+
 .delete-library-confirm {
   padding: 6px 14px;
   font-size: 0.8125rem;
@@ -1715,6 +1722,11 @@ button:disabled {
 
 .delete-library-confirm:hover:not(:disabled) {
   background-color: #b71c1c;
+  border-color: #b71c1c;
+}
+
+.settings-delete-library-btn:hover:not(:disabled) {
+  border-color: #b71c1c;
 }
 
 /* Tag remove confirmation dialog */
@@ -2137,9 +2149,14 @@ button:disabled {
   }
 
   .sort-control select {
-    background: #3a3a3a;
+    background-color: #3a3a3a;
     color: #f6f6f6;
     border-color: #555;
+    color-scheme: dark;
+  }
+
+  .sort-control select:focus {
+    border-color: #999;
   }
 
   .work-card img {
@@ -2185,9 +2202,12 @@ button:disabled {
     background: rgba(255, 255, 255, 0.1);
   }
 
-  .settings-save-btn {
-    background-color: #396cd8;
-    color: #fff;
+  .settings-save-btn:hover:not(:disabled) {
+    border-color: #999;
+  }
+
+  .settings-bulk-import-btn:hover:not(:disabled) {
+    border-color: #999;
   }
 
   .import-description {
@@ -2227,6 +2247,28 @@ button:disabled {
 
   .tag-confirm-delete:hover {
     background-color: #c62828;
+  }
+
+  .delete-library-dialog {
+    background: #3a3a3a;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .delete-library-confirm {
+    background-color: #d32f2f;
+    border-color: #d32f2f;
+  }
+
+  .delete-library-confirm:hover:not(:disabled) {
+    background-color: #c62828;
+  }
+
+  .settings-section-danger {
+    border-top-color: #4a4a4a;
+  }
+
+  .resource-mode-sub-settings {
+    border-left-color: #4a4a4a;
   }
 
   .relocation-dialog {
