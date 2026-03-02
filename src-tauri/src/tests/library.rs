@@ -15,9 +15,9 @@ fn list_empty_returns_empty() {
 #[test]
 fn add_library_creates_entry() {
     let conn = test_conn();
-    let lib = add_library(&conn, "Photos", "/path/to/photos").unwrap();
+    let lib = add_library(&conn, "Photos", Some("/path/to/photos")).unwrap();
     assert_eq!(lib.name, "Photos");
-    assert_eq!(lib.path, "/path/to/photos");
+    assert_eq!(lib.path, Some("/path/to/photos".to_string()));
     assert!(!lib.id.is_empty());
 
     let libs = list_libraries(&conn).unwrap();
@@ -31,25 +31,47 @@ fn add_library_creates_entry() {
 #[test]
 fn add_duplicate_path_returns_error() {
     let conn = test_conn();
-    add_library(&conn, "Photos", "/same/path").unwrap();
-    let result = add_library(&conn, "Another", "/same/path");
+    add_library(&conn, "Photos", Some("/same/path")).unwrap();
+    let result = add_library(&conn, "Another", Some("/same/path"));
     assert!(result.is_err());
 }
 
 #[test]
 fn add_second_library_keeps_first_active() {
     let conn = test_conn();
-    let first = add_library(&conn, "First", "/first").unwrap();
-    add_library(&conn, "Second", "/second").unwrap();
+    let first = add_library(&conn, "First", Some("/first")).unwrap();
+    add_library(&conn, "Second", Some("/second")).unwrap();
 
     let active = active_library(&conn).unwrap().unwrap();
     assert_eq!(active.id, first.id);
 }
 
 #[test]
+fn add_library_with_no_path() {
+    let conn = test_conn();
+    let lib = add_library(&conn, "MetadataOnly", None).unwrap();
+    assert_eq!(lib.name, "MetadataOnly");
+    assert_eq!(lib.path, None);
+
+    let libs = list_libraries(&conn).unwrap();
+    assert_eq!(libs.len(), 1);
+}
+
+#[test]
+fn add_multiple_null_path_libraries() {
+    let conn = test_conn();
+    let lib1 = add_library(&conn, "Meta1", None).unwrap();
+    let lib2 = add_library(&conn, "Meta2", None).unwrap();
+    assert_ne!(lib1.id, lib2.id);
+
+    let libs = list_libraries(&conn).unwrap();
+    assert_eq!(libs.len(), 2);
+}
+
+#[test]
 fn remove_library_removes_entry() {
     let conn = test_conn();
-    let lib = add_library(&conn, "ToRemove", "/remove").unwrap();
+    let lib = add_library(&conn, "ToRemove", Some("/remove")).unwrap();
     remove_library(&conn, &lib.id).unwrap();
 
     let libs = list_libraries(&conn).unwrap();
@@ -59,8 +81,8 @@ fn remove_library_removes_entry() {
 #[test]
 fn remove_active_library_activates_next() {
     let conn = test_conn();
-    let first = add_library(&conn, "First", "/first").unwrap();
-    let second = add_library(&conn, "Second", "/second").unwrap();
+    let first = add_library(&conn, "First", Some("/first")).unwrap();
+    let second = add_library(&conn, "Second", Some("/second")).unwrap();
 
     remove_library(&conn, &first.id).unwrap();
     let libs = list_libraries(&conn).unwrap();
@@ -80,8 +102,8 @@ fn remove_nonexistent_returns_error() {
 #[test]
 fn set_active() {
     let conn = test_conn();
-    add_library(&conn, "First", "/first").unwrap();
-    let second = add_library(&conn, "Second", "/second").unwrap();
+    add_library(&conn, "First", Some("/first")).unwrap();
+    let second = add_library(&conn, "Second", Some("/second")).unwrap();
 
     set_active_library(&conn, &second.id).unwrap();
     let active = active_library(&conn).unwrap().unwrap();
@@ -98,7 +120,7 @@ fn set_active_nonexistent_returns_error() {
 #[test]
 fn find_by_id_found() {
     let conn = test_conn();
-    let lib = add_library(&conn, "Test", "/test").unwrap();
+    let lib = add_library(&conn, "Test", Some("/test")).unwrap();
     let found = find_library_by_id(&conn, &lib.id).unwrap();
     assert!(found.is_some());
     assert_eq!(found.unwrap().name, "Test");
@@ -114,7 +136,7 @@ fn find_by_id_not_found() {
 #[test]
 fn active_library_returns_active() {
     let conn = test_conn();
-    let lib = add_library(&conn, "Active", "/active").unwrap();
+    let lib = add_library(&conn, "Active", Some("/active")).unwrap();
     let active = active_library(&conn).unwrap();
     assert!(active.is_some());
     assert_eq!(active.unwrap().id, lib.id);

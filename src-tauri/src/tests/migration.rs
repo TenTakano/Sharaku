@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS playlist_items (
 
 fn new_conn_with_library(lib_id: &str, lib_path: &str) -> Connection {
     let conn = open_db_in_memory().unwrap();
-    library::add_library(&conn, "Test Library", lib_path).unwrap();
+    library::add_library(&conn, "Test Library", Some(lib_path)).unwrap();
     conn.execute(
         "UPDATE libraries SET id = ?1 WHERE path = ?2",
         rusqlite::params![lib_id, lib_path],
@@ -318,10 +318,10 @@ fn one_library_failure_does_not_block_others() {
     let dir2 = unique_temp_dir("fail2");
     let conn = open_db_in_memory().unwrap();
 
-    library::add_library(&conn, "Lib1", dir1.to_str().unwrap()).unwrap();
+    library::add_library(&conn, "Lib1", Some(dir1.to_str().unwrap())).unwrap();
     let lib1_id = library::active_library(&conn).unwrap().unwrap().id;
 
-    library::add_library(&conn, "Lib2", dir2.to_str().unwrap()).unwrap();
+    library::add_library(&conn, "Lib2", Some(dir2.to_str().unwrap())).unwrap();
     let libs = library::list_libraries(&conn).unwrap();
     let lib2_id = libs.iter().find(|l| l.name == "Lib2").unwrap().id.clone();
 

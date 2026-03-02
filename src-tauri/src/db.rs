@@ -25,6 +25,39 @@ pub fn open_db_in_memory() -> Result<Connection, AppError> {
 fn init_db(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
     conn.execute_batch(include_str!("../migrations/004_unified_local_db.sql"))?;
+    migrate_libraries_path_nullable(conn)?;
+    Ok(())
+}
+
+fn migrate_libraries_path_nullable(conn: &Connection) -> Result<(), AppError> {
+    let notnull: bool = conn
+        .prepare("PRAGMA table_info(libraries)")?
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(1)?, row.get::<_, bool>(3)?))
+        })?
+        .filter_map(|r| r.ok())
+        .any(|(name, notnull)| name == "path" && notnull);
+
+    if !notnull {
+        return Ok(());
+    }
+
+    conn.execute_batch(
+        "PRAGMA foreign_keys=OFF;
+         BEGIN;
+         CREATE TABLE libraries_new (
+             id         TEXT PRIMARY KEY,
+             name       TEXT NOT NULL,
+             path       TEXT UNIQUE,
+             is_active  INTEGER NOT NULL DEFAULT 0,
+             created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+         );
+         INSERT INTO libraries_new SELECT * FROM libraries;
+         DROP TABLE libraries;
+         ALTER TABLE libraries_new RENAME TO libraries;
+         COMMIT;
+         PRAGMA foreign_keys=ON;",
+    )?;
     Ok(())
 }
 

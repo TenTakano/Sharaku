@@ -26,6 +26,9 @@
   let tags = $state<Tag[]>([]);
   let expandedCategories = new SvelteSet<string>();
   let adding = $state(false);
+  let showAddMenu = $state(false);
+  let showMetadataInput = $state(false);
+  let metadataLibraryName = $state("");
 
   interface TagsByCategory {
     category: string | null;
@@ -76,7 +79,8 @@
     }
   }
 
-  async function addLibrary() {
+  async function addLibraryFull() {
+    showAddMenu = false;
     const selected = await open({ directory: true });
     if (!selected) return;
 
@@ -86,6 +90,7 @@
       const lib = await invoke<Library>("create_library", {
         name: dirName,
         path: selected,
+        resourceMode: "full",
       });
       libraries = [...libraries, lib];
       onSwitchLibrary(lib);
@@ -94,6 +99,38 @@
     } finally {
       adding = false;
     }
+  }
+
+  async function addLibraryMetadataOnly() {
+    const name = metadataLibraryName.trim();
+    if (!name) return;
+
+    adding = true;
+    try {
+      const lib = await invoke<Library>("create_library", {
+        name,
+        path: null,
+        resourceMode: "metadata_only",
+      });
+      libraries = [...libraries, lib];
+      metadataLibraryName = "";
+      showMetadataInput = false;
+      onSwitchLibrary(lib);
+    } catch (e) {
+      console.error("ライブラリ追加失敗:", e);
+    } finally {
+      adding = false;
+    }
+  }
+
+  function handleAddMenuMetadata() {
+    showAddMenu = false;
+    showMetadataInput = true;
+  }
+
+  function cancelMetadataInput() {
+    showMetadataInput = false;
+    metadataLibraryName = "";
   }
 
   async function selectLibrary(lib: Library) {
@@ -170,9 +207,54 @@
         </button>
       {/each}
     </div>
-    <button class="sidebar-add-library" onclick={addLibrary} disabled={adding}>
-      + ライブラリを追加
-    </button>
+    <div class="sidebar-add-library-wrapper">
+      <button
+        class="sidebar-add-library"
+        onclick={() => (showAddMenu = !showAddMenu)}
+        disabled={adding}
+      >
+        + ライブラリを追加
+      </button>
+      {#if showAddMenu}
+        <div class="sidebar-add-menu">
+          <button class="sidebar-add-menu-item" onclick={addLibraryFull}>
+            フォルダを指定して作成
+          </button>
+          <button class="sidebar-add-menu-item" onclick={handleAddMenuMetadata}>
+            メタデータのみで作成
+          </button>
+        </div>
+      {/if}
+      {#if showMetadataInput}
+        <div class="sidebar-metadata-input">
+          <input
+            class="sidebar-metadata-name-input"
+            type="text"
+            bind:value={metadataLibraryName}
+            placeholder="ライブラリ名"
+            onkeydown={(e: KeyboardEvent) => {
+              if (e.key === "Enter") addLibraryMetadataOnly();
+              if (e.key === "Escape") cancelMetadataInput();
+            }}
+          />
+          <div class="sidebar-metadata-input-actions">
+            <button
+              class="sidebar-metadata-input-btn"
+              onclick={addLibraryMetadataOnly}
+              disabled={!metadataLibraryName.trim() || adding}
+            >
+              作成
+            </button>
+            <button
+              class="sidebar-metadata-input-btn sidebar-metadata-cancel-btn"
+              onclick={cancelMetadataInput}
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      {/if}
+    </div>
   </div>
 
   {#if tags.length > 0}

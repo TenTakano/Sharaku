@@ -28,10 +28,14 @@ pub fn migrate_per_library_dbs(conn: &Connection) -> Vec<MigrationError> {
 
     let mut errors = Vec::new();
     for lib in &libraries {
-        if let Err(msg) = migrate_single_library(conn, &lib.id, &lib.path) {
+        let lib_path = lib.path.as_deref().unwrap_or("");
+        if lib_path.is_empty() {
+            continue;
+        }
+        if let Err(msg) = migrate_single_library(conn, &lib.id, lib_path) {
             errors.push(MigrationError {
                 library_id: lib.id.clone(),
-                library_path: lib.path.clone(),
+                library_path: lib_path.to_string(),
                 message: msg,
             });
         }

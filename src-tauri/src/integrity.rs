@@ -54,7 +54,7 @@ pub enum IntegrityCheckProgress {
 pub fn check_integrity(
     conn: &Connection,
     library_id: &str,
-    library_root: &Path,
+    library_root: Option<&Path>,
     on_progress: &Channel<IntegrityCheckProgress>,
 ) -> Result<IntegrityReport, AppError> {
     let work_entries = db::list_work_paths(conn, library_id)?;
@@ -95,12 +95,13 @@ pub fn check_integrity(
         }
     }
 
-    // Phase 2: unregistered entry detection (skipped in metadata_only mode)
+    // Phase 2: unregistered entry detection (skipped in metadata_only mode or when no library root)
     let resource_mode = settings::get_resource_mode(conn, library_id)?;
     let mut unregistered_entries = Vec::new();
-    if resource_mode != "metadata_only" {
+    if resource_mode != "metadata_only" && library_root.is_some() {
+        let root = library_root.unwrap();
         let mut scanned_dirs = 0usize;
-        for entry in WalkDir::new(library_root)
+        for entry in WalkDir::new(root)
             .into_iter()
             .filter_map(|e| e.ok())
         {

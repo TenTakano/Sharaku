@@ -188,6 +188,78 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.sidebar-add-library-wrapper {
+  position: relative;
+}
+
+.sidebar-add-menu {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.sidebar-add-menu-item {
+  all: unset;
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.sidebar-add-menu-item:hover {
+  background: rgba(57, 108, 216, 0.08);
+}
+
+.sidebar-metadata-input {
+  padding: 6px 8px;
+}
+
+.sidebar-metadata-name-input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 0.82rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.sidebar-metadata-input-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sidebar-metadata-input-btn {
+  all: unset;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #396cd8;
+  color: #fff;
+}
+
+.sidebar-metadata-input-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebar-metadata-cancel-btn {
+  background: #888;
+}
+
+.setup-mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
 /* Sidebar Tags */
 .sidebar-tags-section {
   flex: 1;
@@ -1933,6 +2005,25 @@ button:disabled {
 
   .sidebar-add-library:hover {
     background: rgba(57, 108, 216, 0.15);
+  }
+
+  .sidebar-add-menu {
+    border-color: #444;
+    background: #2a2a2a;
+  }
+
+  .sidebar-add-menu-item {
+    color: #ccc;
+  }
+
+  .sidebar-add-menu-item:hover {
+    background: rgba(57, 108, 216, 0.2);
+  }
+
+  .sidebar-metadata-name-input {
+    background: #333;
+    color: #eee;
+    border-color: #555;
   }
 
   .sidebar-tag-category-header {

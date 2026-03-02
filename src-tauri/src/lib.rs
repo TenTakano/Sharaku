@@ -30,7 +30,7 @@ use template::WorkMetadata;
 
 struct ActiveLibrary {
     id: String,
-    path: PathBuf,
+    path: Option<PathBuf>,
 }
 
 struct AppDb {
@@ -70,16 +70,26 @@ async fn get_active_library(state: tauri::State<'_, AppState>) -> Result<Option<
 async fn create_library(
     state: tauri::State<'_, AppState>,
     name: String,
-    path: String,
+    path: Option<String>,
+    resource_mode: String,
 ) -> Result<Library, String> {
+    if resource_mode != "full" && resource_mode != "metadata_only" {
+        return Err("無効なリソース管理モードです".to_string());
+    }
+    if resource_mode == "full" && path.is_none() {
+        return Err("フルモードではパスの指定が必須です".to_string());
+    }
     let db = state.db.clone();
     tokio::task::spawn_blocking(move || {
         let mut guard = db.lock().unwrap();
-        let lib = library::add_library(&guard.conn, &name, &path).map_err(|e| e.to_string())?;
+        let lib = library::add_library(&guard.conn, &name, path.as_deref())
+            .map_err(|e| e.to_string())?;
         library::set_active_library(&guard.conn, &lib.id).map_err(|e| e.to_string())?;
+        settings::set_resource_mode(&guard.conn, &lib.id, &resource_mode)
+            .map_err(|e| e.to_string())?;
         guard.active_library = Some(ActiveLibrary {
             id: lib.id.clone(),
-            path: PathBuf::from(&lib.path),
+            path: lib.path.as_ref().map(|p| PathBuf::from(p)),
         });
         Ok(lib)
     })
@@ -98,7 +108,7 @@ async fn switch_library(state: tauri::State<'_, AppState>, id: String) -> Result
         library::set_active_library(&guard.conn, &id).map_err(|e| e.to_string())?;
         guard.active_library = Some(ActiveLibrary {
             id: lib.id,
-            path: PathBuf::from(&lib.path),
+            path: lib.path.map(|p| PathBuf::from(p)),
         });
         Ok(())
     })
@@ -115,7 +125,7 @@ async fn remove_library(state: tauri::State<'_, AppState>, id: String) -> Result
         let active = library::active_library(&guard.conn).map_err(|e| e.to_string())?;
         guard.active_library = active.map(|lib| ActiveLibrary {
             id: lib.id,
-            path: PathBuf::from(&lib.path),
+            path: lib.path.map(|p| PathBuf::from(p)),
         });
         Ok(())
     })
@@ -352,11 +362,15 @@ async fn preview_import_path(
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
+        let lib_path = active
+            .path
+            .as_ref()
+            .ok_or("ライブラリルートが設定されていません")?;
         let template_str = settings::get_directory_template(&guard.conn, &active.id)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "ディレクトリテンプレートが設定されていません".to_string())?;
         Ok(importer::preview_import_path(
-            &active.path,
+            lib_path,
             &template_str,
             &metadata,
         ))
@@ -377,7 +391,11 @@ async fn import_work(
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
-        importer::import_work(&request, &guard.conn, &active.id, &active.path)
+        let lib_path = active
+            .path
+            .as_ref()
+            .ok_or("ライブラリルートが設定されていません")?;
+        importer::import_work(&request, &guard.conn, &active.id, lib_path)
             .map_err(|e| e.to_string())
     })
     .await
@@ -418,11 +436,15 @@ async fn bulk_import(
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
+        let lib_path = active
+            .path
+            .as_ref()
+            .ok_or("ライブラリルートが設定されていません")?;
         importer::bulk_import(
             &requests,
             &guard.conn,
             &active.id,
-            &active.path,
+            lib_path,
             &on_progress,
         )
         .map_err(|e| e.to_string())
@@ -445,7 +467,11 @@ async fn preview_relocation(
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
-        relocator::preview_relocation(&guard.conn, &active.id, &active.path, &trimmed)
+        let lib_path = active
+            .path
+            .as_ref()
+            .ok_or("ライブラリルートが設定されていません")?;
+        relocator::preview_relocation(&guard.conn, &active.id, lib_path, &trimmed)
             .map_err(|e| e.to_string())
     })
     .await
@@ -467,10 +493,14 @@ async fn relocate_works(
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
+        let lib_path = active
+            .path
+            .as_ref()
+            .ok_or("ライブラリルートが設定されていません")?;
         relocator::execute_relocation(
             &guard.conn,
             &active.id,
-            &active.path,
+            lib_path,
             &trimmed,
             &on_progress,
         )
@@ -658,8 +688,13 @@ async fn check_integrity(
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
-        integrity::check_integrity(&guard.conn, &active.id, &active.path, &on_progress)
-            .map_err(|e| e.to_string())
+        integrity::check_integrity(
+            &guard.conn,
+            &active.id,
+            active.path.as_deref(),
+            &on_progress,
+        )
+        .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -762,7 +797,7 @@ pub fn run() {
                     .flatten()
                     .map(|lib| ActiveLibrary {
                         id: lib.id,
-                        path: PathBuf::from(&lib.path),
+                        path: lib.path.map(|p| PathBuf::from(p)),
                     });
 
             app.manage(AppState {

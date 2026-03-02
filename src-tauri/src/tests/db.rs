@@ -11,7 +11,7 @@ fn test_conn() -> Connection {
 }
 
 fn setup_test_library(conn: &Connection) {
-    library::add_library(conn, "Test Library", "/test/path").ok();
+    library::add_library(conn, "Test Library", Some("/test/path")).ok();
     conn.execute(
         "UPDATE libraries SET id = ?1 WHERE id = (SELECT id FROM libraries LIMIT 1)",
         [TEST_LIBRARY_ID],
@@ -599,7 +599,7 @@ fn open_db_succeeds_despite_brief_external_lock() {
     );
 
     let conn = result.unwrap();
-    library::add_library(&conn, "Test", "/test").unwrap();
+    library::add_library(&conn, "Test", Some("/test")).unwrap();
     let lib_id = library::active_library(&conn).unwrap().unwrap().id;
     let works = list_works(&conn, &lib_id, "title", "asc").unwrap();
     assert_eq!(works.len(), 0);
