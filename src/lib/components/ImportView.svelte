@@ -2,6 +2,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
   import type {
+    AppSettings,
+    ResourceMode,
     ImportMode,
     ImportRequest,
     ImportResult,
@@ -18,6 +20,7 @@
 
   type Step = "select" | "metadata" | "importing" | "done" | "error";
 
+  let resourceMode = $state<ResourceMode>("full");
   let step = $state<Step>("select");
   let sourcePath = $state("");
   let title = $state("");
@@ -68,6 +71,10 @@
   }
 
   async function updatePreview() {
+    if (resourceMode === "metadata_only") {
+      previewPath = null;
+      return;
+    }
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(async () => {
       if (!title.trim()) {
@@ -140,6 +147,9 @@
   }
 
   $effect(() => {
+    invoke<AppSettings>("get_settings").then((settings) => {
+      resourceMode = settings.resourceMode;
+    });
     if (initialSourcePath) {
       loadFromPath(initialSourcePath);
     }
@@ -244,22 +254,28 @@
           </div>
         </div>
 
-        <div class="import-field">
-          <label class="import-label">取り込みモード</label>
-          <div class="import-mode-select">
-            <label class="import-mode-option">
-              <input type="radio" bind:group={mode} value="copy" />
-              コピー
-            </label>
-            <label class="import-mode-option">
-              <input type="radio" bind:group={mode} value="move" />
-              移動
-            </label>
+        {#if resourceMode === "full"}
+          <div class="import-field">
+            <label class="import-label">取り込みモード</label>
+            <div class="import-mode-select">
+              <label class="import-mode-option">
+                <input type="radio" bind:group={mode} value="copy" />
+                コピー
+              </label>
+              <label class="import-mode-option">
+                <input type="radio" bind:group={mode} value="move" />
+                移動
+              </label>
+            </div>
           </div>
-        </div>
+        {/if}
       </div>
 
-      {#if previewPath}
+      {#if resourceMode === "metadata_only"}
+        <div class="template-preview">
+          <span class="template-preview-label">元の場所に登録されます</span>
+        </div>
+      {:else if previewPath}
         <div class="template-preview">
           <span class="template-preview-label">配置先:</span>
           <code class="template-preview-path">{previewPath}</code>

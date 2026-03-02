@@ -3,6 +3,7 @@
   import { Channel } from "@tauri-apps/api/core";
   import type {
     AppSettings,
+    ResourceMode,
     TemplateValidation,
     RelocationPreview,
     RelocationProgress,
@@ -19,6 +20,7 @@
 
   let { libraryPath, onNavigate, onImportUnregistered }: Props = $props();
 
+  let resourceMode = $state<ResourceMode>("full");
   let directoryTemplate = $state("");
   let typeLabelImage = $state("");
   let typeLabelFolder = $state("");
@@ -50,6 +52,7 @@
   async function loadSettings() {
     try {
       const settings = await invoke<AppSettings>("get_settings");
+      resourceMode = settings.resourceMode;
       directoryTemplate = settings.directoryTemplate ?? "";
       savedDirectoryTemplate = directoryTemplate;
       typeLabelImage = settings.typeLabelImage;
@@ -61,6 +64,15 @@
       message = { type: "error", text: `設定の読み込みに失敗しました: ${e}` };
     } finally {
       loading = false;
+    }
+  }
+
+  async function setResourceMode(mode: ResourceMode) {
+    try {
+      await invoke("set_resource_mode", { mode });
+      resourceMode = mode;
+    } catch (e) {
+      message = { type: "error", text: `モードの変更に失敗しました: ${e}` };
     }
   }
 
@@ -251,6 +263,35 @@
     </section>
 
     <section class="settings-section">
+      <h2>リソース管理モード</h2>
+      <p class="settings-description">
+        作品ファイルの管理方法を選択します。
+      </p>
+      <div class="resource-mode-select">
+        <label class="resource-mode-option">
+          <input
+            type="radio"
+            name="resource-mode"
+            checked={resourceMode === "full"}
+            onchange={() => setResourceMode("full")}
+          />
+          <span class="resource-mode-label">すべて管理</span>
+          <span class="resource-mode-desc">テンプレートに基づきファイルを配置</span>
+        </label>
+        <label class="resource-mode-option">
+          <input
+            type="radio"
+            name="resource-mode"
+            checked={resourceMode === "metadata_only"}
+            onchange={() => setResourceMode("metadata_only")}
+          />
+          <span class="resource-mode-label">メタデータのみ管理</span>
+          <span class="resource-mode-desc">ファイルを移動せず、メタデータのみ管理</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-section" class:settings-section-disabled={resourceMode === "metadata_only"}>
       <h2>ディレクトリテンプレート</h2>
       <p class="settings-description">
         作品取り込み時のフォルダ配置パターンを指定します。<br />
@@ -268,12 +309,12 @@
           bind:value={directoryTemplate}
           oninput={onTemplateInput}
           placeholder={"{artist}/{title}"}
-          disabled={saving}
+          disabled={saving || resourceMode === "metadata_only"}
         />
         <button
           class="settings-save-btn"
           onclick={saveDirectoryTemplate}
-          disabled={saving || !templateValidation.valid}
+          disabled={saving || !templateValidation.valid || resourceMode === "metadata_only"}
         >
           保存
         </button>
@@ -289,7 +330,7 @@
       {/if}
     </section>
 
-    <section class="settings-section">
+    <section class="settings-section" class:settings-section-disabled={resourceMode === "metadata_only"}>
       <h2>作品種別ラベル</h2>
       <p class="settings-description">
         テンプレートの <code>{"{type}"}</code>
@@ -305,7 +346,7 @@
             class="settings-input type-label-input"
             bind:value={typeLabelImage}
             placeholder="Image"
-            disabled={saving}
+            disabled={saving || resourceMode === "metadata_only"}
           />
         </div>
         <div class="type-label-row">
@@ -318,13 +359,13 @@
             class="settings-input type-label-input"
             bind:value={typeLabelFolder}
             placeholder="Folder"
-            disabled={saving}
+            disabled={saving || resourceMode === "metadata_only"}
           />
         </div>
         <button
           class="settings-save-btn"
           onclick={saveTypeLabels}
-          disabled={saving || !typeLabelImage.trim() || !typeLabelFolder.trim()}
+          disabled={saving || !typeLabelImage.trim() || !typeLabelFolder.trim() || resourceMode === "metadata_only"}
         >
           保存
         </button>

@@ -121,6 +121,36 @@ pub fn import_work(
         ));
     }
 
+    let resource_mode = settings::get_resource_mode(conn, library_id)?;
+    let thumb = thumbnail::generate_thumbnail(&images[0])?;
+    let page_count = images.len();
+
+    if resource_mode == "metadata_only" {
+        let source_str = source.to_string_lossy().to_string();
+
+        db::insert_work(
+            conn,
+            &WorkRecord {
+                library_id,
+                title: &request.title,
+                path: &source_str,
+                work_type: "folder",
+                page_count: page_count as i32,
+                thumbnail: &thumb,
+                artist: request.artist.as_deref(),
+                year: request.year,
+                genre: request.genre.as_deref(),
+                circle: request.circle.as_deref(),
+                origin: request.origin.as_deref(),
+            },
+        )?;
+
+        return Ok(ImportResult {
+            destination_path: source_str,
+            page_count,
+        });
+    }
+
     let template_str = settings::get_directory_template(conn, library_id)?.ok_or_else(|| {
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
@@ -144,8 +174,6 @@ pub fn import_work(
         ));
     }
 
-    let thumb = thumbnail::generate_thumbnail(&images[0])?;
-
     std::fs::create_dir_all(&dest)?;
 
     let rollback = |dest: &Path| {
@@ -158,7 +186,6 @@ pub fn import_work(
     }
 
     let dest_str = dest.to_string_lossy().to_string();
-    let page_count = images.len();
 
     if let Err(e) = db::insert_work(
         conn,

@@ -177,6 +177,7 @@ async fn get_work(state: tauri::State<'_, AppState>, work_id: i64) -> Result<Wor
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AppSettings {
+    resource_mode: String,
     directory_template: Option<String>,
     type_label_image: String,
     type_label_folder: String,
@@ -191,6 +192,8 @@ async fn get_settings(state: tauri::State<'_, AppState>) -> Result<AppSettings, 
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
+        let resource_mode =
+            settings::get_resource_mode(&guard.conn, &active.id).map_err(|e| e.to_string())?;
         let directory_template =
             settings::get_directory_template(&guard.conn, &active.id).map_err(|e| e.to_string())?;
         let type_label_image =
@@ -198,10 +201,32 @@ async fn get_settings(state: tauri::State<'_, AppState>) -> Result<AppSettings, 
         let type_label_folder =
             settings::get_type_label_folder(&guard.conn, &active.id).map_err(|e| e.to_string())?;
         Ok(AppSettings {
+            resource_mode,
             directory_template,
             type_label_image,
             type_label_folder,
         })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn set_resource_mode(
+    state: tauri::State<'_, AppState>,
+    mode: String,
+) -> Result<(), String> {
+    if mode != "full" && mode != "metadata_only" {
+        return Err("無効なリソース管理モードです".to_string());
+    }
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        let active = guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+        settings::set_resource_mode(&guard.conn, &active.id, &mode).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -782,6 +807,7 @@ pub fn run() {
             get_thumbnail,
             get_work,
             get_settings,
+            set_resource_mode,
             set_directory_template,
             set_type_labels,
             validate_template,

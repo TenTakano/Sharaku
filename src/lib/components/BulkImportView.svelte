@@ -3,6 +3,8 @@
   import { open } from "@tauri-apps/plugin-dialog";
   import { SvelteSet, SvelteMap } from "svelte/reactivity";
   import type {
+    AppSettings,
+    ResourceMode,
     DiscoveredFolder,
     DiscoverProgress,
     ImportMode,
@@ -24,6 +26,7 @@
 
   type Step = "discover" | "review" | "importing" | "done";
 
+  let resourceMode = $state<ResourceMode>("full");
   let step = $state<Step>("discover");
   let discovering = $state(false);
   let discoverStatus = $state("");
@@ -195,6 +198,9 @@
   }
 
   $effect(() => {
+    invoke<AppSettings>("get_settings").then((settings) => {
+      resourceMode = settings.resourceMode;
+    });
     if (initialEntries) {
       loadFromEntries(initialEntries);
     } else if (initialRootPath) {
@@ -239,16 +245,18 @@
           />
           すべて選択
         </label>
-        <div class="import-mode-select">
-          <label class="import-mode-option">
-            <input type="radio" bind:group={mode} value="copy" />
-            コピー
-          </label>
-          <label class="import-mode-option">
-            <input type="radio" bind:group={mode} value="move" />
-            移動
-          </label>
-        </div>
+        {#if resourceMode === "full"}
+          <div class="import-mode-select">
+            <label class="import-mode-option">
+              <input type="radio" bind:group={mode} value="copy" />
+              コピー
+            </label>
+            <label class="import-mode-option">
+              <input type="radio" bind:group={mode} value="move" />
+              移動
+            </label>
+          </div>
+        {/if}
       </div>
 
       <div class="bulk-table-wrapper">
