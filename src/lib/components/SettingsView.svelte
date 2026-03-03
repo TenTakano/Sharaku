@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { Channel } from "@tauri-apps/api/core";
+  import { addToast } from "../stores/toast.svelte";
   import type {
     AppSettings,
     ResourceMode,
@@ -36,9 +37,6 @@
   let typeLabelFolder = $state("");
   let loading = $state(true);
   let saving = $state(false);
-  let message = $state<{ type: "success" | "error"; text: string } | null>(
-    null,
-  );
   let templateValidation = $state<TemplateValidation>({
     valid: true,
     error: null,
@@ -71,7 +69,7 @@
         await validateAndPreviewTemplate(directoryTemplate);
       }
     } catch (e) {
-      message = { type: "error", text: `設定の読み込みに失敗しました: ${e}` };
+      addToast("error", `設定の読み込みに失敗しました: ${e}`);
     } finally {
       loading = false;
     }
@@ -82,13 +80,12 @@
       await invoke("set_resource_mode", { mode });
       resourceMode = mode;
     } catch (e) {
-      message = { type: "error", text: `モードの変更に失敗しました: ${e}` };
+      addToast("error", `モードの変更に失敗しました: ${e}`);
     }
   }
 
   async function saveDirectoryTemplate() {
     saving = true;
-    message = null;
     try {
       const previews = await invoke<RelocationPreview[]>("preview_relocation", {
         newTemplate: directoryTemplate.trim(),
@@ -98,16 +95,13 @@
           template: directoryTemplate.trim(),
         });
         savedDirectoryTemplate = directoryTemplate;
-        message = {
-          type: "success",
-          text: "ディレクトリテンプレートを保存しました",
-        };
+        addToast("success", "ディレクトリテンプレートを保存しました");
       } else {
         relocationPreviews = previews;
         showRelocationDialog = true;
       }
     } catch (e) {
-      message = { type: "error", text: `保存に失敗しました: ${e}` };
+      addToast("error", `保存に失敗しました: ${e}`);
     } finally {
       saving = false;
     }
@@ -138,12 +132,9 @@
       showRelocationDialog = false;
       relocationPreviews = [];
       savedDirectoryTemplate = directoryTemplate;
-      message = {
-        type: "success",
-        text: "テンプレートを保存し、作品を再配置しました",
-      };
+      addToast("success", "テンプレートを保存し、作品を再配置しました");
     } catch (e) {
-      message = { type: "error", text: `再配置に失敗しました: ${e}` };
+      addToast("error", `再配置に失敗しました: ${e}`);
     } finally {
       relocating = false;
       relocationProgress = null;
@@ -181,18 +172,17 @@
 
   async function saveTypeLabels() {
     saving = true;
-    message = null;
     try {
       await invoke("set_type_labels", {
         imageLabel: typeLabelImage.trim(),
         folderLabel: typeLabelFolder.trim(),
       });
-      message = { type: "success", text: "作品種別ラベルを保存しました" };
+      addToast("success", "作品種別ラベルを保存しました");
       if (directoryTemplate) {
         await validateAndPreviewTemplate(directoryTemplate);
       }
     } catch (e) {
-      message = { type: "error", text: `保存に失敗しました: ${e}` };
+      addToast("error", `保存に失敗しました: ${e}`);
     } finally {
       saving = false;
     }
@@ -222,7 +212,7 @@
       integrityReport = report;
       showIntegrityDialog = true;
     } catch (e) {
-      message = { type: "error", text: `整合チェックに失敗しました: ${e}` };
+      addToast("error", `整合チェックに失敗しました: ${e}`);
     } finally {
       integrityChecking = false;
       integrityProgress = null;
@@ -240,14 +230,11 @@
     try {
       const ids = integrityReport.orphanWorks.map((w) => w.id);
       const deleted = await invoke<number>("delete_orphan_works", { ids });
-      message = {
-        type: "success",
-        text: `${deleted} 件の孤立レコードを削除しました`,
-      };
+      addToast("success", `${deleted} 件の孤立レコードを削除しました`);
       showIntegrityDialog = false;
       integrityReport = null;
     } catch (e) {
-      message = { type: "error", text: `削除に失敗しました: ${e}` };
+      addToast("error", `削除に失敗しました: ${e}`);
     } finally {
       deletingOrphans = false;
     }
@@ -263,7 +250,7 @@
       showDeleteConfirm = false;
       onDeleteLibrary();
     } catch (e) {
-      message = { type: "error", text: `ライブラリの削除に失敗しました: ${e}` };
+      addToast("error", `ライブラリの削除に失敗しました: ${e}`);
     } finally {
       deleting = false;
     }
@@ -469,10 +456,6 @@
         </button>
       </section>
     </div>
-
-    {#if message}
-      <p class="settings-message {message.type}">{message.text}</p>
-    {/if}
   </div>
 {/if}
 

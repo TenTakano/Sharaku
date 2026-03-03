@@ -7,6 +7,7 @@
   import SetupView from "./lib/components/SetupView.svelte";
   import SettingsView from "./lib/components/SettingsView.svelte";
   import WorkGrid from "./lib/components/WorkGrid.svelte";
+  import Toast from "./lib/components/Toast.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
   import type {
     Library,
@@ -261,3 +262,7 @@
     </main>
   </div>
 {/if}
+
+<div class="toast-container">
+  <Toast />
+</div>
