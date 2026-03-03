@@ -57,6 +57,17 @@ pub fn check_integrity(
     library_root: Option<&Path>,
     on_progress: &Channel<IntegrityCheckProgress>,
 ) -> Result<IntegrityReport, AppError> {
+    check_integrity_core(conn, library_id, library_root, |p| {
+        let _ = on_progress.send(p);
+    })
+}
+
+fn check_integrity_core(
+    conn: &Connection,
+    library_id: &str,
+    library_root: Option<&Path>,
+    on_progress: impl Fn(IntegrityCheckProgress),
+) -> Result<IntegrityReport, AppError> {
     let work_entries = db::list_work_paths(conn, library_id)?;
     let total_works = work_entries.len();
 
@@ -66,7 +77,7 @@ pub fn check_integrity(
     let mut registered_dirs = HashSet::new();
     for (i, entry) in work_entries.iter().enumerate() {
         if (i + 1).is_multiple_of(50) || i + 1 == total_works {
-            let _ = on_progress.send(IntegrityCheckProgress::CheckingWorks {
+            on_progress(IntegrityCheckProgress::CheckingWorks {
                 checked: i + 1,
                 total: total_works,
             });
@@ -107,8 +118,7 @@ pub fn check_integrity(
 
             scanned_dirs += 1;
             if scanned_dirs.is_multiple_of(50) {
-                let _ =
-                    on_progress.send(IntegrityCheckProgress::ScanningDirectory { scanned_dirs });
+                on_progress(IntegrityCheckProgress::ScanningDirectory { scanned_dirs });
             }
 
             let dir_path = entry.path();
@@ -136,7 +146,7 @@ pub fn check_integrity(
         }
     }
 
-    let _ = on_progress.send(IntegrityCheckProgress::Completed);
+    on_progress(IntegrityCheckProgress::Completed);
 
     Ok(IntegrityReport {
         total_works,
@@ -152,3 +162,7 @@ pub fn delete_orphan_works(
 ) -> Result<usize, AppError> {
     db::delete_works_by_ids(conn, library_id, ids)
 }
+
+#[cfg(test)]
+#[path = "tests/integrity.rs"]
+mod tests;
