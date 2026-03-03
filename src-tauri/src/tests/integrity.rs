@@ -54,13 +54,8 @@ fn no_issues_when_all_files_exist() {
     let conn = setup_test_db();
     insert_work(&conn, "Image1", &file_path.to_string_lossy(), "image");
 
-    let report = check_integrity_core(
-        &conn,
-        TEST_LIBRARY_ID,
-        Some(tmp.path()),
-        noop_progress,
-    )
-    .unwrap();
+    let report =
+        check_integrity_core(&conn, TEST_LIBRARY_ID, Some(tmp.path()), noop_progress).unwrap();
 
     assert_eq!(report.total_works, 1);
     assert!(report.orphan_works.is_empty());
@@ -72,8 +67,7 @@ fn detects_orphan_when_file_missing() {
     let conn = setup_test_db();
     insert_work(&conn, "Missing", "/nonexistent/image.jpg", "image");
 
-    let report =
-        check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
+    let report = check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
 
     assert_eq!(report.total_works, 1);
     assert_eq!(report.orphan_works.len(), 1);
@@ -86,8 +80,7 @@ fn detects_orphan_folder_when_dir_missing() {
     let conn = setup_test_db();
     insert_work(&conn, "MissingFolder", "/nonexistent/folder", "folder");
 
-    let report =
-        check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
+    let report = check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
 
     assert_eq!(report.orphan_works.len(), 1);
     assert_eq!(report.orphan_works[0].title, "MissingFolder");
@@ -115,13 +108,8 @@ fn detects_unregistered_directory() {
         "folder",
     );
 
-    let report = check_integrity_core(
-        &conn,
-        TEST_LIBRARY_ID,
-        Some(tmp.path()),
-        noop_progress,
-    )
-    .unwrap();
+    let report =
+        check_integrity_core(&conn, TEST_LIBRARY_ID, Some(tmp.path()), noop_progress).unwrap();
 
     assert_eq!(report.unregistered_entries.len(), 1);
     assert_eq!(report.unregistered_entries[0].folder_name, "unregistered");
@@ -138,13 +126,8 @@ fn skips_phase2_when_metadata_only() {
     let conn = setup_test_db();
     settings::set_resource_mode(&conn, TEST_LIBRARY_ID, "metadata_only").unwrap();
 
-    let report = check_integrity_core(
-        &conn,
-        TEST_LIBRARY_ID,
-        Some(tmp.path()),
-        noop_progress,
-    )
-    .unwrap();
+    let report =
+        check_integrity_core(&conn, TEST_LIBRARY_ID, Some(tmp.path()), noop_progress).unwrap();
 
     assert!(report.unregistered_entries.is_empty());
 }
@@ -153,8 +136,7 @@ fn skips_phase2_when_metadata_only() {
 fn skips_phase2_when_library_root_is_none() {
     let conn = setup_test_db();
 
-    let report =
-        check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
+    let report = check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
 
     assert!(report.unregistered_entries.is_empty());
 }
