@@ -2060,6 +2060,119 @@ button:disabled {
 }
 
 /* ============================
+   Context Menu
+   ============================ */
+
+.context-menu {
+  position: fixed;
+  z-index: 400;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 160px;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: left;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: #333;
+}
+
+.context-menu-item:hover {
+  background: #f0f0f0;
+  border-color: transparent;
+}
+
+/* ============================
+   Edit Work Dialog
+   ============================ */
+
+.edit-work-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-work-dialog {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 420px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.edit-work-dialog-title {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+}
+
+.edit-work-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-work-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.edit-work-required {
+  color: #c62828;
+}
+
+.edit-work-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.edit-work-cancel {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
+.edit-work-save {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  background-color: #396cd8;
+  color: #fff;
+  border-color: #396cd8;
+}
+
+.edit-work-save:hover:not(:disabled) {
+  background-color: #2c56b0;
+  border-color: #2c56b0;
+}
+
+.viewer-toolbar-separator {
+  color: #888;
+  margin: 0 4px;
+  user-select: none;
+}
+
+/* ============================
    Dark Mode
    ============================ */
 
@@ -2551,5 +2664,46 @@ button:disabled {
 
   .toast-close:hover {
     color: #f0f0f0;
+  }
+
+  .context-menu {
+    background: #3a3a3a;
+    border-color: #555;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .context-menu-item {
+    color: #ddd;
+  }
+
+  .context-menu-item:hover {
+    background: #4a4a4a;
+  }
+
+  .edit-work-dialog {
+    background: #3a3a3a;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .edit-work-label {
+    color: #aaa;
+  }
+
+  .edit-work-required {
+    color: #ef5350;
+  }
+
+  .edit-work-save {
+    background-color: #396cd8;
+    border-color: #396cd8;
+  }
+
+  .edit-work-save:hover:not(:disabled) {
+    background-color: #2c56b0;
+    border-color: #2c56b0;
+  }
+
+  .viewer-toolbar-separator {
+    color: #666;
   }
 }

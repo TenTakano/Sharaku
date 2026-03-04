@@ -3,8 +3,11 @@
   import { VList } from "virtua/svelte";
   import WorkCardComponent from "./WorkCard.svelte";
   import { WorkCard } from "./WorkCard.svelte";
+  import ContextMenu from "./ContextMenu.svelte";
+  import EditWorkDialog from "./EditWorkDialog.svelte";
   import type {
     WorkSummary,
+    WorkDetail,
     SortField,
     SortOrder,
     Tag,
@@ -36,6 +39,10 @@
   let sortField = $state<SortField>("created_at");
   let sortOrder = $state<SortOrder>("desc");
   let containerWidth = $state(0);
+  let contextMenu = $state<{ x: number; y: number; workId: number } | null>(
+    null,
+  );
+  let editingWork = $state<WorkDetail | null>(null);
 
   const CARD_WIDTH = 180;
   const GAP = 16;
@@ -105,6 +112,20 @@
     void tagSearchMode;
     loadWorks();
   });
+
+  function handleContextMenu(workId: number, e: MouseEvent) {
+    contextMenu = { x: e.clientX, y: e.clientY, workId };
+  }
+
+  async function openEditDialog(workId: number) {
+    contextMenu = null;
+    try {
+      const detail: WorkDetail = await invoke("get_work", { workId });
+      editingWork = detail;
+    } catch (e) {
+      console.error("Failed to get work:", e);
+    }
+  }
 
   function handleSort(e: Event) {
     const value = (e.target as HTMLSelectElement).value;
@@ -179,7 +200,11 @@
           style="gap: {GAP}px; grid-template-columns: repeat({columnCount}, {CARD_WIDTH}px);"
         >
           {#each row as work (work.id)}
-            <WorkCardComponent {work} onclick={onSelectWork} />
+            <WorkCardComponent
+              {work}
+              onclick={onSelectWork}
+              oncontextmenu={handleContextMenu}
+            />
           {/each}
         </div>
       {/snippet}
@@ -193,3 +218,25 @@
     </div>
   {/if}
 </div>
+
+{#if contextMenu}
+  <ContextMenu
+    x={contextMenu.x}
+    y={contextMenu.y}
+    items={[
+      {
+        label: "メタデータを編集",
+        action: () => openEditDialog(contextMenu!.workId),
+      },
+    ]}
+    onClose={() => (contextMenu = null)}
+  />
+{/if}
+
+{#if editingWork}
+  <EditWorkDialog
+    work={editingWork}
+    onClose={() => (editingWork = null)}
+    onUpdated={() => loadWorks()}
+  />
+{/if}

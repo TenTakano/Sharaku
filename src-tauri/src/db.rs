@@ -207,6 +207,27 @@ pub fn list_folder_works(conn: &Connection, library_id: &str) -> Result<Vec<Work
     Ok(works)
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn update_work(
+    conn: &Connection,
+    id: i64,
+    title: &str,
+    artist: Option<&str>,
+    year: Option<i32>,
+    genre: Option<&str>,
+    circle: Option<&str>,
+    origin: Option<&str>,
+) -> Result<(), AppError> {
+    let rows = conn.execute(
+        "UPDATE works SET title = ?1, artist = ?2, year = ?3, genre = ?4, circle = ?5, origin = ?6, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?7",
+        rusqlite::params![title, artist, year, genre, circle, origin, id],
+    )?;
+    if rows == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(())
+}
+
 pub fn update_work_path(conn: &Connection, work_id: i64, new_path: &str) -> Result<(), AppError> {
     conn.execute(
         "UPDATE works SET path = ?1 WHERE id = ?2",

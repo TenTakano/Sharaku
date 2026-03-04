@@ -3,6 +3,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import type { WorkDetail, FitMode, SlideshowMode, Tag } from "../types";
   import TagInput from "./TagInput.svelte";
+  import EditWorkDialog from "./EditWorkDialog.svelte";
 
   interface Props {
     workId: number;
@@ -38,6 +39,7 @@
   let tagInputFocused = $state(false);
   let workTags = $state<Tag[]>([]);
   let tagToRemove = $state<Tag | null>(null);
+  let showEditDialog = $state(false);
 
   let imageUrl = $derived(`sharaku://localhost/view/${workId}/${currentPage}`);
   let pageCount = $derived(work?.pageCount ?? 1);
@@ -209,6 +211,7 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (showEditDialog) return;
     if (tagToRemove) {
       if (e.key === "Escape") {
         tagToRemove = null;
@@ -371,6 +374,14 @@
         S
       </button>
       <span class="viewer-zoom-label">{Math.round(zoom * 100)}%</span>
+      <span class="viewer-toolbar-separator">|</span>
+      <button
+        class="viewer-fit-btn"
+        onclick={() => (showEditDialog = true)}
+        title="メタデータを編集"
+      >
+        Edit
+      </button>
     </div>
   </div>
 
@@ -552,5 +563,13 @@
         </div>
       </div>
     </div>
+  {/if}
+
+  {#if showEditDialog && work}
+    <EditWorkDialog
+      {work}
+      onClose={() => (showEditDialog = false)}
+      onUpdated={() => loadWork()}
+    />
   {/if}
 </div>
