@@ -554,6 +554,45 @@ async fn create_tag(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
+async fn update_work(
+    state: tauri::State<'_, AppState>,
+    id: i64,
+    title: String,
+    artist: Option<String>,
+    year: Option<i32>,
+    genre: Option<String>,
+    circle: Option<String>,
+    origin: Option<String>,
+) -> Result<(), String> {
+    let title = title.trim().to_string();
+    if title.is_empty() {
+        return Err("タイトルは空にできません".to_string());
+    }
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+        db::update_work(
+            &guard.conn,
+            id,
+            &title,
+            artist.as_deref(),
+            year,
+            genre.as_deref(),
+            circle.as_deref(),
+            origin.as_deref(),
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn update_tag(
     state: tauri::State<'_, AppState>,
     id: i64,
@@ -826,6 +865,7 @@ pub fn run() {
             list_works,
             get_thumbnail,
             get_work,
+            update_work,
             get_settings,
             set_resource_mode,
             set_directory_template,

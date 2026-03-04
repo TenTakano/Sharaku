@@ -564,6 +564,87 @@ fn delete_works_by_ids_cascades_tags() {
     assert!(tags.is_empty());
 }
 
+// --- update_work ---
+
+#[test]
+fn update_work_changes_metadata() {
+    let conn = test_conn();
+    let record = WorkRecord {
+        library_id: TEST_LIBRARY_ID,
+        title: "Original",
+        path: "/orig.jpg",
+        work_type: "image",
+        page_count: 1,
+        thumbnail: b"thumb",
+        artist: Some("Old Artist"),
+        year: Some(2020),
+        genre: Some("Old Genre"),
+        circle: Some("Old Circle"),
+        origin: Some("Old Origin"),
+    };
+    insert_work(&conn, &record).unwrap();
+    let works = list_works(&conn, TEST_LIBRARY_ID, "title", "asc").unwrap();
+    let id = works[0].id;
+
+    update_work(
+        &conn,
+        id,
+        "Updated Title",
+        Some("New Artist"),
+        Some(2025),
+        Some("New Genre"),
+        Some("New Circle"),
+        Some("New Origin"),
+    )
+    .unwrap();
+
+    let detail = get_work(&conn, id).unwrap();
+    assert_eq!(detail.title, "Updated Title");
+    assert_eq!(detail.artist.as_deref(), Some("New Artist"));
+    assert_eq!(detail.year, Some(2025));
+    assert_eq!(detail.genre.as_deref(), Some("New Genre"));
+    assert_eq!(detail.circle.as_deref(), Some("New Circle"));
+    assert_eq!(detail.origin.as_deref(), Some("New Origin"));
+}
+
+#[test]
+fn update_work_not_found() {
+    let conn = test_conn();
+    let result = update_work(&conn, 9999, "Title", None, None, None, None, None);
+    assert!(matches!(result, Err(AppError::NotFound)));
+}
+
+#[test]
+fn update_work_clears_optional_fields() {
+    let conn = test_conn();
+    let record = WorkRecord {
+        library_id: TEST_LIBRARY_ID,
+        title: "Work",
+        path: "/w.jpg",
+        work_type: "image",
+        page_count: 1,
+        thumbnail: b"thumb",
+        artist: Some("Artist"),
+        year: Some(2024),
+        genre: Some("Genre"),
+        circle: Some("Circle"),
+        origin: Some("Origin"),
+    };
+    insert_work(&conn, &record).unwrap();
+    let works = list_works(&conn, TEST_LIBRARY_ID, "title", "asc").unwrap();
+    let id = works[0].id;
+
+    update_work(&conn, id, "Work", None, None, None, None, None).unwrap();
+
+    let detail = get_work(&conn, id).unwrap();
+    assert_eq!(detail.title, "Work");
+    assert_eq!(detail.artist, None);
+    assert_eq!(detail.year, None);
+    assert_eq!(detail.genre, None);
+    assert_eq!(detail.circle, None);
+    assert_eq!(detail.origin, None);
+}
+
 // --- database is locked reproduction ---
 
 fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
