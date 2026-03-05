@@ -112,7 +112,7 @@ pub fn get_theme_mode(conn: &Connection) -> Result<String, AppError> {
 pub fn set_theme_mode(conn: &Connection, mode: &str) -> Result<(), AppError> {
     match mode {
         "light" | "dark" | "system" => set_app_setting(conn, KEY_THEME_MODE, mode),
-        _ => Err(AppError::InvalidTemplate("無効なテーマモードです".into())),
+        _ => Err(AppError::InvalidSetting("無効なテーマモードです".into())),
     }
 }
 

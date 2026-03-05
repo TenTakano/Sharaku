@@ -29,6 +29,9 @@ pub enum AppError {
     #[error("Library error: {0}")]
     LibraryError(String),
 
+    #[error("Invalid setting: {0}")]
+    InvalidSetting(String),
+
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 }

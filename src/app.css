@@ -192,6 +192,55 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px;
+}
+
+.sidebar-app-settings {
+  all: unset;
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.8125rem;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.sidebar-app-settings:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-app-settings.active {
+  color: #396cd8;
+  background: rgba(57, 108, 216, 0.08);
+}
+
+.app-settings-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.setup-app-settings-link {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+  all: unset;
+  font-size: 0.8125rem;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.setup-app-settings-link:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .setup-mode-select {
   display: flex;
   flex-direction: column;
@@ -2237,6 +2286,27 @@ button:disabled {
 
   .sidebar-add-library:hover {
     background: rgba(57, 108, 216, 0.15);
+  }
+
+  .sidebar-app-settings {
+    color: #999;
+  }
+
+  .sidebar-app-settings:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .sidebar-app-settings.active {
+    color: #5c93e6;
+    background: rgba(57, 108, 216, 0.15);
+  }
+
+  .setup-app-settings-link {
+    color: #999;
+  }
+
+  .setup-app-settings-link:hover {
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .setup-secondary-btn {
