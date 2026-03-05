@@ -185,10 +185,7 @@
     <main class="content-area">
       <div class="context-bar">
         <div class="context-bar-left">
-          <button
-            class="context-bar-back"
-            onclick={handleBackFromAppSettings}
-          >
+          <button class="context-bar-back" onclick={handleBackFromAppSettings}>
             ←
           </button>
           <h1 class="context-bar-title">アプリ設定</h1>

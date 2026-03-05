@@ -29,8 +29,7 @@
             onchange={() => handleThemeChange("system")}
           />
           <span class="resource-mode-label">OS設定に従う</span>
-          <span class="resource-mode-desc"
-            >OSのダーク/ライト設定に自動追従</span
+          <span class="resource-mode-desc">OSのダーク/ライト設定に自動追従</span
           >
         </label>
         <label class="resource-mode-option">
