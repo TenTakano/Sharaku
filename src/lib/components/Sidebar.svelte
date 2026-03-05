@@ -6,18 +6,22 @@
   interface Props {
     activeLibrary: Library;
     currentView: string;
+    reloadTrigger: number;
     onSwitchLibrary: (library: Library) => void;
     onNavigate: (view: string) => void;
     onTagSelect: (tag: Tag) => void;
+    onNavigateToAppSettings: () => void;
     selectedTagIds: number[];
   }
 
   let {
     activeLibrary,
     currentView,
+    reloadTrigger,
     onSwitchLibrary,
     onNavigate,
     onTagSelect,
+    onNavigateToAppSettings,
     selectedTagIds,
   }: Props = $props();
 
@@ -102,6 +106,7 @@
   }
 
   $effect(() => {
+    void reloadTrigger;
     loadLibraries();
   });
 
@@ -193,4 +198,14 @@
       </div>
     </div>
   {/if}
+
+  <div class="sidebar-footer">
+    <button
+      class="sidebar-app-settings"
+      class:active={currentView === "app-settings"}
+      onclick={onNavigateToAppSettings}
+    >
+      &#9881; アプリ設定
+    </button>
+  </div>
 </aside>

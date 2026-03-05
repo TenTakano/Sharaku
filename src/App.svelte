@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
+  import AppSettingsView from "./lib/components/AppSettingsView.svelte";
   import BulkImportView from "./lib/components/BulkImportView.svelte";
   import ImportView from "./lib/components/ImportView.svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
@@ -9,6 +10,7 @@
   import WorkGrid from "./lib/components/WorkGrid.svelte";
   import Toast from "./lib/components/Toast.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
+  import { initTheme } from "./lib/stores/theme.svelte";
   import type {
     Library,
     Tag,
@@ -20,7 +22,13 @@
   let filterTags = $state<Tag[]>([]);
   let tagSearchMode = $state<TagSearchMode>("and");
   let currentView = $state<
-    "library" | "viewer" | "settings" | "import" | "bulk-import" | "add-library"
+    | "library"
+    | "viewer"
+    | "settings"
+    | "import"
+    | "bulk-import"
+    | "add-library"
+    | "app-settings"
   >("library");
   let selectedWorkId = $state<number | null>(null);
   let workIds = $state<number[]>([]);
@@ -32,6 +40,7 @@
   let pendingBulkImportEntries = $state<UnregisteredEntry[] | undefined>(
     undefined,
   );
+  let previousView = $state<typeof currentView>("library");
 
   async function loadActiveLibrary() {
     try {
@@ -97,6 +106,15 @@
     }
   }
 
+  function handleNavigateToAppSettings() {
+    previousView = currentView;
+    currentView = "app-settings";
+  }
+
+  function handleBackFromAppSettings() {
+    currentView = activeLibrary ? previousView : "library";
+  }
+
   function handleSidebarNavigate(view: string) {
     currentView = view as typeof currentView;
   }
@@ -116,6 +134,10 @@
   async function resolveFolderPath(path: string): Promise<string> {
     return invoke<string>("resolve_drop_path", { path });
   }
+
+  $effect(() => {
+    initTheme();
+  });
 
   $effect(() => {
     loadActiveLibrary();
@@ -158,7 +180,21 @@
   });
 </script>
 
-{#if currentView === "viewer" && selectedWorkId !== null && activeLibrary}
+{#if currentView === "app-settings"}
+  <div class="app-settings-layout">
+    <main class="content-area">
+      <div class="context-bar">
+        <div class="context-bar-left">
+          <button class="context-bar-back" onclick={handleBackFromAppSettings}>
+            ←
+          </button>
+          <h1 class="context-bar-title">アプリ設定</h1>
+        </div>
+      </div>
+      <AppSettingsView />
+    </main>
+  </div>
+{:else if currentView === "viewer" && selectedWorkId !== null && activeLibrary}
   <WorkViewer
     workId={selectedWorkId}
     {workIds}
@@ -177,15 +213,20 @@
     onCancel={handleBackToLibrary}
   />
 {:else if !activeLibrary}
+  <button class="setup-app-settings-link" onclick={handleNavigateToAppSettings}>
+    &#9881; アプリ設定
+  </button>
   <SetupView onComplete={handleLibrarySwitch} />
 {:else}
   <div class="app-layout">
     <Sidebar
       {activeLibrary}
       {currentView}
+      {reloadTrigger}
       onSwitchLibrary={handleLibrarySwitch}
       onNavigate={handleSidebarNavigate}
       onTagSelect={handleSidebarTagSelect}
+      onNavigateToAppSettings={handleNavigateToAppSettings}
       selectedTagIds={filterTags.map((t) => t.id)}
     />
     <main class="content-area">

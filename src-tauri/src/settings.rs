@@ -86,6 +86,36 @@ pub fn set_resource_mode(conn: &Connection, library_id: &str, mode: &str) -> Res
     set_setting(conn, library_id, KEY_RESOURCE_MODE, mode)
 }
 
+pub fn get_app_setting(conn: &Connection, key: &str) -> Result<Option<String>, AppError> {
+    let mut stmt = conn.prepare_cached("SELECT value FROM app_settings WHERE key = ?1")?;
+    let result = stmt
+        .query_row(rusqlite::params![key], |row| row.get(0))
+        .optional()
+        .map_err(AppError::Database)?;
+    Ok(result)
+}
+
+pub fn set_app_setting(conn: &Connection, key: &str, value: &str) -> Result<(), AppError> {
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        rusqlite::params![key, value],
+    )?;
+    Ok(())
+}
+
+const KEY_THEME_MODE: &str = "theme_mode";
+
+pub fn get_theme_mode(conn: &Connection) -> Result<String, AppError> {
+    Ok(get_app_setting(conn, KEY_THEME_MODE)?.unwrap_or_else(|| "system".into()))
+}
+
+pub fn set_theme_mode(conn: &Connection, mode: &str) -> Result<(), AppError> {
+    match mode {
+        "light" | "dark" | "system" => set_app_setting(conn, KEY_THEME_MODE, mode),
+        _ => Err(AppError::InvalidSetting("無効なテーマモードです".into())),
+    }
+}
+
 pub fn resolve_type_label(
     conn: &Connection,
     library_id: &str,

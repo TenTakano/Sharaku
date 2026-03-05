@@ -47,6 +47,8 @@ export type FitMode = "screen" | "width" | "height";
 
 export type SlideshowMode = "page" | "work";
 
+export type ThemeMode = "light" | "dark" | "system";
+
 export type ResourceMode = "full" | "metadata_only";
 
 export interface AppSettings {

@@ -745,6 +745,28 @@ async fn delete_orphan_works(
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn get_theme(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        settings::get_theme_mode(&guard.conn).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn set_theme(state: tauri::State<'_, AppState>, mode: String) -> Result<(), String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        settings::set_theme_mode(&guard.conn, &mode).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn migrate_libraries_json(conn: &Connection, app_data_dir: &std::path::Path) {
     let json_path = app_data_dir.join("libraries.json");
     if !json_path.exists() {
@@ -892,6 +914,8 @@ pub fn run() {
             search_works_by_tags,
             check_integrity,
             delete_orphan_works,
+            get_theme,
+            set_theme,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
