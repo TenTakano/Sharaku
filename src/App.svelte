@@ -9,6 +9,7 @@
   import WorkGrid from "./lib/components/WorkGrid.svelte";
   import Toast from "./lib/components/Toast.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
+  import { initTheme } from "./lib/stores/theme.svelte";
   import type {
     Library,
     Tag,
@@ -118,6 +119,7 @@
   }
 
   $effect(() => {
+    initTheme();
     loadActiveLibrary();
   });
 
