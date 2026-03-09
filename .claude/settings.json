@@ -10,11 +10,34 @@
       "Bash(cargo remove:*)",
       "Bash(rustfmt:*)",
       "Bash(scripts/screenshot.sh:*)",
-      "Bash(bash scripts/screenshot.sh:*)"
+      "Bash(bash scripts/screenshot.sh:*)",
+      "Bash(npm:*)"
     ],
     "ask": [
       "Bash(cargo install:*)",
       "Bash(cargo add:*)"
+    ]
+  },
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-create.sh\""
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-remove.sh\""
+          }
+        ]
+      }
     ]
   }
 }
