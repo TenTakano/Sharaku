@@ -72,12 +72,19 @@ async fn create_library(
     name: String,
     path: Option<String>,
     resource_mode: String,
+    directory_template: Option<String>,
 ) -> Result<Library, String> {
     if resource_mode != "full" && resource_mode != "metadata_only" {
         return Err("無効なリソース管理モードです".to_string());
     }
     if resource_mode == "full" && path.is_none() {
         return Err("フルモードではパスの指定が必須です".to_string());
+    }
+    if resource_mode == "full" {
+        let tmpl = directory_template
+            .as_deref()
+            .unwrap_or(settings::DEFAULT_DIRECTORY_TEMPLATE);
+        template::validate_template(tmpl).map_err(|e| e.to_string())?;
     }
     let db = state.db.clone();
     tokio::task::spawn_blocking(move || {
@@ -87,6 +94,13 @@ async fn create_library(
         library::set_active_library(&guard.conn, &lib.id).map_err(|e| e.to_string())?;
         settings::set_resource_mode(&guard.conn, &lib.id, &resource_mode)
             .map_err(|e| e.to_string())?;
+        if resource_mode == "full" {
+            let tmpl = directory_template
+                .as_deref()
+                .unwrap_or(settings::DEFAULT_DIRECTORY_TEMPLATE);
+            settings::set_directory_template(&guard.conn, &lib.id, tmpl)
+                .map_err(|e| e.to_string())?;
+        }
         guard.active_library = Some(ActiveLibrary {
             id: lib.id.clone(),
             path: lib.path.as_ref().map(PathBuf::from),
