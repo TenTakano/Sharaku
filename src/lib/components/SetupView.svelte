@@ -17,7 +17,6 @@
     "{type}/{artist}/{title}",
   ];
 
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- initial value from prop, not reactive binding
   let step = $state<
     "welcome" | "mode-select" | "select" | "template" | "name-only"
   >(initialStep);
@@ -212,7 +211,7 @@
     </p>
 
     <div class="setup-template-options">
-      {#each TEMPLATE_PRESETS as preset}
+      {#each TEMPLATE_PRESETS as preset (preset)}
         <label class="setup-template-option">
           <input
             type="radio"
