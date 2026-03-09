@@ -927,6 +927,48 @@ button:disabled {
   margin: 0;
 }
 
+.setup-template-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.setup-template-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.setup-template-code {
+  font-size: 0.9rem;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.setup-template-custom {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 4px;
+}
+
+.setup-template-placeholders {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 6px 0 0;
+}
+
+.setup-template-placeholders code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
 .library-loading {
   color: #888;
   text-align: center;
@@ -2703,6 +2745,18 @@ button:disabled {
 
   .setup-error {
     color: #ef5350;
+  }
+
+  .setup-template-code {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .setup-template-placeholders {
+    color: #999;
+  }
+
+  .setup-template-placeholders code {
+    background: rgba(255, 255, 255, 0.1);
   }
 
   .settings-library-path {

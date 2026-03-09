@@ -29,6 +29,8 @@ pub fn set_setting(
     Ok(())
 }
 
+pub const DEFAULT_DIRECTORY_TEMPLATE: &str = "{artist}/{title}";
+
 const KEY_DIRECTORY_TEMPLATE: &str = "directory_template";
 const KEY_TYPE_LABEL_IMAGE: &str = "type_label_image";
 const KEY_TYPE_LABEL_FOLDER: &str = "type_label_folder";
