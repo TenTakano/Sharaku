@@ -92,23 +92,20 @@ export function dismissJob(jobId: string) {
 export function initImportQueueListener(onCompleted: () => void) {
   let autoCloseTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
-  const unlistenPromise = listen<ImportQueueEvent>(
-    "import-queue",
-    (event) => {
-      handleEvent(event.payload);
+  const unlistenPromise = listen<ImportQueueEvent>("import-queue", (event) => {
+    handleEvent(event.payload);
 
-      if (event.payload.type === "jobCompleted") {
-        onCompleted();
-        const { jobId, failed } = event.payload;
-        if (failed === 0) {
-          autoCloseTimers[jobId] = setTimeout(() => {
-            dismissJob(jobId);
-            delete autoCloseTimers[jobId];
-          }, 5000);
-        }
+    if (event.payload.type === "jobCompleted") {
+      onCompleted();
+      const { jobId, failed } = event.payload;
+      if (failed === 0) {
+        autoCloseTimers[jobId] = setTimeout(() => {
+          dismissJob(jobId);
+          delete autoCloseTimers[jobId];
+        }, 5000);
       }
-    },
-  );
+    }
+  });
 
   return () => {
     unlistenPromise.then((unlisten) => unlisten());
