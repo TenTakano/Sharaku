@@ -11,6 +11,8 @@
       "Bash(rustfmt:*)",
       "Bash(scripts/screenshot.sh:*)",
       "Bash(bash scripts/screenshot.sh:*)",
+      "Bash(scripts/reset-dev-data.sh:*)",
+      "Bash(bash scripts/reset-dev-data.sh:*)",
       "Bash(npm:*)"
     ],
     "ask": [
