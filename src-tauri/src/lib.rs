@@ -405,14 +405,20 @@ async fn enqueue_import(
     state: tauri::State<'_, AppState>,
     requests: Vec<importer::ImportRequest>,
 ) -> Result<EnqueueResult, String> {
-    let (library_id, library_root) = {
+    let (library_id, library_root, resource_mode) = {
         let guard = state.db.lock().unwrap();
         let active = guard
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
-        (active.id.clone(), active.path.clone())
+        let mode =
+            settings::get_resource_mode(&guard.conn, &active.id).map_err(|e| e.to_string())?;
+        (active.id.clone(), active.path.clone(), mode)
     };
+
+    if resource_mode == "full" && library_root.is_none() {
+        return Err("ライブラリルートが設定されていません".to_string());
+    }
 
     let job_id = uuid::Uuid::new_v4().to_string();
     let total = requests.len();
@@ -423,8 +429,6 @@ async fn enqueue_import(
         requests,
     };
 
-    state.import_queue.enqueue(job)?;
-
     let _ = app.emit(
         "import-queue",
         ImportQueueEvent::Enqueued {
@@ -432,6 +436,8 @@ async fn enqueue_import(
             total,
         },
     );
+
+    state.import_queue.enqueue(job)?;
 
     Ok(EnqueueResult { job_id })
 }
