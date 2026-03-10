@@ -3,6 +3,7 @@
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import AppSettingsView from "./lib/components/AppSettingsView.svelte";
   import BulkImportView from "./lib/components/BulkImportView.svelte";
+  import ImportBanner from "./lib/components/ImportBanner.svelte";
   import ImportView from "./lib/components/ImportView.svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
   import SetupView from "./lib/components/SetupView.svelte";
@@ -10,6 +11,7 @@
   import WorkGrid from "./lib/components/WorkGrid.svelte";
   import Toast from "./lib/components/Toast.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
+  import { initImportQueueListener } from "./lib/stores/importQueue.svelte";
   import { initTheme } from "./lib/stores/theme.svelte";
   import type {
     Library,
@@ -144,6 +146,13 @@
   });
 
   $effect(() => {
+    const cleanup = initImportQueueListener(() => {
+      reloadTrigger++;
+    });
+    return cleanup;
+  });
+
+  $effect(() => {
     const unlisten = getCurrentWebview().onDragDropEvent((event) => {
       if (currentView !== "library") return;
       if (event.payload.type === "enter") {
@@ -268,18 +277,12 @@
         <ImportView
           initialSourcePath={importSourcePath}
           onBack={handleBackToLibrary}
-          onImported={() => reloadTrigger++}
         />
       {:else if currentView === "bulk-import"}
         <BulkImportView
           initialEntries={pendingBulkImportEntries}
           initialRootPath={bulkImportRootPath}
           onBack={handleBulkImportBack}
-          onImported={() => {
-            reloadTrigger++;
-            pendingBulkImportEntries = undefined;
-            bulkImportRootPath = undefined;
-          }}
         />
       {:else}
         <WorkGrid
@@ -304,6 +307,7 @@
   </div>
 {/if}
 
-<div class="toast-container">
+<div class="notification-container">
+  <ImportBanner />
   <Toast />
 </div>

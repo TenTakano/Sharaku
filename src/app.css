@@ -2088,7 +2088,7 @@ button:disabled {
    Toast
    ============================ */
 
-.toast-container {
+.notification-container {
   position: fixed;
   top: 16px;
   right: 16px;
@@ -2149,6 +2149,72 @@ button:disabled {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* ============================
+   Import Banner
+   ============================ */
+
+.import-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 0.875rem;
+  pointer-events: auto;
+  animation: toast-slide-in 0.3s ease-out;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.import-banner-running {
+  border-left-color: #1976d2;
+}
+
+.import-banner-success {
+  border-left-color: #2e7d32;
+}
+
+.import-banner-error {
+  border-left-color: #c62828;
+}
+
+.import-banner-text {
+  flex: 1;
+  word-break: break-all;
+}
+
+.import-banner-progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  appearance: none;
+}
+
+.import-banner-progress::-webkit-progress-bar {
+  background: #e0e0e0;
+  border-radius: 3px;
+}
+
+.import-banner-progress::-webkit-progress-value {
+  background: #1976d2;
+  border-radius: 3px;
+}
+
+.import-banner-errors {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  font-size: 0.8rem;
+  color: #c62828;
+  list-style: disc;
+}
+
+.import-banner-errors li {
+  margin-bottom: 2px;
 }
 
 /* ============================
@@ -2788,6 +2854,36 @@ button:disabled {
 
   .toast-close:hover {
     color: #f0f0f0;
+  }
+
+  /* Import Banner dark */
+  .import-banner {
+    background: rgba(50, 50, 50, 0.95);
+    color: #f0f0f0;
+  }
+
+  .import-banner-running {
+    border-left-color: #42a5f5;
+  }
+
+  .import-banner-success {
+    border-left-color: #66bb6a;
+  }
+
+  .import-banner-error {
+    border-left-color: #ef5350;
+  }
+
+  .import-banner-progress::-webkit-progress-bar {
+    background: #555;
+  }
+
+  .import-banner-progress::-webkit-progress-value {
+    background: #42a5f5;
+  }
+
+  .import-banner-errors {
+    color: #ef5350;
   }
 
   .context-menu {
