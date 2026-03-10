@@ -5,7 +5,9 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 
+use crate::error::AppError;
 use crate::importer::{self, ImportRequest};
+use crate::settings;
 use crate::AppDb;
 
 pub struct ImportJob {
@@ -101,7 +103,18 @@ async fn worker(
 
             let result = tokio::task::spawn_blocking(move || {
                 let guard = db_clone.lock().unwrap();
-                let lib_root = library_root.as_deref().unwrap_or(Path::new(""));
+                let lib_root = match library_root.as_deref() {
+                    Some(path) => path,
+                    None => {
+                        let mode = settings::get_resource_mode(&guard.conn, &library_id)?;
+                        if mode == "full" {
+                            return Err(AppError::ImportError(
+                                "ライブラリルートが設定されていません".to_string(),
+                            ));
+                        }
+                        Path::new("")
+                    }
+                };
                 importer::import_work(&request, &guard.conn, &library_id, lib_root)
             })
             .await;
