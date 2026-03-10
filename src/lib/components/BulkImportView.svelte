@@ -2,6 +2,7 @@
   import { invoke, Channel } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
   import { SvelteSet, SvelteMap } from "svelte/reactivity";
+  import { addToast } from "../stores/toast.svelte";
   import type {
     AppSettings,
     ResourceMode,
@@ -9,8 +10,7 @@
     DiscoverProgress,
     ImportMode,
     ImportRequest,
-    BulkImportProgress,
-    BulkImportSummary,
+    EnqueueResult,
     UnregisteredEntry,
     ParsedMetadata,
   } from "../types";
@@ -19,12 +19,11 @@
     initialEntries?: UnregisteredEntry[];
     initialRootPath?: string;
     onBack: () => void;
-    onImported: () => void;
   }
 
-  let { initialEntries, initialRootPath, onBack, onImported }: Props = $props();
+  let { initialEntries, initialRootPath, onBack }: Props = $props();
 
-  type Step = "discover" | "review" | "importing" | "done";
+  type Step = "discover" | "review";
 
   let resourceMode = $state<ResourceMode>("full");
   let step = $state<Step>("discover");
@@ -35,9 +34,7 @@
   let editedTitles = new SvelteMap<number, string>();
   let editedArtists = new SvelteMap<number, string>();
   let mode = $state<ImportMode>("copy");
-  let importProgress = $state<BulkImportProgress | null>(null);
-  let summary = $state<BulkImportSummary | null>(null);
-  let importErrors = $state<{ title: string; message: string }[]>([]);
+  let submitting = $state(false);
 
   async function discoverFromPath(rootPath: string) {
     discovering = true;
@@ -129,37 +126,15 @@
       });
     }
 
-    step = "importing";
-    importProgress = null;
-
-    importErrors = [];
-    const channel = new Channel<BulkImportProgress>();
-    channel.onmessage = (p) => {
-      if (p.type === "error") {
-        importErrors = [
-          ...importErrors,
-          { title: p.title, message: p.message },
-        ];
-      } else {
-        importProgress = p;
-      }
-    };
-
+    submitting = true;
     try {
-      summary = await invoke<BulkImportSummary>("bulk_import", {
-        requests,
-        onProgress: channel,
-      });
-      step = "done";
-    } catch {
-      summary = { succeeded: 0, failed: requests.length };
-      step = "done";
+      await invoke<EnqueueResult>("enqueue_import", { requests });
+      onBack();
+    } catch (e) {
+      addToast("error", String(e));
+    } finally {
+      submitting = false;
     }
-  }
-
-  function handleDone() {
-    onImported();
-    onBack();
   }
 
   function resetToDiscover() {
@@ -168,9 +143,6 @@
     selected.clear();
     editedTitles.clear();
     editedArtists.clear();
-    importProgress = null;
-    summary = null;
-    importErrors = [];
     discoverStatus = "";
   }
 
@@ -332,58 +304,9 @@
         <button
           class="import-execute-btn"
           onclick={executeImport}
-          disabled={selected.size === 0}
+          disabled={selected.size === 0 || submitting}
         >
           {selected.size} 件を取り込み
-        </button>
-      </div>
-    </section>
-  </div>
-{:else if step === "importing"}
-  <div class="import-content">
-    <section class="import-section">
-      <h2>取り込み中</h2>
-      {#if importProgress && importProgress.type === "importing"}
-        <p class="bulk-progress-text">
-          {importProgress.current} / {importProgress.total}: {importProgress.title}
-        </p>
-        <progress max={importProgress.total} value={importProgress.current}
-        ></progress>
-      {:else if importProgress && importProgress.type === "started"}
-        <p class="bulk-progress-text">
-          {importProgress.total} 件の取り込みを開始...
-        </p>
-        <progress max={importProgress.total} value={0}></progress>
-      {:else}
-        <p class="import-loading">準備中...</p>
-      {/if}
-    </section>
-  </div>
-{:else if step === "done"}
-  <div class="import-content">
-    <section class="import-section">
-      <h2>取り込み完了</h2>
-      {#if summary}
-        <p class="import-success">
-          成功: {summary.succeeded} 件 / 失敗: {summary.failed} 件
-        </p>
-      {/if}
-      {#if importErrors.length > 0}
-        <div class="bulk-error-list">
-          <h3>エラー詳細</h3>
-          <ul>
-            {#each importErrors as err, i (i)}
-              <li><strong>{err.title}</strong>: {err.message}</li>
-            {/each}
-          </ul>
-        </div>
-      {/if}
-      <div class="import-actions">
-        <button class="settings-back-btn" onclick={handleDone}>
-          ← ライブラリへ戻る
-        </button>
-        <button class="import-select-btn" onclick={resetToDiscover}>
-          続けて取り込む
         </button>
       </div>
     </section>

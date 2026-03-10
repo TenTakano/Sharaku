@@ -11,7 +11,7 @@ use crate::settings;
 use crate::template::{self, WorkMetadata};
 use crate::thumbnail;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportRequest {
     pub source_path: String,
@@ -300,71 +300,6 @@ pub fn discover_image_folders(
         found: folders.len(),
     });
     Ok(folders)
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase", tag = "type")]
-pub enum BulkImportProgress {
-    Started {
-        total: usize,
-    },
-    Importing {
-        current: usize,
-        total: usize,
-        title: String,
-    },
-    Completed {
-        succeeded: usize,
-        failed: usize,
-    },
-    #[serde(rename_all = "camelCase")]
-    Error {
-        title: String,
-        message: String,
-    },
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BulkImportSummary {
-    pub succeeded: usize,
-    pub failed: usize,
-}
-
-pub fn bulk_import(
-    requests: &[ImportRequest],
-    conn: &rusqlite::Connection,
-    library_id: &str,
-    library_root: &Path,
-    on_progress: &Channel<BulkImportProgress>,
-) -> Result<BulkImportSummary, AppError> {
-    let total = requests.len();
-    let _ = on_progress.send(BulkImportProgress::Started { total });
-
-    let mut succeeded = 0usize;
-    let mut failed = 0usize;
-
-    for (i, request) in requests.iter().enumerate() {
-        let _ = on_progress.send(BulkImportProgress::Importing {
-            current: i + 1,
-            total,
-            title: request.title.clone(),
-        });
-
-        match import_work(request, conn, library_id, library_root) {
-            Ok(_) => succeeded += 1,
-            Err(e) => {
-                let _ = on_progress.send(BulkImportProgress::Error {
-                    title: request.title.clone(),
-                    message: e.to_string(),
-                });
-                failed += 1;
-            }
-        }
-    }
-
-    let _ = on_progress.send(BulkImportProgress::Completed { succeeded, failed });
-    Ok(BulkImportSummary { succeeded, failed })
 }
 
 #[cfg(test)]

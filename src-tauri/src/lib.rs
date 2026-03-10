@@ -1,5 +1,6 @@
 mod db;
 mod error;
+mod import_queue;
 mod importer;
 mod integrity;
 mod library;
@@ -15,13 +16,11 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use rusqlite::Connection;
-use tauri::Manager;
+use tauri::{AppHandle, Emitter, Manager};
 
 use db::{Tag, WorkDetail, WorkSummary};
-use importer::{
-    BulkImportProgress, BulkImportSummary, DiscoverProgress, DiscoveredFolder, ImportResult,
-    ParsedMetadata,
-};
+use import_queue::{ImportJob, ImportQueue, ImportQueueEvent};
+use importer::{DiscoverProgress, DiscoveredFolder, ParsedMetadata};
 use integrity::{IntegrityCheckProgress, IntegrityReport};
 use library::Library;
 use relocator::{RelocationPreview, RelocationProgress};
@@ -40,6 +39,7 @@ struct AppDb {
 
 pub struct AppState {
     db: Arc<Mutex<AppDb>>,
+    import_queue: ImportQueue,
 }
 
 // --- Library CRUD commands ---
@@ -393,27 +393,47 @@ async fn preview_import_path(
     .map_err(|e| e.to_string())?
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EnqueueResult {
+    job_id: String,
+}
+
 #[tauri::command]
-async fn import_work(
+async fn enqueue_import(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
-    request: importer::ImportRequest,
-) -> Result<ImportResult, String> {
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let guard = db.lock().unwrap();
+    requests: Vec<importer::ImportRequest>,
+) -> Result<EnqueueResult, String> {
+    let (library_id, library_root) = {
+        let guard = state.db.lock().unwrap();
         let active = guard
             .active_library
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
-        let lib_path = active
-            .path
-            .as_ref()
-            .ok_or("ライブラリルートが設定されていません")?;
-        importer::import_work(&request, &guard.conn, &active.id, lib_path)
-            .map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|e| e.to_string())?
+        (active.id.clone(), active.path.clone())
+    };
+
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let total = requests.len();
+    let job = ImportJob {
+        id: job_id.clone(),
+        library_id,
+        library_root,
+        requests,
+    };
+
+    state.import_queue.enqueue(job)?;
+
+    let _ = app.emit(
+        "import-queue",
+        ImportQueueEvent::Enqueued {
+            job_id: job_id.clone(),
+            total,
+        },
+    );
+
+    Ok(EnqueueResult { job_id })
 }
 
 #[tauri::command]
@@ -431,30 +451,6 @@ async fn discover_folders(
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
         importer::discover_image_folders(&root, &guard.conn, &active.id, &on_progress)
-            .map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
-#[tauri::command]
-async fn bulk_import(
-    state: tauri::State<'_, AppState>,
-    requests: Vec<importer::ImportRequest>,
-    on_progress: tauri::ipc::Channel<BulkImportProgress>,
-) -> Result<BulkImportSummary, String> {
-    let db = state.db.clone();
-    tokio::task::spawn_blocking(move || {
-        let guard = db.lock().unwrap();
-        let active = guard
-            .active_library
-            .as_ref()
-            .ok_or("ライブラリが選択されていません")?;
-        let lib_path = active
-            .path
-            .as_ref()
-            .ok_or("ライブラリルートが設定されていません")?;
-        importer::bulk_import(&requests, &guard.conn, &active.id, lib_path, &on_progress)
             .map_err(|e| e.to_string())
     })
     .await
@@ -863,12 +859,13 @@ pub fn run() {
                         path: lib.path.map(PathBuf::from),
                     });
 
-            app.manage(AppState {
-                db: Arc::new(Mutex::new(AppDb {
-                    conn,
-                    active_library,
-                })),
-            });
+            let db = Arc::new(Mutex::new(AppDb {
+                conn,
+                active_library,
+            }));
+            let import_queue = ImportQueue::new(app.handle().clone(), db.clone());
+
+            app.manage(AppState { db, import_queue });
 
             Ok(())
         })
@@ -912,9 +909,8 @@ pub fn run() {
             resolve_drop_path,
             parse_folder_name,
             preview_import_path,
-            import_work,
+            enqueue_import,
             discover_folders,
-            bulk_import,
             preview_relocation,
             relocate_works,
             list_tags,

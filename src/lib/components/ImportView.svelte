@@ -1,24 +1,24 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
+  import { addToast } from "../stores/toast.svelte";
   import type {
     AppSettings,
     ResourceMode,
     ImportMode,
     ImportRequest,
-    ImportResult,
+    EnqueueResult,
     ParsedMetadata,
   } from "../types";
 
   interface Props {
     initialSourcePath?: string;
     onBack: () => void;
-    onImported: () => void;
   }
 
-  let { initialSourcePath, onBack, onImported }: Props = $props();
+  let { initialSourcePath, onBack }: Props = $props();
 
-  type Step = "select" | "metadata" | "importing" | "done" | "error";
+  type Step = "select" | "metadata";
 
   let resourceMode = $state<ResourceMode>("full");
   let step = $state<Step>("select");
@@ -31,8 +31,7 @@
   let origin = $state("");
   let mode = $state<ImportMode>("copy");
   let previewPath = $state<string | null>(null);
-  let result = $state<ImportResult | null>(null);
-  let errorMessage = $state("");
+  let submitting = $state(false);
   let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
   let previewRequestId = 0;
 
@@ -96,18 +95,19 @@
   }
 
   async function executeImport() {
-    step = "importing";
+    submitting = true;
     try {
       const request: ImportRequest = {
         sourcePath,
         ...buildMetadata(),
         mode,
       };
-      result = await invoke<ImportResult>("import_work", { request });
-      step = "done";
+      await invoke<EnqueueResult>("enqueue_import", { requests: [request] });
+      onBack();
     } catch (e) {
-      errorMessage = String(e);
-      step = "error";
+      addToast("error", String(e));
+    } finally {
+      submitting = false;
     }
   }
 
@@ -122,8 +122,6 @@
     origin = "";
     mode = "copy";
     previewPath = null;
-    result = null;
-    errorMessage = "";
   }
 
   async function loadFromPath(path: string) {
@@ -287,54 +285,9 @@
         <button
           class="import-execute-btn"
           onclick={executeImport}
-          disabled={!title.trim()}
+          disabled={!title.trim() || submitting}
         >
           取り込み実行
-        </button>
-      </div>
-    </section>
-  </div>
-{:else if step === "importing"}
-  <div class="import-content">
-    <div class="import-loading">取り込み中...</div>
-  </div>
-{:else if step === "done"}
-  <div class="import-content">
-    <section class="import-section">
-      <h2>取り込み完了</h2>
-      {#if result}
-        <p class="import-success">
-          {result.pageCount}ページの作品を取り込みました。
-        </p>
-        <div class="import-source-path">
-          <span class="import-label">配置先:</span>
-          <code>{result.destinationPath}</code>
-        </div>
-      {/if}
-      <div class="import-actions">
-        <button
-          class="settings-back-btn"
-          onclick={() => {
-            onImported();
-            onBack();
-          }}
-        >
-          ← ライブラリへ戻る
-        </button>
-        <button class="import-select-btn" onclick={resetForm}>
-          別の作品を取り込む
-        </button>
-      </div>
-    </section>
-  </div>
-{:else if step === "error"}
-  <div class="import-content">
-    <section class="import-section">
-      <h2>エラー</h2>
-      <p class="import-error">{errorMessage}</p>
-      <div class="import-actions">
-        <button class="import-select-btn" onclick={resetForm}>
-          やり直す
         </button>
       </div>
     </section>

@@ -154,3 +154,21 @@ export type IntegrityCheckProgress =
   | { type: "checkingWorks"; checked: number; total: number }
   | { type: "scanningDirectory"; scannedDirs: number }
   | { type: "completed" };
+
+export type ImportQueueEvent =
+  | { type: "enqueued"; jobId: string; total: number }
+  | { type: "jobStarted"; jobId: string; total: number }
+  | {
+      type: "progress";
+      jobId: string;
+      current: number;
+      total: number;
+      title: string;
+    }
+  | { type: "itemError"; jobId: string; title: string; message: string }
+  | { type: "jobCompleted"; jobId: string; succeeded: number; failed: number }
+  | { type: "jobFailed"; jobId: string; message: string };
+
+export interface EnqueueResult {
+  jobId: string;
+}
