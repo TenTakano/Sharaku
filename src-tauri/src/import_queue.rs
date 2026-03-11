@@ -55,7 +55,7 @@ pub struct ImportQueue {
 impl ImportQueue {
     pub fn new(app_handle: AppHandle, db: Arc<Mutex<AppDb>>) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        tokio::spawn(worker(rx, app_handle, db));
+        tauri::async_runtime::spawn(worker(rx, app_handle, db));
         Self { tx }
     }
 

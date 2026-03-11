@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEV_DATA_DIR="$HOME/.local/share/com.sharaku.viewer.dev"
+case "$(uname)" in
+  Darwin) DEV_DATA_DIR="$HOME/Library/Application Support/com.sharaku.viewer.dev" ;;
+  *)      DEV_DATA_DIR="$HOME/.local/share/com.sharaku.viewer.dev" ;;
+esac
 
 if [ ! -d "$DEV_DATA_DIR" ]; then
   echo "Dev data directory does not exist: $DEV_DATA_DIR"
