@@ -1,16 +1,35 @@
 <script lang="ts">
   import {
+    getBannerAutoClose,
+    setBannerAutoClose as setBannerAutoCloseStore,
+  } from "../stores/bannerAutoClose.svelte";
+  import {
     getThemeMode,
     setThemeMode as setThemeModeStore,
   } from "../stores/theme.svelte";
   import { addToast } from "../stores/toast.svelte";
-  import type { ThemeMode } from "../types";
+  import type { BannerAutoClose, ThemeMode } from "../types";
 
   async function handleThemeChange(mode: ThemeMode) {
     try {
       await setThemeModeStore(mode);
     } catch (e) {
       addToast("error", `テーマの変更に失敗しました: ${e}`);
+    }
+  }
+
+  const bannerOptions: { value: BannerAutoClose; label: string }[] = [
+    { value: 1, label: "1秒" },
+    { value: 3, label: "3秒" },
+    { value: 5, label: "5秒" },
+    { value: 0, label: "手動で閉じる" },
+  ];
+
+  async function handleBannerAutoCloseChange(seconds: BannerAutoClose) {
+    try {
+      await setBannerAutoCloseStore(seconds);
+    } catch (e) {
+      addToast("error", `設定の変更に失敗しました: ${e}`);
     }
   }
 </script>
@@ -52,6 +71,26 @@
           <span class="resource-mode-label">ダーク</span>
           <span class="resource-mode-desc">常にダークテーマを使用</span>
         </label>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h2>取り込みバナー</h2>
+      <p class="settings-description">
+        取り込み完了バナーが自動で消えるまでの時間を設定します。エラーがある場合は手動で閉じる必要があります。
+      </p>
+      <div class="resource-mode-select">
+        {#each bannerOptions as option (option.value)}
+          <label class="resource-mode-option">
+            <input
+              type="radio"
+              name="banner-auto-close"
+              checked={getBannerAutoClose() === option.value}
+              onchange={() => handleBannerAutoCloseChange(option.value)}
+            />
+            <span class="resource-mode-label">{option.label}</span>
+          </label>
+        {/each}
       </div>
     </section>
   </div>

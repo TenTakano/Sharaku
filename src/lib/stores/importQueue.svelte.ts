@@ -1,5 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import type { ImportQueueEvent } from "../types";
+import { getBannerAutoClose } from "./bannerAutoClose.svelte";
 
 type JobStatus = "queued" | "running" | "completed" | "failed";
 
@@ -98,11 +99,12 @@ export function initImportQueueListener(onCompleted: () => void) {
     if (event.payload.type === "jobCompleted") {
       onCompleted();
       const { jobId, failed } = event.payload;
-      if (failed === 0) {
+      const autoCloseSeconds = getBannerAutoClose();
+      if (failed === 0 && autoCloseSeconds > 0) {
         autoCloseTimers[jobId] = setTimeout(() => {
           dismissJob(jobId);
           delete autoCloseTimers[jobId];
-        }, 5000);
+        }, autoCloseSeconds * 1000);
       }
     }
   });
