@@ -140,8 +140,12 @@
       currentPage--;
     } else if (hasMultipleWorks && currentWorkIndex > 0) {
       navigateToWork(workIds[currentWorkIndex - 1]);
-    } else if (slideshowLoop && hasMultipleWorks) {
-      navigateToWork(workIds[totalWorks - 1]);
+    } else if (slideshowLoop) {
+      if (hasMultipleWorks) {
+        navigateToWork(workIds[totalWorks - 1]);
+      } else {
+        currentPage = pageCount - 1;
+      }
     }
   }
 
@@ -150,8 +154,12 @@
       currentPage++;
     } else if (hasMultipleWorks && currentWorkIndex < totalWorks - 1) {
       navigateToWork(workIds[currentWorkIndex + 1]);
-    } else if (slideshowLoop && hasMultipleWorks) {
-      navigateToWork(workIds[0]);
+    } else if (slideshowLoop) {
+      if (hasMultipleWorks) {
+        navigateToWork(workIds[0]);
+      } else {
+        currentPage = 0;
+      }
     }
   }
 
