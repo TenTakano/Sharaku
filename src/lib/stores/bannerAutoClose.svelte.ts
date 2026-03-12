@@ -9,7 +9,9 @@ export function getBannerAutoClose(): BannerAutoClose {
 
 export async function initBannerAutoClose() {
   try {
-    seconds = (await invoke<number>("get_banner_auto_close")) as BannerAutoClose;
+    seconds = (await invoke<number>(
+      "get_banner_auto_close",
+    )) as BannerAutoClose;
   } catch {
     seconds = 3;
   }
