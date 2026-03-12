@@ -783,6 +783,31 @@ async fn set_theme(state: tauri::State<'_, AppState>, mode: String) -> Result<()
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn get_banner_auto_close(state: tauri::State<'_, AppState>) -> Result<u32, String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        settings::get_banner_auto_close(&guard.conn).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn set_banner_auto_close(
+    state: tauri::State<'_, AppState>,
+    seconds: u32,
+) -> Result<(), String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        settings::set_banner_auto_close(&guard.conn, seconds).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn migrate_libraries_json(conn: &Connection, app_data_dir: &std::path::Path) {
     let json_path = app_data_dir.join("libraries.json");
     if !json_path.exists() {
@@ -932,6 +957,8 @@ pub fn run() {
             delete_orphan_works,
             get_theme,
             set_theme,
+            get_banner_auto_close,
+            set_banner_auto_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

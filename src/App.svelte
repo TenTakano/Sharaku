@@ -12,6 +12,7 @@
   import Toast from "./lib/components/Toast.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
   import { initImportQueueListener } from "./lib/stores/importQueue.svelte";
+  import { initBannerAutoClose } from "./lib/stores/bannerAutoClose.svelte";
   import { initTheme } from "./lib/stores/theme.svelte";
   import type {
     Library,
@@ -139,6 +140,7 @@
 
   $effect(() => {
     initTheme();
+    initBannerAutoClose();
   });
 
   $effect(() => {

@@ -106,6 +106,7 @@ pub fn set_app_setting(conn: &Connection, key: &str, value: &str) -> Result<(), 
 }
 
 const KEY_THEME_MODE: &str = "theme_mode";
+const KEY_BANNER_AUTO_CLOSE: &str = "banner_auto_close";
 
 pub fn get_theme_mode(conn: &Connection) -> Result<String, AppError> {
     Ok(get_app_setting(conn, KEY_THEME_MODE)?.unwrap_or_else(|| "system".into()))
@@ -115,6 +116,20 @@ pub fn set_theme_mode(conn: &Connection, mode: &str) -> Result<(), AppError> {
     match mode {
         "light" | "dark" | "system" => set_app_setting(conn, KEY_THEME_MODE, mode),
         _ => Err(AppError::InvalidSetting("無効なテーマモードです".into())),
+    }
+}
+
+pub fn get_banner_auto_close(conn: &Connection) -> Result<u32, AppError> {
+    let value = get_app_setting(conn, KEY_BANNER_AUTO_CLOSE)?;
+    Ok(value.and_then(|v| v.parse().ok()).unwrap_or(3))
+}
+
+pub fn set_banner_auto_close(conn: &Connection, seconds: u32) -> Result<(), AppError> {
+    match seconds {
+        0 | 1 | 3 | 5 => set_app_setting(conn, KEY_BANNER_AUTO_CLOSE, &seconds.to_string()),
+        _ => Err(AppError::InvalidSetting(
+            "無効なバナー自動クローズ設定です".into(),
+        )),
     }
 }
 

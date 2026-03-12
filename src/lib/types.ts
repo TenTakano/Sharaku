@@ -49,6 +49,8 @@ export type SlideshowMode = "page" | "work";
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export type BannerAutoClose = 0 | 1 | 3 | 5;
+
 export type ResourceMode = "full" | "metadata_only";
 
 export interface AppSettings {
