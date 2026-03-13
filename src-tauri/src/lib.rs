@@ -720,6 +720,39 @@ async fn search_works_by_tags(
 }
 
 #[tauri::command]
+async fn delete_work(
+    state: tauri::State<'_, AppState>,
+    work_id: i64,
+    delete_files: bool,
+) -> Result<(), String> {
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        let active = guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+
+        if delete_files {
+            let work = db::get_work(&guard.conn, work_id).map_err(|e| e.to_string())?;
+            let path = std::path::Path::new(&work.path);
+            if path.exists() {
+                if path.is_dir() {
+                    std::fs::remove_dir_all(path).map_err(|e| e.to_string())?;
+                } else {
+                    std::fs::remove_file(path).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        db::delete_works_by_ids(&guard.conn, &active.id, &[work_id]).map_err(|e| e.to_string())?;
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn check_integrity(
     state: tauri::State<'_, AppState>,
     on_progress: tauri::ipc::Channel<IntegrityCheckProgress>,
@@ -953,6 +986,7 @@ pub fn run() {
             remove_tag_from_work,
             get_tags_for_work,
             search_works_by_tags,
+            delete_work,
             check_integrity,
             delete_orphan_works,
             get_theme,
