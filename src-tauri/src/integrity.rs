@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::path::Path;
 
 use rusqlite::Connection;
@@ -111,7 +112,10 @@ fn check_integrity_core(
     let mut unregistered_entries = Vec::new();
     if let (Some(root), true) = (library_root, resource_mode != "metadata_only") {
         let mut scanned_dirs = 0usize;
-        for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
+        let walker = WalkDir::new(root).into_iter().filter_entry(|e| {
+            e.file_name() != OsStr::new(".trash")
+        });
+        for entry in walker.filter_map(|e| e.ok()) {
             if !entry.file_type().is_dir() {
                 continue;
             }

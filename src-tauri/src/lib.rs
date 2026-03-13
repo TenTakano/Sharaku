@@ -205,6 +205,7 @@ struct AppSettings {
     directory_template: Option<String>,
     type_label_image: String,
     type_label_folder: String,
+    delete_file_action: String,
 }
 
 #[tauri::command]
@@ -224,11 +225,14 @@ async fn get_settings(state: tauri::State<'_, AppState>) -> Result<AppSettings, 
             settings::get_type_label_image(&guard.conn, &active.id).map_err(|e| e.to_string())?;
         let type_label_folder =
             settings::get_type_label_folder(&guard.conn, &active.id).map_err(|e| e.to_string())?;
+        let delete_file_action =
+            settings::get_delete_file_action(&guard.conn, &active.id).map_err(|e| e.to_string())?;
         Ok(AppSettings {
             resource_mode,
             directory_template,
             type_label_image,
             type_label_folder,
+            delete_file_action,
         })
     })
     .await
@@ -248,6 +252,28 @@ async fn set_resource_mode(state: tauri::State<'_, AppState>, mode: String) -> R
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
         settings::set_resource_mode(&guard.conn, &active.id, &mode).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn set_delete_file_action(
+    state: tauri::State<'_, AppState>,
+    action: String,
+) -> Result<(), String> {
+    if action != "delete" && action != "trash" && action != "ask" {
+        return Err("無効な削除時のファイル処理設定です".to_string());
+    }
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        let active = guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+        settings::set_delete_file_action(&guard.conn, &active.id, &action)
+            .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -723,7 +749,7 @@ async fn search_works_by_tags(
 async fn delete_work(
     state: tauri::State<'_, AppState>,
     work_id: i64,
-    delete_files: bool,
+    file_action: String,
 ) -> Result<(), String> {
     let db = state.db.clone();
     tokio::task::spawn_blocking(move || {
@@ -733,16 +759,66 @@ async fn delete_work(
             .as_ref()
             .ok_or("ライブラリが選択されていません")?;
 
-        if delete_files {
-            let work = db::get_work(&guard.conn, work_id).map_err(|e| e.to_string())?;
-            let path = std::path::Path::new(&work.path);
-            if path.exists() {
-                if path.is_dir() {
-                    std::fs::remove_dir_all(path).map_err(|e| e.to_string())?;
-                } else {
-                    std::fs::remove_file(path).map_err(|e| e.to_string())?;
+        match file_action.as_str() {
+            "delete" => {
+                let work = db::get_work(&guard.conn, work_id).map_err(|e| e.to_string())?;
+                let path = std::path::Path::new(&work.path);
+                let lib_path = active
+                    .path
+                    .as_ref()
+                    .ok_or("ライブラリルートが設定されていません")?;
+                let canonical_lib = lib_path.canonicalize().unwrap_or_else(|_| lib_path.clone());
+                let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+                if !canonical_path.starts_with(&canonical_lib) {
+                    return Err("作品パスがライブラリルート外にあるため削除できません".to_string());
+                }
+                if path.exists() {
+                    if path.is_dir() {
+                        std::fs::remove_dir_all(path).map_err(|e| e.to_string())?;
+                    } else {
+                        std::fs::remove_file(path).map_err(|e| e.to_string())?;
+                    }
                 }
             }
+            "trash" => {
+                let work = db::get_work(&guard.conn, work_id).map_err(|e| e.to_string())?;
+                let src = std::path::Path::new(&work.path);
+                let lib_path = active
+                    .path
+                    .as_ref()
+                    .ok_or("ライブラリルートが設定されていません")?;
+                let canonical_lib = lib_path.canonicalize().unwrap_or_else(|_| lib_path.clone());
+                let canonical_src = src.canonicalize().unwrap_or_else(|_| src.to_path_buf());
+                if !canonical_src.starts_with(&canonical_lib) {
+                    return Err("作品パスがライブラリルート外にあるため移動できません".to_string());
+                }
+                if src.exists() {
+                    let trash_dir = lib_path.join(".trash");
+                    std::fs::create_dir_all(&trash_dir).map_err(|e| e.to_string())?;
+
+                    let file_name = src
+                        .file_name()
+                        .ok_or("ファイル名の取得に失敗しました")?;
+                    let mut dest = trash_dir.join(file_name);
+                    if dest.exists() {
+                        let timestamp = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs();
+                        let stem = std::path::Path::new(file_name)
+                            .file_stem()
+                            .unwrap_or_default()
+                            .to_string_lossy();
+                        let ext = std::path::Path::new(file_name)
+                            .extension()
+                            .map(|e| format!(".{}", e.to_string_lossy()))
+                            .unwrap_or_default();
+                        dest = trash_dir.join(format!("{}_{}{}", stem, timestamp, ext));
+                    }
+                    std::fs::rename(src, &dest).map_err(|e| e.to_string())?;
+                }
+            }
+            _ => {} // "none" — metadata only
         }
 
         db::delete_works_by_ids(&guard.conn, &active.id, &[work_id]).map_err(|e| e.to_string())?;
@@ -965,6 +1041,7 @@ pub fn run() {
             update_work,
             get_settings,
             set_resource_mode,
+            set_delete_file_action,
             set_directory_template,
             set_type_labels,
             validate_template,

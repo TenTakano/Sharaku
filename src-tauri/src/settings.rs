@@ -35,6 +35,7 @@ const KEY_DIRECTORY_TEMPLATE: &str = "directory_template";
 const KEY_TYPE_LABEL_IMAGE: &str = "type_label_image";
 const KEY_TYPE_LABEL_FOLDER: &str = "type_label_folder";
 const KEY_RESOURCE_MODE: &str = "resource_mode";
+const KEY_DELETE_FILE_ACTION: &str = "delete_file_action";
 
 const DEFAULT_TYPE_LABEL_IMAGE: &str = "Image";
 const DEFAULT_TYPE_LABEL_FOLDER: &str = "Folder";
@@ -86,6 +87,23 @@ pub fn get_resource_mode(conn: &Connection, library_id: &str) -> Result<String, 
 
 pub fn set_resource_mode(conn: &Connection, library_id: &str, mode: &str) -> Result<(), AppError> {
     set_setting(conn, library_id, KEY_RESOURCE_MODE, mode)
+}
+
+pub fn get_delete_file_action(conn: &Connection, library_id: &str) -> Result<String, AppError> {
+    Ok(get_setting(conn, library_id, KEY_DELETE_FILE_ACTION)?.unwrap_or_else(|| "ask".into()))
+}
+
+pub fn set_delete_file_action(
+    conn: &Connection,
+    library_id: &str,
+    action: &str,
+) -> Result<(), AppError> {
+    match action {
+        "delete" | "trash" | "ask" => set_setting(conn, library_id, KEY_DELETE_FILE_ACTION, action),
+        _ => Err(AppError::InvalidSetting(
+            "無効な削除時のファイル処理設定です".into(),
+        )),
+    }
 }
 
 pub fn get_app_setting(conn: &Connection, key: &str) -> Result<Option<String>, AppError> {

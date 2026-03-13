@@ -14,6 +14,8 @@
     SortOrder,
     Tag,
     TagSearchMode,
+    AppSettings,
+    DeleteFileAction,
   } from "../types";
   import TagInput from "./TagInput.svelte";
 
@@ -46,7 +48,8 @@
   );
   let editingWork = $state<WorkDetail | null>(null);
   let deletingWork = $state<{ id: number; title: string } | null>(null);
-  let deleteFiles = $state(false);
+  let deleteFileAction = $state<DeleteFileAction>("ask");
+  let selectedFileAction = $state<string>("none");
   let isFullMode = $state(false);
 
   const CARD_WIDTH = 180;
@@ -137,20 +140,28 @@
     const work = works.find((w) => w.id === workId);
     if (!work) return;
     try {
-      const settings: { resourceMode: string } = await invoke("get_settings");
+      const settings = await invoke<AppSettings>("get_settings");
       isFullMode = settings.resourceMode === "full";
+      deleteFileAction = settings.deleteFileAction;
     } catch {
       isFullMode = false;
+      deleteFileAction = "ask";
     }
-    deleteFiles = false;
+    selectedFileAction = "none";
     deletingWork = { id: work.id, title: work.title };
+  }
+
+  function resolveFileAction(): string {
+    if (!isFullMode) return "none";
+    if (deleteFileAction === "ask") return selectedFileAction;
+    return deleteFileAction;
   }
 
   async function handleDelete() {
     if (!deletingWork) return;
     const { id, title } = deletingWork;
     try {
-      await invoke("delete_work", { workId: id, deleteFiles });
+      await invoke("delete_work", { workId: id, fileAction: resolveFileAction() });
       addToast("success", `「${title}」を削除しました`);
       deletingWork = null;
       loadWorks();
@@ -279,11 +290,47 @@
     onCancel={() => (deletingWork = null)}
   >
     {#snippet extra()}
-      {#if isFullMode}
-        <label class="confirm-dialog-checkbox">
-          <input type="checkbox" bind:checked={deleteFiles} />
-          ローカルファイルも削除する
-        </label>
+      {#if isFullMode && deleteFileAction === "delete"}
+        <p class="confirm-dialog-file-action-note">
+          ※ ローカルファイルも削除されます
+        </p>
+      {:else if isFullMode && deleteFileAction === "trash"}
+        <p class="confirm-dialog-file-action-note">
+          ※ ローカルファイルはゴミ箱に退避されます
+        </p>
+      {:else if isFullMode && deleteFileAction === "ask"}
+        <div class="confirm-dialog-file-action">
+          <label class="confirm-dialog-radio">
+            <input
+              type="radio"
+              name="file-action"
+              value="none"
+              checked={selectedFileAction === "none"}
+              onchange={() => (selectedFileAction = "none")}
+            />
+            メタデータのみ削除（ファイルは保持）
+          </label>
+          <label class="confirm-dialog-radio">
+            <input
+              type="radio"
+              name="file-action"
+              value="trash"
+              checked={selectedFileAction === "trash"}
+              onchange={() => (selectedFileAction = "trash")}
+            />
+            ゴミ箱に退避する
+          </label>
+          <label class="confirm-dialog-radio">
+            <input
+              type="radio"
+              name="file-action"
+              value="delete"
+              checked={selectedFileAction === "delete"}
+              onchange={() => (selectedFileAction = "delete")}
+            />
+            ローカルファイルを完全削除する
+          </label>
+        </div>
       {/if}
     {/snippet}
   </ConfirmDialog>
