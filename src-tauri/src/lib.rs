@@ -796,9 +796,7 @@ async fn delete_work(
                     let trash_dir = lib_path.join(".trash");
                     std::fs::create_dir_all(&trash_dir).map_err(|e| e.to_string())?;
 
-                    let file_name = src
-                        .file_name()
-                        .ok_or("ファイル名の取得に失敗しました")?;
+                    let file_name = src.file_name().ok_or("ファイル名の取得に失敗しました")?;
                     let mut dest = trash_dir.join(file_name);
                     if dest.exists() {
                         let timestamp = std::time::SystemTime::now()
