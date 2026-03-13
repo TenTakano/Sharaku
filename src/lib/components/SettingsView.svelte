@@ -378,9 +378,7 @@
                   disabled={resourceMode === "metadata_only"}
                 />
                 <span class="resource-mode-label">実行時に確認する</span>
-                <span class="resource-mode-desc"
-                  >削除時に処理方法を選択</span
-                >
+                <span class="resource-mode-desc">削除時に処理方法を選択</span>
               </label>
               <label class="resource-mode-option">
                 <input
@@ -390,7 +388,9 @@
                   onchange={() => setDeleteFileAction("trash")}
                   disabled={resourceMode === "metadata_only"}
                 />
-                <span class="resource-mode-label">非追跡ディレクトリに退避させる</span>
+                <span class="resource-mode-label"
+                  >非追跡ディレクトリに退避させる</span
+                >
                 <span class="resource-mode-desc"
                   >ライブラリ内の .trash ディレクトリに移動</span
                 >

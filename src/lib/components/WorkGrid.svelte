@@ -161,7 +161,10 @@
     if (!deletingWork) return;
     const { id, title } = deletingWork;
     try {
-      await invoke("delete_work", { workId: id, fileAction: resolveFileAction() });
+      await invoke("delete_work", {
+        workId: id,
+        fileAction: resolveFileAction(),
+      });
       addToast("success", `「${title}」を削除しました`);
       deletingWork = null;
       loadWorks();
