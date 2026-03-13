@@ -5,6 +5,7 @@
   import type {
     AppSettings,
     ResourceMode,
+    DeleteFileAction,
     TemplateValidation,
     RelocationPreview,
     RelocationProgress,
@@ -32,6 +33,7 @@
   }: Props = $props();
 
   let resourceMode = $state<ResourceMode>("full");
+  let deleteFileAction = $state<DeleteFileAction>("ask");
   let directoryTemplate = $state("");
   let typeLabelImage = $state("");
   let typeLabelFolder = $state("");
@@ -61,6 +63,7 @@
     try {
       const settings = await invoke<AppSettings>("get_settings");
       resourceMode = settings.resourceMode;
+      deleteFileAction = settings.deleteFileAction;
       directoryTemplate = settings.directoryTemplate ?? "";
       savedDirectoryTemplate = directoryTemplate;
       typeLabelImage = settings.typeLabelImage;
@@ -81,6 +84,15 @@
       resourceMode = mode;
     } catch (e) {
       addToast("error", `モードの変更に失敗しました: ${e}`);
+    }
+  }
+
+  async function setDeleteFileAction(action: DeleteFileAction) {
+    try {
+      await invoke("set_delete_file_action", { action });
+      deleteFileAction = action;
+    } catch (e) {
+      addToast("error", `設定の変更に失敗しました: ${e}`);
     }
   }
 
@@ -349,6 +361,54 @@
                 <code class="template-preview-path">{templatePreview}</code>
               </div>
             {/if}
+          </div>
+
+          <div class="settings-subsection">
+            <h3>削除時のファイル処理</h3>
+            <p class="settings-description">
+              作品削除時にローカルファイルをどのように扱うかを設定します。
+            </p>
+            <div class="resource-mode-select">
+              <label class="resource-mode-option">
+                <input
+                  type="radio"
+                  name="delete-file-action"
+                  checked={deleteFileAction === "ask"}
+                  onchange={() => setDeleteFileAction("ask")}
+                  disabled={resourceMode === "metadata_only"}
+                />
+                <span class="resource-mode-label">実行時に確認する</span>
+                <span class="resource-mode-desc">削除時に処理方法を選択</span>
+              </label>
+              <label class="resource-mode-option">
+                <input
+                  type="radio"
+                  name="delete-file-action"
+                  checked={deleteFileAction === "trash"}
+                  onchange={() => setDeleteFileAction("trash")}
+                  disabled={resourceMode === "metadata_only"}
+                />
+                <span class="resource-mode-label"
+                  >非追跡ディレクトリに退避させる</span
+                >
+                <span class="resource-mode-desc"
+                  >ライブラリ内の .trash ディレクトリに移動</span
+                >
+              </label>
+              <label class="resource-mode-option">
+                <input
+                  type="radio"
+                  name="delete-file-action"
+                  checked={deleteFileAction === "delete"}
+                  onchange={() => setDeleteFileAction("delete")}
+                  disabled={resourceMode === "metadata_only"}
+                />
+                <span class="resource-mode-label">合わせて削除する</span>
+                <span class="resource-mode-desc"
+                  >ローカルファイルを完全に削除</span
+                >
+              </label>
+            </div>
           </div>
 
           <div class="settings-subsection">

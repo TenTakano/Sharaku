@@ -2365,6 +2365,28 @@ button:disabled {
   cursor: pointer;
 }
 
+.confirm-dialog-file-action-note {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.confirm-dialog-file-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.confirm-dialog-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: #555;
+  cursor: pointer;
+}
+
 .confirm-dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -3008,6 +3030,14 @@ button:disabled {
   }
 
   .confirm-dialog-checkbox {
+    color: #aaa;
+  }
+
+  .confirm-dialog-file-action-note {
+    color: #999;
+  }
+
+  .confirm-dialog-radio {
     color: #aaa;
   }
 

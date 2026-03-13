@@ -53,11 +53,14 @@ export type BannerAutoClose = 0 | 1 | 3 | 5;
 
 export type ResourceMode = "full" | "metadata_only";
 
+export type DeleteFileAction = "delete" | "trash" | "ask";
+
 export interface AppSettings {
   resourceMode: ResourceMode;
   directoryTemplate: string | null;
   typeLabelImage: string;
   typeLabelFolder: string;
+  deleteFileAction: DeleteFileAction;
 }
 
 export interface TemplateValidation {
