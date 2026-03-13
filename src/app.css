@@ -2324,6 +2324,71 @@ button:disabled {
   border-color: #2c56b0;
 }
 
+.confirm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-dialog {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.confirm-dialog-title {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.confirm-dialog-message {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-dialog-cancel {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
+.confirm-dialog-confirm {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  background-color: #396cd8;
+  color: #fff;
+  border-color: #396cd8;
+}
+
+.confirm-dialog-confirm:hover {
+  background-color: #2c56b0;
+  border-color: #2c56b0;
+}
+
+.confirm-dialog-danger {
+  background-color: #ef5350;
+  border-color: #ef5350;
+}
+
+.confirm-dialog-danger:hover {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+}
+
 .viewer-toolbar-separator {
   color: #888;
   margin: 0 4px;
@@ -2921,6 +2986,15 @@ button:disabled {
   .edit-work-save:hover:not(:disabled) {
     background-color: #2c56b0;
     border-color: #2c56b0;
+  }
+
+  .confirm-dialog {
+    background: #3a3a3a;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .confirm-dialog-message {
+    color: #aaa;
   }
 
   .viewer-toolbar-separator {

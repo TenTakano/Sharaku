@@ -4,7 +4,9 @@
   import WorkCardComponent from "./WorkCard.svelte";
   import { WorkCard } from "./WorkCard.svelte";
   import ContextMenu from "./ContextMenu.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
   import EditWorkDialog from "./EditWorkDialog.svelte";
+  import { addToast } from "../stores/toast.svelte";
   import type {
     WorkSummary,
     WorkDetail,
@@ -43,6 +45,7 @@
     null,
   );
   let editingWork = $state<WorkDetail | null>(null);
+  let deletingWork = $state<{ id: number; title: string } | null>(null);
 
   const CARD_WIDTH = 180;
   const GAP = 16;
@@ -124,6 +127,27 @@
       editingWork = detail;
     } catch (e) {
       console.error("Failed to get work:", e);
+    }
+  }
+
+  function openDeleteDialog(workId: number) {
+    contextMenu = null;
+    const work = works.find((w) => w.id === workId);
+    if (work) {
+      deletingWork = { id: work.id, title: work.title };
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletingWork) return;
+    const { id, title } = deletingWork;
+    try {
+      await invoke("delete_work", { workId: id });
+      addToast("success", `「${title}」を削除しました`);
+      deletingWork = null;
+      loadWorks();
+    } catch (e) {
+      addToast("error", `削除に失敗しました: ${e}`);
     }
   }
 
@@ -228,8 +252,23 @@
         label: "メタデータを編集",
         action: () => openEditDialog(contextMenu!.workId),
       },
+      {
+        label: "削除",
+        action: () => openDeleteDialog(contextMenu!.workId),
+      },
     ]}
     onClose={() => (contextMenu = null)}
+  />
+{/if}
+
+{#if deletingWork}
+  <ConfirmDialog
+    title="作品の削除"
+    message="「{deletingWork.title}」を削除しますか？この操作は取り消せません。"
+    confirmLabel="削除"
+    danger={true}
+    onConfirm={handleDelete}
+    onCancel={() => (deletingWork = null)}
   />
 {/if}
 
