@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
+
   interface Props {
     title: string;
     message: string;
@@ -6,6 +8,7 @@
     danger?: boolean;
     onConfirm: () => void;
     onCancel: () => void;
+    extra?: Snippet;
   }
 
   let {
@@ -15,6 +18,7 @@
     danger = false,
     onConfirm,
     onCancel,
+    extra,
   }: Props = $props();
 
   function handleKeydown(e: KeyboardEvent) {
@@ -38,6 +42,9 @@
   <div class="confirm-dialog">
     <h3 class="confirm-dialog-title">{title}</h3>
     <p class="confirm-dialog-message">{message}</p>
+    {#if extra}
+      {@render extra()}
+    {/if}
     <div class="confirm-dialog-actions">
       <button class="confirm-dialog-cancel" onclick={onCancel}>
         キャンセル

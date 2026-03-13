@@ -46,6 +46,8 @@
   );
   let editingWork = $state<WorkDetail | null>(null);
   let deletingWork = $state<{ id: number; title: string } | null>(null);
+  let deleteFiles = $state(false);
+  let isFullMode = $state(false);
 
   const CARD_WIDTH = 180;
   const GAP = 16;
@@ -130,19 +132,25 @@
     }
   }
 
-  function openDeleteDialog(workId: number) {
+  async function openDeleteDialog(workId: number) {
     contextMenu = null;
     const work = works.find((w) => w.id === workId);
-    if (work) {
-      deletingWork = { id: work.id, title: work.title };
+    if (!work) return;
+    try {
+      const settings: { resourceMode: string } = await invoke("get_settings");
+      isFullMode = settings.resourceMode === "full";
+    } catch {
+      isFullMode = false;
     }
+    deleteFiles = false;
+    deletingWork = { id: work.id, title: work.title };
   }
 
   async function handleDelete() {
     if (!deletingWork) return;
     const { id, title } = deletingWork;
     try {
-      await invoke("delete_work", { workId: id });
+      await invoke("delete_work", { workId: id, deleteFiles });
       addToast("success", `「${title}」を削除しました`);
       deletingWork = null;
       loadWorks();
@@ -269,7 +277,16 @@
     danger={true}
     onConfirm={handleDelete}
     onCancel={() => (deletingWork = null)}
-  />
+  >
+    {#snippet extra()}
+      {#if isFullMode}
+        <label class="confirm-dialog-checkbox">
+          <input type="checkbox" bind:checked={deleteFiles} />
+          ローカルファイルも削除する
+        </label>
+      {/if}
+    {/snippet}
+  </ConfirmDialog>
 {/if}
 
 {#if editingWork}

@@ -2355,6 +2355,16 @@ button:disabled {
   line-height: 1.5;
 }
 
+.confirm-dialog-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+  color: #555;
+  cursor: pointer;
+}
+
 .confirm-dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -2994,6 +3004,10 @@ button:disabled {
   }
 
   .confirm-dialog-message {
+    color: #aaa;
+  }
+
+  .confirm-dialog-checkbox {
     color: #aaa;
   }
 
