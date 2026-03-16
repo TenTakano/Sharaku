@@ -15,8 +15,11 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,svelte,js,json,css,html,md}": "prettier --write",
-    "*.{ts,svelte,js}": "eslint --fix"
+    "*.{ts,svelte,js}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,html,md}": "prettier --write"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
