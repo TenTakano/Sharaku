@@ -11,7 +11,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,svelte,js,json,css,html,md}": "prettier --write",
+    "*.{ts,svelte,js}": "eslint --fix"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -27,6 +32,8 @@
     "eslint": "^9.39.2",
     "eslint-plugin-svelte": "^3.15.0",
     "globals": "^17.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "prettier-plugin-svelte": "^3.4.1",
     "svelte": "^5.0.0",
