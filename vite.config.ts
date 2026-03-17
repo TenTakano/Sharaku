@@ -10,11 +10,8 @@ export default defineConfig(async () => ({
   resolve: process.env.VITEST ? { conditions: ["browser"] } : undefined,
   test: {
     environment: "jsdom",
-    include: [
-      "src/**/*.{test,spec}.{ts,js}",
-      "src/**/*.svelte.{test,spec}.{ts,js}",
-    ],
-    setupFiles: ["src/test-setup.ts"],
+    include: ["tests/**/*.{test,spec}.{ts,js}"],
+    setupFiles: ["tests/setup.ts"],
   },
   server: {
     port: 1420,

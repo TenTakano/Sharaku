@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { addToast, removeToast, getToasts } from "./toast.svelte";
+import {
+  addToast,
+  removeToast,
+  getToasts,
+} from "../../src/lib/stores/toast.svelte";
 
 beforeEach(() => {
   for (const toast of getToasts()) {
