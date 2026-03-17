@@ -28,6 +28,9 @@ jobs:
       - name: Svelte check
         run: npm run check
 
+      - name: Test
+        run: npm test
+
   backend:
     runs-on: ubuntu-latest
     steps:
