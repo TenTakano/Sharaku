@@ -28,7 +28,7 @@
     "@tauri-apps/plugin-dialog": "^2",
     "@tauri-apps/plugin-fs": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "virtua": "^0.48.5"
+    "virtua": "^0.48.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
