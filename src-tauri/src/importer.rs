@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -294,6 +295,64 @@ pub fn discover_image_folders(
             parsed_metadata,
             already_registered,
         });
+    }
+
+    let _ = on_progress.send(DiscoverProgress::Completed {
+        found: folders.len(),
+    });
+    Ok(folders)
+}
+
+pub fn discover_from_paths(
+    roots: &[PathBuf],
+    conn: &rusqlite::Connection,
+    library_id: &str,
+    on_progress: &Channel<DiscoverProgress>,
+) -> Result<Vec<DiscoveredFolder>, AppError> {
+    let mut folders = Vec::new();
+    let mut seen_paths = HashSet::new();
+    let mut scanned_dirs = 0usize;
+
+    for root in roots {
+        for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
+            if !entry.file_type().is_dir() {
+                continue;
+            }
+
+            scanned_dirs += 1;
+            if scanned_dirs.is_multiple_of(50) {
+                let _ = on_progress.send(DiscoverProgress::Scanning { scanned_dirs });
+            }
+
+            let dir_path = entry.path();
+            let path_str = dir_path.to_string_lossy().to_string();
+
+            if !seen_paths.insert(path_str.clone()) {
+                continue;
+            }
+
+            let image_count = scanner::count_direct_images(dir_path);
+            if image_count == 0 {
+                continue;
+            }
+
+            let folder_name = dir_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+
+            let already_registered = db::path_exists(conn, library_id, &path_str)?;
+            let parsed_metadata = parse_folder_name(&folder_name);
+
+            folders.push(DiscoveredFolder {
+                path: path_str,
+                folder_name,
+                image_count,
+                parsed_metadata,
+                already_registered,
+            });
+        }
     }
 
     let _ = on_progress.send(DiscoverProgress::Completed {

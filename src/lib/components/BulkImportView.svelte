@@ -18,10 +18,12 @@
   interface Props {
     initialEntries?: UnregisteredEntry[];
     initialRootPath?: string;
+    initialDroppedPaths?: string[];
     onBack: () => void;
   }
 
-  let { initialEntries, initialRootPath, onBack }: Props = $props();
+  let { initialEntries, initialRootPath, initialDroppedPaths, onBack }: Props =
+    $props();
 
   type Step = "discover" | "review";
 
@@ -54,6 +56,44 @@
         rootPath,
         onProgress: channel,
       });
+      folders = result;
+      selected.clear();
+      folders.forEach((f, i) => {
+        if (!f.alreadyRegistered) {
+          selected.add(i);
+        }
+      });
+      editedTitles.clear();
+      editedArtists.clear();
+      step = "review";
+    } catch (e) {
+      discoverStatus = `エラー: ${e}`;
+    } finally {
+      discovering = false;
+    }
+  }
+
+  async function discoverFromDroppedPaths(paths: string[]) {
+    discovering = true;
+    discoverStatus = "探索中...";
+
+    const channel = new Channel<DiscoverProgress>();
+    channel.onmessage = (p) => {
+      if (p.type === "scanning") {
+        discoverStatus = `${p.scannedDirs} フォルダを探索中...`;
+      } else if (p.type === "completed") {
+        discoverStatus = `${p.found} 件のフォルダを検出`;
+      }
+    };
+
+    try {
+      const result = await invoke<DiscoveredFolder[]>(
+        "discover_dropped_paths",
+        {
+          paths,
+          onProgress: channel,
+        },
+      );
       folders = result;
       selected.clear();
       folders.forEach((f, i) => {
@@ -175,6 +215,8 @@
     });
     if (initialEntries) {
       loadFromEntries(initialEntries);
+    } else if (initialDroppedPaths) {
+      discoverFromDroppedPaths(initialDroppedPaths);
     } else if (initialRootPath) {
       discoverFromPath(initialRootPath);
     }

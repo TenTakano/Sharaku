@@ -40,6 +40,7 @@
   let dragging = $state(false);
   let importSourcePath = $state<string | undefined>(undefined);
   let bulkImportRootPath = $state<string | undefined>(undefined);
+  let bulkImportDroppedPaths = $state<string[] | undefined>(undefined);
   let pendingBulkImportEntries = $state<UnregisteredEntry[] | undefined>(
     undefined,
   );
@@ -88,8 +89,9 @@
   }
 
   function handleBulkImportBack() {
-    if (bulkImportRootPath) {
+    if (bulkImportRootPath || bulkImportDroppedPaths) {
       bulkImportRootPath = undefined;
+      bulkImportDroppedPaths = undefined;
       currentView = "library";
     } else {
       handleBackToSettings();
@@ -164,7 +166,19 @@
       } else if (event.payload.type === "drop") {
         dragging = false;
         const paths = event.payload.paths;
-        if (paths.length > 0) {
+        if (paths.length > 1) {
+          Promise.all(paths.map((p) => resolveFolderPath(p)))
+            .then((resolved) => {
+              const unique = [...new Set(resolved)];
+              bulkImportDroppedPaths = unique;
+              bulkImportRootPath = undefined;
+              pendingBulkImportEntries = undefined;
+              currentView = "bulk-import";
+            })
+            .catch((e) => {
+              console.error("Drop path resolution failed:", e);
+            });
+        } else if (paths.length === 1) {
           resolveFolderPath(paths[0])
             .then(async (folderPath) => {
               const hasSubs = await invoke<boolean>("has_image_subfolders", {
@@ -172,6 +186,7 @@
               });
               if (hasSubs) {
                 bulkImportRootPath = folderPath;
+                bulkImportDroppedPaths = undefined;
                 pendingBulkImportEntries = undefined;
                 currentView = "bulk-import";
               } else {
@@ -284,6 +299,7 @@
         <BulkImportView
           initialEntries={pendingBulkImportEntries}
           initialRootPath={bulkImportRootPath}
+          initialDroppedPaths={bulkImportDroppedPaths}
           onBack={handleBulkImportBack}
         />
       {:else}
