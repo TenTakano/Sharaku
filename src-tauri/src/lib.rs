@@ -490,6 +490,27 @@ async fn discover_folders(
 }
 
 #[tauri::command]
+async fn discover_dropped_paths(
+    state: tauri::State<'_, AppState>,
+    paths: Vec<String>,
+    on_progress: tauri::ipc::Channel<DiscoverProgress>,
+) -> Result<Vec<DiscoveredFolder>, String> {
+    let db = state.db.clone();
+    let roots: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
+    tokio::task::spawn_blocking(move || {
+        let guard = db.lock().unwrap();
+        let active = guard
+            .active_library
+            .as_ref()
+            .ok_or("ライブラリが選択されていません")?;
+        importer::discover_from_paths(&roots, &guard.conn, &active.id, &on_progress)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn preview_relocation(
     state: tauri::State<'_, AppState>,
     new_template: String,
@@ -1050,6 +1071,7 @@ pub fn run() {
             preview_import_path,
             enqueue_import,
             discover_folders,
+            discover_dropped_paths,
             preview_relocation,
             relocate_works,
             list_tags,
