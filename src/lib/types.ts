@@ -121,6 +121,17 @@ export interface DiscoveredFolder {
   alreadyRegistered: boolean;
 }
 
+export interface SkippedFolder {
+  path: string;
+  folderName: string;
+  imageCount: number;
+}
+
+export interface DiscoverResult {
+  folders: DiscoveredFolder[];
+  skippedFolders: SkippedFolder[];
+}
+
 export type DiscoverProgress =
   | { type: "scanning"; scannedDirs: number }
   | { type: "completed"; found: number };

@@ -20,7 +20,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use db::{Tag, WorkDetail, WorkSummary};
 use import_queue::{ImportJob, ImportQueue, ImportQueueEvent};
-use importer::{DiscoverProgress, DiscoveredFolder, ParsedMetadata};
+use importer::{DiscoverProgress, DiscoverResult, ParsedMetadata};
 use integrity::{IntegrityCheckProgress, IntegrityReport};
 use library::Library;
 use relocator::{RelocationPreview, RelocationProgress};
@@ -473,7 +473,7 @@ async fn discover_folders(
     state: tauri::State<'_, AppState>,
     root_path: String,
     on_progress: tauri::ipc::Channel<DiscoverProgress>,
-) -> Result<Vec<DiscoveredFolder>, String> {
+) -> Result<DiscoverResult, String> {
     let db = state.db.clone();
     let root = PathBuf::from(root_path);
     tokio::task::spawn_blocking(move || {
@@ -494,7 +494,7 @@ async fn discover_dropped_paths(
     state: tauri::State<'_, AppState>,
     paths: Vec<String>,
     on_progress: tauri::ipc::Channel<DiscoverProgress>,
-) -> Result<Vec<DiscoveredFolder>, String> {
+) -> Result<DiscoverResult, String> {
     let db = state.db.clone();
     let roots: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
     tokio::task::spawn_blocking(move || {

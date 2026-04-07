@@ -6,13 +6,15 @@
   import type {
     AppSettings,
     ResourceMode,
-    DiscoveredFolder,
+    DiscoverResult,
     DiscoverProgress,
     ImportMode,
     ImportRequest,
     EnqueueResult,
     UnregisteredEntry,
     ParsedMetadata,
+    SkippedFolder,
+    DiscoveredFolder,
   } from "../types";
 
   interface Props {
@@ -32,6 +34,8 @@
   let discovering = $state(false);
   let discoverStatus = $state("");
   let folders = $state<DiscoveredFolder[]>([]);
+  let skippedFolders = $state<SkippedFolder[]>([]);
+  let showSkippedDetails = $state(false);
   let selected = new SvelteSet<number>();
   let editedTitles = new SvelteMap<number, string>();
   let editedArtists = new SvelteMap<number, string>();
@@ -52,11 +56,13 @@
     };
 
     try {
-      const result = await invoke<DiscoveredFolder[]>("discover_folders", {
+      const result = await invoke<DiscoverResult>("discover_folders", {
         rootPath,
         onProgress: channel,
       });
-      folders = result;
+      folders = result.folders;
+      skippedFolders = result.skippedFolders;
+      showSkippedDetails = false;
       selected.clear();
       folders.forEach((f, i) => {
         if (!f.alreadyRegistered) {
@@ -87,14 +93,13 @@
     };
 
     try {
-      const result = await invoke<DiscoveredFolder[]>(
-        "discover_dropped_paths",
-        {
-          paths,
-          onProgress: channel,
-        },
-      );
-      folders = result;
+      const result = await invoke<DiscoverResult>("discover_dropped_paths", {
+        paths,
+        onProgress: channel,
+      });
+      folders = result.folders;
+      skippedFolders = result.skippedFolders;
+      showSkippedDetails = false;
       selected.clear();
       folders.forEach((f, i) => {
         if (!f.alreadyRegistered) {
@@ -180,6 +185,8 @@
   function resetToDiscover() {
     step = "discover";
     folders = [];
+    skippedFolders = [];
+    showSkippedDetails = false;
     selected.clear();
     editedTitles.clear();
     editedArtists.clear();
@@ -249,6 +256,34 @@
       <p class="import-description">
         {folders.length} フォルダ検出 / {selected.size} 件選択中
       </p>
+
+      {#if skippedFolders.length > 0}
+        {@const skippedImageCount = skippedFolders.reduce(
+          (sum, f) => sum + f.imageCount,
+          0,
+        )}
+        <div class="bulk-skipped-warning">
+          <p class="bulk-skipped-message">
+            {skippedFolders.length} 件の中間フォルダにある {skippedImageCount} 枚の画像はスキップされました。最下層フォルダのみが作品として取り込まれます。
+          </p>
+          <button
+            class="bulk-skipped-toggle"
+            onclick={() => (showSkippedDetails = !showSkippedDetails)}
+          >
+            {showSkippedDetails ? "詳細を隠す" : "詳細を表示"}
+          </button>
+          {#if showSkippedDetails}
+            <ul class="bulk-skipped-list">
+              {#each skippedFolders as sf (sf.path)}
+                <li>
+                  {sf.folderName}（{sf.imageCount} 枚）
+                  <span class="bulk-skipped-path">{sf.path}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
 
       <div class="bulk-toolbar">
         <label class="bulk-select-all">
