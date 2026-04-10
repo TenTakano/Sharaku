@@ -65,10 +65,4 @@ docs/                 # 機能仕様書
 
 ## 機能仕様書
 
-現在の機能仕様は `docs/` に整理されている:
-
-- [全体概要・データモデル](docs/spec-overview.md)
-- [インポート機能](docs/spec-import.md)
-- [ビューア機能](docs/spec-viewer.md)
-- [ライブラリ管理・設定](docs/spec-library-management.md)
-- [タグ機能](docs/spec-tagging.md)
+現在の機能仕様は [docs/README.md](docs/README.md) を起点に整理されている。
