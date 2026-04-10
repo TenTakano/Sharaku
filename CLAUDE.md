@@ -60,4 +60,15 @@ src-tauri/            # バックエンド（Rust + Tauri 2）
   tests/              # Rustテスト
   Cargo.toml
   tauri.conf.json     # Tauri設定
+docs/                 # 機能仕様書
 ```
+
+## 機能仕様書
+
+現在の機能仕様は `docs/` に整理されている:
+
+- [全体概要・データモデル](docs/spec-overview.md)
+- [インポート機能](docs/spec-import.md)
+- [ビューア機能](docs/spec-viewer.md)
+- [ライブラリ管理・設定](docs/spec-library-management.md)
+- [タグ機能](docs/spec-tagging.md)
