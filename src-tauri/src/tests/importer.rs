@@ -185,6 +185,92 @@ fn list_images_natural_sort_order() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+// find_leaf_indices tests
+
+#[test]
+fn leaf_indices_flat_structure() {
+    let candidates = vec![
+        (PathBuf::from("/root/work1"), 3),
+        (PathBuf::from("/root/work2"), 5),
+    ];
+    let leaves = find_leaf_indices(&candidates, &[Path::new("/root")]);
+    assert_eq!(leaves.len(), 2);
+    assert!(leaves.contains(&0));
+    assert!(leaves.contains(&1));
+}
+
+#[test]
+fn leaf_indices_nested_skips_intermediate() {
+    let candidates = vec![
+        (PathBuf::from("/root"), 1),
+        (PathBuf::from("/root/chapter1"), 3),
+        (PathBuf::from("/root/chapter2"), 5),
+    ];
+    let leaves = find_leaf_indices(&candidates, &[Path::new("/root")]);
+    assert_eq!(leaves.len(), 2);
+    assert!(leaves.contains(&1));
+    assert!(leaves.contains(&2));
+    assert!(!leaves.contains(&0));
+}
+
+#[test]
+fn leaf_indices_deeply_nested() {
+    let candidates = vec![
+        (PathBuf::from("/root"), 1),
+        (PathBuf::from("/root/level1"), 2),
+        (PathBuf::from("/root/level1/level2"), 3),
+    ];
+    let leaves = find_leaf_indices(&candidates, &[Path::new("/root")]);
+    assert_eq!(leaves.len(), 1);
+    assert!(leaves.contains(&2));
+}
+
+#[test]
+fn leaf_indices_single_leaf() {
+    let candidates = vec![(PathBuf::from("/root"), 5)];
+    let leaves = find_leaf_indices(&candidates, &[Path::new("/root")]);
+    assert_eq!(leaves.len(), 1);
+    assert!(leaves.contains(&0));
+}
+
+#[test]
+fn leaf_indices_mixed_branches() {
+    // root/
+    //   cover.jpg         <- intermediate (has child with images)
+    //   branch_a/
+    //     page.jpg         <- leaf
+    //   branch_b/
+    //     page.jpg         <- intermediate
+    //     sub/
+    //       page.jpg       <- leaf
+    let candidates = vec![
+        (PathBuf::from("/root"), 1),
+        (PathBuf::from("/root/branch_a"), 1),
+        (PathBuf::from("/root/branch_b"), 1),
+        (PathBuf::from("/root/branch_b/sub"), 1),
+    ];
+    let leaves = find_leaf_indices(&candidates, &[Path::new("/root")]);
+    assert_eq!(leaves.len(), 2);
+    assert!(leaves.contains(&1)); // branch_a
+    assert!(leaves.contains(&3)); // branch_b/sub
+}
+
+#[test]
+fn leaf_indices_multiple_independent_roots() {
+    let candidates = vec![
+        (PathBuf::from("/root_a"), 1),
+        (PathBuf::from("/root_a/child"), 2),
+        (PathBuf::from("/root_b/work1"), 3),
+        (PathBuf::from("/root_b/work2"), 4),
+    ];
+    let leaves = find_leaf_indices(&candidates, &[Path::new("/root_a"), Path::new("/root_b")]);
+    assert_eq!(leaves.len(), 3);
+    assert!(leaves.contains(&1)); // root_a/child
+    assert!(leaves.contains(&2)); // root_b/work1
+    assert!(leaves.contains(&3)); // root_b/work2
+    assert!(!leaves.contains(&0)); // root_a is intermediate
+}
+
 // count_direct_images tests
 
 #[test]

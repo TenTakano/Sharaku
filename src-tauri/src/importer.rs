@@ -247,6 +247,21 @@ pub struct DiscoveredFolder {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SkippedFolder {
+    pub path: String,
+    pub folder_name: String,
+    pub image_count: usize,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoverResult {
+    pub folders: Vec<DiscoveredFolder>,
+    pub skipped_folders: Vec<SkippedFolder>,
+}
+
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DiscoverProgress {
     Scanning { scanned_dirs: usize },
@@ -258,8 +273,8 @@ pub fn discover_image_folders(
     conn: &rusqlite::Connection,
     library_id: &str,
     on_progress: &Channel<DiscoverProgress>,
-) -> Result<Vec<DiscoveredFolder>, AppError> {
-    let mut folders = Vec::new();
+) -> Result<DiscoverResult, AppError> {
+    let mut candidates: Vec<(PathBuf, usize)> = Vec::new();
     let mut scanned_dirs = 0usize;
 
     for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
@@ -274,33 +289,17 @@ pub fn discover_image_folders(
 
         let dir_path = entry.path();
         let image_count = scanner::count_direct_images(dir_path);
-        if image_count == 0 {
-            continue;
+        if image_count > 0 {
+            candidates.push((dir_path.to_path_buf(), image_count));
         }
-
-        let folder_name = dir_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
-
-        let path_str = dir_path.to_string_lossy().to_string();
-        let already_registered = db::path_exists(conn, library_id, &path_str)?;
-        let parsed_metadata = parse_folder_name(&folder_name);
-
-        folders.push(DiscoveredFolder {
-            path: path_str,
-            folder_name,
-            image_count,
-            parsed_metadata,
-            already_registered,
-        });
     }
 
+    let result = partition_leaf_folders(&candidates, conn, library_id, &[root])?;
+
     let _ = on_progress.send(DiscoverProgress::Completed {
-        found: folders.len(),
+        found: result.folders.len(),
     });
-    Ok(folders)
+    Ok(result)
 }
 
 pub fn discover_from_paths(
@@ -308,8 +307,8 @@ pub fn discover_from_paths(
     conn: &rusqlite::Connection,
     library_id: &str,
     on_progress: &Channel<DiscoverProgress>,
-) -> Result<Vec<DiscoveredFolder>, AppError> {
-    let mut folders = Vec::new();
+) -> Result<DiscoverResult, AppError> {
+    let mut candidates: Vec<(PathBuf, usize)> = Vec::new();
     let mut seen_paths = HashSet::new();
     let mut scanned_dirs = 0usize;
 
@@ -327,38 +326,93 @@ pub fn discover_from_paths(
             let dir_path = entry.path();
             let path_str = dir_path.to_string_lossy().to_string();
 
-            if !seen_paths.insert(path_str.clone()) {
+            if !seen_paths.insert(path_str) {
                 continue;
             }
 
             let image_count = scanner::count_direct_images(dir_path);
-            if image_count == 0 {
-                continue;
+            if image_count > 0 {
+                candidates.push((dir_path.to_path_buf(), image_count));
             }
+        }
+    }
 
-            let folder_name = dir_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string();
+    let root_refs: Vec<&Path> = roots.iter().map(|r| r.as_path()).collect();
+    let result = partition_leaf_folders(&candidates, conn, library_id, &root_refs)?;
 
+    let _ = on_progress.send(DiscoverProgress::Completed {
+        found: result.folders.len(),
+    });
+    Ok(result)
+}
+
+fn find_leaf_indices(candidates: &[(PathBuf, usize)], roots: &[&Path]) -> HashSet<usize> {
+    let root_set: HashSet<&Path> = roots.iter().copied().collect();
+    let mut parent_of_image_dir = HashSet::new();
+    for (path, _) in candidates {
+        let mut ancestor = path.parent();
+        while let Some(a) = ancestor {
+            if !parent_of_image_dir.insert(a.to_path_buf()) {
+                break;
+            }
+            if root_set.contains(a) {
+                break;
+            }
+            ancestor = a.parent();
+        }
+    }
+
+    candidates
+        .iter()
+        .enumerate()
+        .filter(|(_, (path, _))| !parent_of_image_dir.contains(path))
+        .map(|(i, _)| i)
+        .collect()
+}
+
+fn partition_leaf_folders(
+    candidates: &[(PathBuf, usize)],
+    conn: &rusqlite::Connection,
+    library_id: &str,
+    roots: &[&Path],
+) -> Result<DiscoverResult, AppError> {
+    let leaf_indices = find_leaf_indices(candidates, roots);
+
+    let mut folders = Vec::new();
+    let mut skipped_folders = Vec::new();
+
+    for (i, (path, image_count)) in candidates.iter().enumerate() {
+        let folder_name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        if leaf_indices.contains(&i) {
+            let path_str = path.to_string_lossy().to_string();
             let already_registered = db::path_exists(conn, library_id, &path_str)?;
             let parsed_metadata = parse_folder_name(&folder_name);
 
             folders.push(DiscoveredFolder {
                 path: path_str,
                 folder_name,
-                image_count,
+                image_count: *image_count,
                 parsed_metadata,
                 already_registered,
+            });
+        } else {
+            skipped_folders.push(SkippedFolder {
+                path: path.to_string_lossy().to_string(),
+                folder_name,
+                image_count: *image_count,
             });
         }
     }
 
-    let _ = on_progress.send(DiscoverProgress::Completed {
-        found: folders.len(),
-    });
-    Ok(folders)
+    Ok(DiscoverResult {
+        folders,
+        skipped_folders,
+    })
 }
 
 #[cfg(test)]

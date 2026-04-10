@@ -1439,6 +1439,46 @@ button:disabled {
   margin: 0 0 8px;
 }
 
+.bulk-skipped-warning {
+  background: #fff3e0;
+  border-left: 4px solid #e65100;
+  padding: 12px 16px;
+  margin: 0 0 16px;
+  border-radius: 4px;
+}
+
+.bulk-skipped-message {
+  font-size: 0.875rem;
+  color: #e65100;
+  margin: 0;
+}
+
+.bulk-skipped-toggle {
+  background: none;
+  border: none;
+  color: #e65100;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+
+.bulk-skipped-list {
+  font-size: 0.8125rem;
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.bulk-skipped-list li {
+  margin-bottom: 4px;
+}
+
+.bulk-skipped-path {
+  color: #888;
+  margin-left: 8px;
+  font-size: 0.75rem;
+}
+
 .bulk-review-content progress,
 .import-content progress {
   width: 100%;
@@ -2810,6 +2850,23 @@ button:disabled {
 
   .bulk-progress-text {
     color: #aaa;
+  }
+
+  .bulk-skipped-warning {
+    background: #3d2800;
+    border-left-color: #ff9800;
+  }
+
+  .bulk-skipped-message {
+    color: #ffb74d;
+  }
+
+  .bulk-skipped-toggle {
+    color: #ffb74d;
+  }
+
+  .bulk-skipped-path {
+    color: #777;
   }
 
   .bulk-review-content progress::-webkit-progress-bar,
