@@ -263,10 +263,7 @@ fn leaf_indices_multiple_independent_roots() {
         (PathBuf::from("/root_b/work1"), 3),
         (PathBuf::from("/root_b/work2"), 4),
     ];
-    let leaves = find_leaf_indices(
-        &candidates,
-        &[Path::new("/root_a"), Path::new("/root_b")],
-    );
+    let leaves = find_leaf_indices(&candidates, &[Path::new("/root_a"), Path::new("/root_b")]);
     assert_eq!(leaves.len(), 3);
     assert!(leaves.contains(&1)); // root_a/child
     assert!(leaves.contains(&2)); // root_b/work1
