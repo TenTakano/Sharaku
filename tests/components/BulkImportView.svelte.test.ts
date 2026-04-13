@@ -95,11 +95,11 @@ describe("BulkImportView コンポーネント", () => {
       });
     });
 
-    it("検出フォルダ数と選択件数が表示される", async () => {
+    it("検出件数と選択件数が表示される", async () => {
       render(BulkImportView, createProps({ initialEntries: entries }));
 
       await waitFor(() => {
-        expect(screen.getByText(/2 フォルダ検出/)).toBeInTheDocument();
+        expect(screen.getByText(/2 件検出/)).toBeInTheDocument();
         expect(screen.getByText(/2 件選択中/)).toBeInTheDocument();
       });
     });

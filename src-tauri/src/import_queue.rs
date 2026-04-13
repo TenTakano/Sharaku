@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 
 use crate::error::AppError;
-use crate::importer::{self, ImportRequest};
+use crate::importer::{self, ImportKind, ImportRequest};
 use crate::settings;
 use crate::AppDb;
 
@@ -115,7 +115,14 @@ async fn worker(
                         Path::new("")
                     }
                 };
-                importer::import_work(&request, &guard.conn, &library_id, lib_root)
+                match request.kind {
+                    ImportKind::Folder => {
+                        importer::import_work(&request, &guard.conn, &library_id, lib_root)
+                    }
+                    ImportKind::Image => {
+                        importer::import_single_image(&request, &guard.conn, &library_id, lib_root)
+                    }
+                }
             })
             .await;
 

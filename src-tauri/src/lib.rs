@@ -20,7 +20,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use db::{Tag, WorkDetail, WorkSummary};
 use import_queue::{ImportJob, ImportQueue, ImportQueueEvent};
-use importer::{DiscoverProgress, DiscoverResult, ParsedMetadata};
+use importer::{DiscoverProgress, DiscoverResult, ImportKind, ParsedMetadata};
 use integrity::{IntegrityCheckProgress, IntegrityReport};
 use library::Library;
 use relocator::{RelocationPreview, RelocationProgress};
@@ -367,25 +367,6 @@ async fn has_image_subfolders(dir: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn resolve_drop_path(path: String) -> Result<String, String> {
-    let p = std::path::Path::new(&path);
-    let folder = if p.is_dir() {
-        p.to_path_buf()
-    } else {
-        p.parent()
-            .ok_or_else(|| "親ディレクトリを取得できません".to_string())?
-            .to_path_buf()
-    };
-    if !folder.is_dir() {
-        return Err("有効なディレクトリではありません".to_string());
-    }
-    folder
-        .to_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| "パスの変換に失敗しました".to_string())
-}
-
-#[tauri::command]
 async fn parse_folder_name(folder_name: String) -> Result<ParsedMetadata, String> {
     Ok(importer::parse_folder_name(&folder_name))
 }
@@ -394,8 +375,10 @@ async fn parse_folder_name(folder_name: String) -> Result<ParsedMetadata, String
 async fn preview_import_path(
     state: tauri::State<'_, AppState>,
     metadata: WorkMetadata,
+    kind: Option<ImportKind>,
 ) -> Result<String, String> {
     let db = state.db.clone();
+    let kind = kind.unwrap_or_default();
     tokio::task::spawn_blocking(move || {
         let guard = db.lock().unwrap();
         let active = guard
@@ -413,10 +396,17 @@ async fn preview_import_path(
             lib_path,
             &template_str,
             &metadata,
+            kind.work_kind(),
         ))
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn classify_drop_path(path: String) -> Result<scanner::DropKind, String> {
+    let p = std::path::Path::new(&path);
+    Ok(scanner::classify_path(p))
 }
 
 #[derive(Serialize)]
@@ -1066,7 +1056,7 @@ pub fn run() {
             validate_template,
             preview_template,
             has_image_subfolders,
-            resolve_drop_path,
+            classify_drop_path,
             parse_folder_name,
             preview_import_path,
             enqueue_import,

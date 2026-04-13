@@ -23,6 +23,8 @@ pub struct ImportRequest {
     pub circle: Option<String>,
     pub origin: Option<String>,
     pub mode: ImportMode,
+    #[serde(default)]
+    pub kind: ImportKind,
 }
 
 #[derive(Serialize)]
@@ -44,6 +46,23 @@ pub struct ParsedMetadata {
 pub enum ImportMode {
     Copy,
     Move,
+}
+
+#[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum ImportKind {
+    #[default]
+    Folder,
+    Image,
+}
+
+impl ImportKind {
+    pub fn work_kind(self) -> &'static str {
+        match self {
+            ImportKind::Folder => template::WORK_KIND_FOLDER,
+            ImportKind::Image => template::WORK_KIND_IMAGE,
+        }
+    }
 }
 
 pub fn parse_folder_name(folder_name: &str) -> ParsedMetadata {
@@ -97,8 +116,9 @@ pub fn preview_import_path(
     library_root: &Path,
     template_str: &str,
     metadata: &WorkMetadata,
+    work_kind: &str,
 ) -> String {
-    let path = template::resolve_work_path(library_root, template_str, metadata);
+    let path = template::resolve_work_path(library_root, template_str, metadata, work_kind);
     path.to_string_lossy().to_string()
 }
 
@@ -167,7 +187,12 @@ pub fn import_work(
         work_type: Some(type_label),
     };
 
-    let dest = template::resolve_unique_work_path(library_root, &template_str, &metadata);
+    let dest = template::resolve_unique_work_path(
+        library_root,
+        &template_str,
+        &metadata,
+        template::WORK_KIND_FOLDER,
+    );
 
     if paths_overlap(source, &dest) {
         return Err(AppError::ImportError(
@@ -236,6 +261,124 @@ fn copy_images_to_dest(images: &[PathBuf], dest: &Path) -> Result<(), AppError> 
     Ok(())
 }
 
+pub fn import_single_image(
+    request: &ImportRequest,
+    conn: &rusqlite::Connection,
+    library_id: &str,
+    library_root: &Path,
+) -> Result<ImportResult, AppError> {
+    let source = Path::new(&request.source_path);
+    if !source.is_file() || !scanner::is_image_file(source) {
+        return Err(AppError::ImportError(
+            "ソースパスが画像ファイルではありません".to_string(),
+        ));
+    }
+
+    let resource_mode = settings::get_resource_mode(conn, library_id)?;
+    let thumb = thumbnail::generate_thumbnail(source)?;
+
+    if resource_mode == "metadata_only" {
+        let source_str = source.to_string_lossy().to_string();
+
+        db::insert_work(
+            conn,
+            &WorkRecord {
+                library_id,
+                title: &request.title,
+                path: &source_str,
+                work_type: "image",
+                page_count: 1,
+                thumbnail: &thumb,
+                artist: request.artist.as_deref(),
+                year: request.year,
+                genre: request.genre.as_deref(),
+                circle: request.circle.as_deref(),
+                origin: request.origin.as_deref(),
+            },
+        )?;
+
+        return Ok(ImportResult {
+            destination_path: source_str,
+            page_count: 1,
+        });
+    }
+
+    let template_str = settings::get_directory_template(conn, library_id)?.ok_or_else(|| {
+        AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
+    })?;
+
+    let type_label = settings::resolve_type_label(conn, library_id, "image")?;
+    let metadata = WorkMetadata {
+        title: request.title.clone(),
+        artist: request.artist.clone(),
+        year: request.year,
+        genre: request.genre.clone(),
+        circle: request.circle.clone(),
+        origin: request.origin.clone(),
+        work_type: Some(type_label),
+    };
+
+    let dest_dir = template::resolve_unique_work_path(
+        library_root,
+        &template_str,
+        &metadata,
+        template::WORK_KIND_IMAGE,
+    );
+
+    if paths_overlap(source, &dest_dir) {
+        return Err(AppError::ImportError(
+            "取り込み元と取り込み先が重複しています".to_string(),
+        ));
+    }
+
+    let file_name = source
+        .file_name()
+        .ok_or_else(|| AppError::ImportError("無効なファイル名".to_string()))?;
+    let dest_file = dest_dir.join(file_name);
+
+    std::fs::create_dir_all(&dest_dir)?;
+
+    let rollback = |dest_dir: &Path| {
+        let _ = std::fs::remove_dir_all(dest_dir);
+    };
+
+    if let Err(e) = std::fs::copy(source, &dest_file) {
+        rollback(&dest_dir);
+        return Err(AppError::Io(e));
+    }
+
+    let dest_str = dest_file.to_string_lossy().to_string();
+
+    if let Err(e) = db::insert_work(
+        conn,
+        &WorkRecord {
+            library_id,
+            title: &request.title,
+            path: &dest_str,
+            work_type: "image",
+            page_count: 1,
+            thumbnail: &thumb,
+            artist: request.artist.as_deref(),
+            year: request.year,
+            genre: request.genre.as_deref(),
+            circle: request.circle.as_deref(),
+            origin: request.origin.as_deref(),
+        },
+    ) {
+        rollback(&dest_dir);
+        return Err(e);
+    }
+
+    if request.mode == ImportMode::Move {
+        let _ = std::fs::remove_file(source);
+    }
+
+    Ok(ImportResult {
+        destination_path: dest_str,
+        page_count: 1,
+    })
+}
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredFolder {
@@ -256,8 +399,18 @@ pub struct SkippedFolder {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct DiscoveredImage {
+    pub path: String,
+    pub file_name: String,
+    pub parsed_metadata: ParsedMetadata,
+    pub already_registered: bool,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoverResult {
     pub folders: Vec<DiscoveredFolder>,
+    pub images: Vec<DiscoveredImage>,
     pub skipped_folders: Vec<SkippedFolder>,
 }
 
@@ -311,8 +464,37 @@ pub fn discover_from_paths(
     let mut candidates: Vec<(PathBuf, usize)> = Vec::new();
     let mut seen_paths = HashSet::new();
     let mut scanned_dirs = 0usize;
+    let mut image_entries: Vec<DiscoveredImage> = Vec::new();
+    let mut seen_image_paths = HashSet::new();
+    let mut dir_roots: Vec<PathBuf> = Vec::new();
 
     for root in roots {
+        if root.is_file() && scanner::is_image_file(root) {
+            let path_str = root.to_string_lossy().to_string();
+            if !seen_image_paths.insert(path_str.clone()) {
+                continue;
+            }
+            let file_name = root
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let parsed_metadata = parse_image_file_name(&file_name);
+            let already_registered = db::path_exists(conn, library_id, &path_str)?;
+            image_entries.push(DiscoveredImage {
+                path: path_str,
+                file_name,
+                parsed_metadata,
+                already_registered,
+            });
+            continue;
+        }
+
+        if !root.is_dir() {
+            continue;
+        }
+
+        dir_roots.push(root.clone());
         for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
             if !entry.file_type().is_dir() {
                 continue;
@@ -337,13 +519,22 @@ pub fn discover_from_paths(
         }
     }
 
-    let root_refs: Vec<&Path> = roots.iter().map(|r| r.as_path()).collect();
-    let result = partition_leaf_folders(&candidates, conn, library_id, &root_refs)?;
+    let root_refs: Vec<&Path> = dir_roots.iter().map(|r| r.as_path()).collect();
+    let mut result = partition_leaf_folders(&candidates, conn, library_id, &root_refs)?;
+    result.images = image_entries;
 
     let _ = on_progress.send(DiscoverProgress::Completed {
-        found: result.folders.len(),
+        found: result.folders.len() + result.images.len(),
     });
     Ok(result)
+}
+
+pub fn parse_image_file_name(file_name: &str) -> ParsedMetadata {
+    let stem = Path::new(file_name)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(file_name);
+    parse_folder_name(stem)
 }
 
 fn find_leaf_indices(candidates: &[(PathBuf, usize)], roots: &[&Path]) -> HashSet<usize> {
@@ -411,6 +602,7 @@ fn partition_leaf_folders(
 
     Ok(DiscoverResult {
         folders,
+        images: Vec::new(),
         skipped_folders,
     })
 }

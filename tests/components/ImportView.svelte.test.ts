@@ -46,7 +46,7 @@ describe("ImportView コンポーネント", () => {
 
     it("タイトルと説明が表示される", () => {
       render(ImportView, createProps());
-      expect(screen.getByText("フォルダを選択")).toBeInTheDocument();
+      expect(screen.getByText("取り込み対象を選択")).toBeInTheDocument();
       expect(
         screen.getByText("取り込む画像フォルダを選択してください。"),
       ).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe("ImportView コンポーネント", () => {
       await user.click(screen.getByText("← 戻る"));
 
       await waitFor(() => {
-        expect(screen.getByText("フォルダを選択")).toBeInTheDocument();
+        expect(screen.getByText("取り込み対象を選択")).toBeInTheDocument();
       });
     });
   });

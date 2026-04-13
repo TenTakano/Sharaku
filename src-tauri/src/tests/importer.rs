@@ -126,8 +126,33 @@ fn preview_path_with_template() {
         origin: None,
         work_type: None,
     };
-    let result = preview_import_path(Path::new("/library"), "{artist}/{title}", &metadata);
-    assert_eq!(result, "/library/Artist/My Work");
+    let result = preview_import_path(
+        Path::new("/library"),
+        "{artist}/{title}",
+        &metadata,
+        crate::template::WORK_KIND_FOLDER,
+    );
+    assert_eq!(result, "/library/works/Artist/My Work");
+}
+
+#[test]
+fn preview_path_for_image_kind() {
+    let metadata = WorkMetadata {
+        title: "Sketch".to_string(),
+        artist: Some("Artist".to_string()),
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        work_type: None,
+    };
+    let result = preview_import_path(
+        Path::new("/library"),
+        "{artist}/{title}",
+        &metadata,
+        crate::template::WORK_KIND_IMAGE,
+    );
+    assert_eq!(result, "/library/pictures/Artist/Sketch");
 }
 
 // paths_overlap tests
@@ -299,6 +324,97 @@ fn count_direct_images_empty_dir() {
     std::fs::create_dir_all(&dir).unwrap();
 
     assert_eq!(crate::scanner::count_direct_images(&dir), 0);
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+// parse_image_file_name tests
+
+#[test]
+fn parse_image_file_name_strips_extension() {
+    let result = parse_image_file_name("[Artist] Work.jpg");
+    assert_eq!(result.title, "Work");
+    assert_eq!(result.artist.as_deref(), Some("Artist"));
+}
+
+#[test]
+fn parse_image_file_name_no_extension() {
+    let result = parse_image_file_name("plain_name");
+    assert_eq!(result.title, "plain_name");
+    assert_eq!(result.artist, None);
+}
+
+#[test]
+fn parse_image_file_name_multi_dot() {
+    let result = parse_image_file_name("Artist - Title.v2.png");
+    assert_eq!(result.title, "Title.v2");
+    assert_eq!(result.artist.as_deref(), Some("Artist"));
+}
+
+// import_single_image error cases
+
+#[test]
+fn import_single_image_rejects_non_image_file() {
+    let dir = std::env::temp_dir().join("sharaku_test_import_single_non_image");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let txt = dir.join("note.txt");
+    std::fs::write(&txt, b"text").unwrap();
+
+    let conn = crate::db::open_db_in_memory().unwrap();
+    crate::library::add_library(&conn, "Test", Some("/tmp")).ok();
+
+    let request = ImportRequest {
+        source_path: txt.to_string_lossy().to_string(),
+        title: "x".into(),
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        mode: ImportMode::Copy,
+        kind: ImportKind::Image,
+    };
+
+    let lib_id = {
+        let mut stmt = conn.prepare("SELECT id FROM libraries LIMIT 1").unwrap();
+        stmt.query_row([], |row| row.get::<_, String>(0)).unwrap()
+    };
+
+    let result = import_single_image(&request, &conn, &lib_id, &dir);
+    assert!(result.is_err());
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn import_single_image_rejects_directory_path() {
+    let dir = std::env::temp_dir().join("sharaku_test_import_single_dir_reject");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let conn = crate::db::open_db_in_memory().unwrap();
+    crate::library::add_library(&conn, "Test", Some("/tmp")).ok();
+
+    let request = ImportRequest {
+        source_path: dir.to_string_lossy().to_string(),
+        title: "x".into(),
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        mode: ImportMode::Copy,
+        kind: ImportKind::Image,
+    };
+
+    let lib_id = {
+        let mut stmt = conn.prepare("SELECT id FROM libraries LIMIT 1").unwrap();
+        stmt.query_row([], |row| row.get::<_, String>(0)).unwrap()
+    };
+
+    let result = import_single_image(&request, &conn, &lib_id, &dir);
+    assert!(result.is_err());
 
     std::fs::remove_dir_all(&dir).unwrap();
 }

@@ -180,7 +180,7 @@ fn resolve_path_stays_under_root() {
         origin: None,
         work_type: None,
     };
-    let path = resolve_work_path(root, "{artist}/{title}", &meta);
+    let path = resolve_work_path(root, "{artist}/{title}", &meta, WORK_KIND_FOLDER);
     let path_str = path.to_string_lossy();
     assert!(
         path_str.starts_with("/library"),
@@ -192,15 +192,34 @@ fn resolve_path_stays_under_root() {
 #[test]
 fn resolve_path_simple() {
     let root = Path::new("/library");
-    let path = resolve_work_path(root, "{title}", &full_metadata());
-    assert_eq!(path, Path::new("/library/My Title"));
+    let path = resolve_work_path(root, "{title}", &full_metadata(), WORK_KIND_FOLDER);
+    assert_eq!(path, Path::new("/library/works/My Title"));
 }
 
 #[test]
 fn resolve_path_nested() {
     let root = Path::new("/library");
-    let path = resolve_work_path(root, "{artist}/{year}/{title}", &full_metadata());
-    assert_eq!(path, Path::new("/library/Artist A/2024/My Title"));
+    let path = resolve_work_path(
+        root,
+        "{artist}/{year}/{title}",
+        &full_metadata(),
+        WORK_KIND_FOLDER,
+    );
+    assert_eq!(path, Path::new("/library/works/Artist A/2024/My Title"));
+}
+
+#[test]
+fn resolve_path_image_kind_uses_pictures_prefix() {
+    let root = Path::new("/library");
+    let path = resolve_work_path(root, "{artist}/{title}", &full_metadata(), WORK_KIND_IMAGE);
+    assert_eq!(path, Path::new("/library/pictures/Artist A/My Title"));
+}
+
+#[test]
+fn top_level_for_defaults_to_works() {
+    assert_eq!(top_level_for(WORK_KIND_FOLDER), "works");
+    assert_eq!(top_level_for(WORK_KIND_IMAGE), "pictures");
+    assert_eq!(top_level_for("unknown"), "works");
 }
 
 // resolve_unique_work_path tests
@@ -210,18 +229,18 @@ fn resolve_unique_nonexistent_returns_base() {
     let dir = std::env::temp_dir().join("sharaku_test_unique_nonexist");
     let _ = std::fs::remove_dir_all(&dir);
 
-    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata());
-    assert_eq!(path, dir.join("My Title"));
+    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata(), WORK_KIND_FOLDER);
+    assert_eq!(path, dir.join("works/My Title"));
 }
 
 #[test]
 fn resolve_unique_existing_gets_suffix() {
     let dir = std::env::temp_dir().join("sharaku_test_unique_exist");
     let _ = std::fs::remove_dir_all(&dir);
-    let target = dir.join("My Title");
+    let target = dir.join("works/My Title");
     std::fs::create_dir_all(&target).unwrap();
 
-    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata());
+    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata(), WORK_KIND_FOLDER);
     assert_ne!(path, target);
     assert!(path
         .file_name()
@@ -237,12 +256,12 @@ fn resolve_unique_skips_existing_suffixes() {
     let dir = std::env::temp_dir().join("sharaku_test_unique_skip");
     let _ = std::fs::remove_dir_all(&dir);
 
-    let base = dir.join("My Title");
-    let first_suffix = dir.join("My Title_0001");
+    let base = dir.join("works/My Title");
+    let first_suffix = dir.join("works/My Title_0001");
     std::fs::create_dir_all(&base).unwrap();
     std::fs::create_dir_all(&first_suffix).unwrap();
 
-    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata());
+    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata(), WORK_KIND_FOLDER);
     assert_eq!(path.file_name().unwrap().to_string_lossy(), "My Title_0002");
 
     std::fs::remove_dir_all(&dir).unwrap();
