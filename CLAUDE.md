@@ -60,4 +60,9 @@ src-tauri/            # バックエンド（Rust + Tauri 2）
   tests/              # Rustテスト
   Cargo.toml
   tauri.conf.json     # Tauri設定
+docs/                 # 機能仕様書
 ```
+
+## 機能仕様書
+
+現在の機能仕様は [docs/README.md](docs/README.md) を起点に整理されている。
