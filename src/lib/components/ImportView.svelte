@@ -5,6 +5,7 @@
   import type {
     AppSettings,
     ResourceMode,
+    ImportKind,
     ImportMode,
     ImportRequest,
     EnqueueResult,
@@ -13,15 +14,19 @@
 
   interface Props {
     initialSourcePath?: string;
+    initialKind?: ImportKind;
     onBack: () => void;
   }
 
-  let { initialSourcePath, onBack }: Props = $props();
+  let { initialSourcePath, initialKind = "folder", onBack }: Props = $props();
 
   type Step = "select" | "metadata";
 
+  const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp"];
+
   let resourceMode = $state<ResourceMode>("full");
   let step = $state<Step>("select");
+  let kind = $state<ImportKind>(initialKind);
   let sourcePath = $state("");
   let title = $state("");
   let artist = $state("");
@@ -35,27 +40,27 @@
   let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
   let previewRequestId = 0;
 
-  async function selectFolder() {
-    const selected = await open({ directory: true });
-    if (!selected) return;
+  function basenameOf(path: string): string {
+    const sep = path.includes("\\") ? "\\" : "/";
+    return path.split(sep).pop() ?? path;
+  }
 
-    sourcePath = selected;
-    const sep = selected.includes("\\") ? "\\" : "/";
-    const folderName = selected.split(sep).pop() ?? selected;
+  function stripExtension(fileName: string): string {
+    const dot = fileName.lastIndexOf(".");
+    return dot > 0 ? fileName.slice(0, dot) : fileName;
+  }
 
-    try {
-      const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
-        folderName,
-      });
-      title = parsed.title;
-      artist = parsed.artist ?? "";
-    } catch {
-      title = folderName;
-      artist = "";
-    }
-
-    step = "metadata";
-    updatePreview();
+  async function selectSource() {
+    const selected =
+      kind === "folder"
+        ? await open({ directory: true })
+        : await open({
+            directory: false,
+            multiple: false,
+            filters: [{ name: "画像", extensions: IMAGE_EXTENSIONS }],
+          });
+    if (typeof selected !== "string") return;
+    await loadFromPath(selected);
   }
 
   function buildMetadata() {
@@ -84,6 +89,7 @@
       try {
         const path = await invoke<string>("preview_import_path", {
           metadata: buildMetadata(),
+          kind,
         });
         if (requestId !== previewRequestId) return;
         previewPath = path;
@@ -101,6 +107,7 @@
         sourcePath,
         ...buildMetadata(),
         mode,
+        kind,
       };
       await invoke<EnqueueResult>("enqueue_import", { requests: [request] });
       onBack();
@@ -126,17 +133,17 @@
 
   async function loadFromPath(path: string) {
     sourcePath = path;
-    const sep = path.includes("\\") ? "\\" : "/";
-    const folderName = path.split(sep).pop() ?? path;
+    const base = basenameOf(path);
+    const nameForParse = kind === "image" ? stripExtension(base) : base;
 
     try {
       const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
-        folderName,
+        folderName: nameForParse,
       });
       title = parsed.title;
       artist = parsed.artist ?? "";
     } catch {
-      title = folderName;
+      title = nameForParse;
       artist = "";
     }
 
@@ -157,10 +164,24 @@
 {#if step === "select"}
   <div class="import-content">
     <section class="import-section">
-      <h2>フォルダを選択</h2>
-      <p class="import-description">取り込む画像フォルダを選択してください。</p>
-      <button class="import-select-btn" onclick={selectFolder}>
-        フォルダを選択...
+      <h2>取り込み対象を選択</h2>
+      <div class="import-kind-select">
+        <label class="import-mode-option">
+          <input type="radio" bind:group={kind} value="folder" />
+          フォルダ（複数画像）
+        </label>
+        <label class="import-mode-option">
+          <input type="radio" bind:group={kind} value="image" />
+          画像ファイル（1枚）
+        </label>
+      </div>
+      <p class="import-description">
+        {kind === "folder"
+          ? "取り込む画像フォルダを選択してください。"
+          : "取り込む画像ファイルを選択してください。"}
+      </p>
+      <button class="import-select-btn" onclick={selectSource}>
+        {kind === "folder" ? "フォルダを選択..." : "画像を選択..."}
       </button>
     </section>
   </div>

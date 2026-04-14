@@ -14,7 +14,10 @@
   import { initImportQueueListener } from "./lib/stores/importQueue.svelte";
   import { initBannerAutoClose } from "./lib/stores/bannerAutoClose.svelte";
   import { initTheme } from "./lib/stores/theme.svelte";
+  import { addToast } from "./lib/stores/toast.svelte";
   import type {
+    DropKind,
+    ImportKind,
     Library,
     Tag,
     TagSearchMode,
@@ -39,6 +42,7 @@
   let libraryLoading = $state(true);
   let dragging = $state(false);
   let importSourcePath = $state<string | undefined>(undefined);
+  let importSourceKind = $state<ImportKind>("folder");
   let bulkImportRootPath = $state<string | undefined>(undefined);
   let bulkImportDroppedPaths = $state<string[] | undefined>(undefined);
   let pendingBulkImportEntries = $state<UnregisteredEntry[] | undefined>(
@@ -80,6 +84,7 @@
     currentView = "library";
     selectedWorkId = null;
     importSourcePath = undefined;
+    importSourceKind = "folder";
   }
 
   function handleBackToSettings() {
@@ -136,8 +141,8 @@
     }
   }
 
-  async function resolveFolderPath(path: string): Promise<string> {
-    return invoke<string>("resolve_drop_path", { path });
+  async function classifyDropPath(path: string): Promise<DropKind> {
+    return invoke<DropKind>("classify_drop_path", { path });
   }
 
   $effect(() => {
@@ -167,35 +172,39 @@
         dragging = false;
         const paths = event.payload.paths;
         if (paths.length > 1) {
-          Promise.all(paths.map((p) => resolveFolderPath(p)))
-            .then((resolved) => {
-              const unique = [...new Set(resolved)];
-              bulkImportDroppedPaths = unique;
-              bulkImportRootPath = undefined;
-              pendingBulkImportEntries = undefined;
-              currentView = "bulk-import";
-            })
-            .catch((e) => {
-              console.error("Drop path resolution failed:", e);
-            });
+          const unique = [...new Set(paths)];
+          bulkImportDroppedPaths = unique;
+          bulkImportRootPath = undefined;
+          pendingBulkImportEntries = undefined;
+          currentView = "bulk-import";
         } else if (paths.length === 1) {
-          resolveFolderPath(paths[0])
-            .then(async (folderPath) => {
-              const hasSubs = await invoke<boolean>("has_image_subfolders", {
-                dir: folderPath,
-              });
-              if (hasSubs) {
-                bulkImportRootPath = folderPath;
-                bulkImportDroppedPaths = undefined;
-                pendingBulkImportEntries = undefined;
-                currentView = "bulk-import";
-              } else {
-                importSourcePath = folderPath;
+          const path = paths[0];
+          classifyDropPath(path)
+            .then(async (kind) => {
+              if (kind === "folder") {
+                const hasSubs = await invoke<boolean>("has_image_subfolders", {
+                  dir: path,
+                });
+                if (hasSubs) {
+                  bulkImportRootPath = path;
+                  bulkImportDroppedPaths = undefined;
+                  pendingBulkImportEntries = undefined;
+                  currentView = "bulk-import";
+                } else {
+                  importSourcePath = path;
+                  importSourceKind = "folder";
+                  currentView = "import";
+                }
+              } else if (kind === "image") {
+                importSourcePath = path;
+                importSourceKind = "image";
                 currentView = "import";
+              } else {
+                addToast("error", "対応していないファイル形式です");
               }
             })
             .catch((e) => {
-              console.error("Drop path resolution failed:", e);
+              console.error("Drop classification failed:", e);
             });
         }
       }
@@ -293,6 +302,7 @@
       {:else if currentView === "import"}
         <ImportView
           initialSourcePath={importSourcePath}
+          initialKind={importSourceKind}
           onBack={handleBackToLibrary}
         />
       {:else if currentView === "bulk-import"}

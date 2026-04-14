@@ -79,6 +79,10 @@ export interface WorkMetadata {
 
 export type ImportMode = "copy" | "move";
 
+export type ImportKind = "folder" | "image";
+
+export type DropKind = "folder" | "image" | "other";
+
 export interface ImportRequest {
   sourcePath: string;
   title: string;
@@ -88,6 +92,7 @@ export interface ImportRequest {
   circle: string | null;
   origin: string | null;
   mode: ImportMode;
+  kind: ImportKind;
 }
 
 export interface ImportResult {
@@ -121,6 +126,13 @@ export interface DiscoveredFolder {
   alreadyRegistered: boolean;
 }
 
+export interface DiscoveredImage {
+  path: string;
+  fileName: string;
+  parsedMetadata: ParsedMetadata;
+  alreadyRegistered: boolean;
+}
+
 export interface SkippedFolder {
   path: string;
   folderName: string;
@@ -129,6 +141,7 @@ export interface SkippedFolder {
 
 export interface DiscoverResult {
   folders: DiscoveredFolder[];
+  images: DiscoveredImage[];
   skippedFolders: SkippedFolder[];
 }
 

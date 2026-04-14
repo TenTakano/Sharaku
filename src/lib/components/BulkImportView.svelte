@@ -8,14 +8,23 @@
     ResourceMode,
     DiscoverResult,
     DiscoverProgress,
+    ImportKind,
     ImportMode,
     ImportRequest,
     EnqueueResult,
     UnregisteredEntry,
     ParsedMetadata,
     SkippedFolder,
-    DiscoveredFolder,
   } from "../types";
+
+  type BulkEntry = {
+    kind: ImportKind;
+    path: string;
+    displayName: string;
+    imageCount: number;
+    parsedMetadata: ParsedMetadata;
+    alreadyRegistered: boolean;
+  };
 
   interface Props {
     initialEntries?: UnregisteredEntry[];
@@ -33,7 +42,7 @@
   let step = $state<Step>("discover");
   let discovering = $state(false);
   let discoverStatus = $state("");
-  let folders = $state<DiscoveredFolder[]>([]);
+  let entries = $state<BulkEntry[]>([]);
   let skippedFolders = $state<SkippedFolder[]>([]);
   let showSkippedDetails = $state(false);
   let selected = new SvelteSet<number>();
@@ -41,6 +50,39 @@
   let editedArtists = new SvelteMap<number, string>();
   let mode = $state<ImportMode>("copy");
   let submitting = $state(false);
+
+  function buildEntriesFromResult(result: DiscoverResult): BulkEntry[] {
+    const folderEntries: BulkEntry[] = result.folders.map((f) => ({
+      kind: "folder",
+      path: f.path,
+      displayName: f.folderName,
+      imageCount: f.imageCount,
+      parsedMetadata: f.parsedMetadata,
+      alreadyRegistered: f.alreadyRegistered,
+    }));
+    const imageEntries: BulkEntry[] = result.images.map((img) => ({
+      kind: "image",
+      path: img.path,
+      displayName: img.fileName,
+      imageCount: 1,
+      parsedMetadata: img.parsedMetadata,
+      alreadyRegistered: img.alreadyRegistered,
+    }));
+    return [...folderEntries, ...imageEntries];
+  }
+
+  function applyDiscoverResult(result: DiscoverResult) {
+    entries = buildEntriesFromResult(result);
+    skippedFolders = result.skippedFolders;
+    showSkippedDetails = false;
+    selected.clear();
+    entries.forEach((e, i) => {
+      if (!e.alreadyRegistered) selected.add(i);
+    });
+    editedTitles.clear();
+    editedArtists.clear();
+    step = "review";
+  }
 
   async function discoverFromPath(rootPath: string) {
     discovering = true;
@@ -51,7 +93,7 @@
       if (p.type === "scanning") {
         discoverStatus = `${p.scannedDirs} フォルダを探索中...`;
       } else if (p.type === "completed") {
-        discoverStatus = `${p.found} 件のフォルダを検出`;
+        discoverStatus = `${p.found} 件を検出`;
       }
     };
 
@@ -60,18 +102,7 @@
         rootPath,
         onProgress: channel,
       });
-      folders = result.folders;
-      skippedFolders = result.skippedFolders;
-      showSkippedDetails = false;
-      selected.clear();
-      folders.forEach((f, i) => {
-        if (!f.alreadyRegistered) {
-          selected.add(i);
-        }
-      });
-      editedTitles.clear();
-      editedArtists.clear();
-      step = "review";
+      applyDiscoverResult(result);
     } catch (e) {
       discoverStatus = `エラー: ${e}`;
     } finally {
@@ -88,7 +119,7 @@
       if (p.type === "scanning") {
         discoverStatus = `${p.scannedDirs} フォルダを探索中...`;
       } else if (p.type === "completed") {
-        discoverStatus = `${p.found} 件のフォルダを検出`;
+        discoverStatus = `${p.found} 件を検出`;
       }
     };
 
@@ -97,18 +128,7 @@
         paths,
         onProgress: channel,
       });
-      folders = result.folders;
-      skippedFolders = result.skippedFolders;
-      showSkippedDetails = false;
-      selected.clear();
-      folders.forEach((f, i) => {
-        if (!f.alreadyRegistered) {
-          selected.add(i);
-        }
-      });
-      editedTitles.clear();
-      editedArtists.clear();
-      step = "review";
+      applyDiscoverResult(result);
     } catch (e) {
       discoverStatus = `エラー: ${e}`;
     } finally {
@@ -123,12 +143,12 @@
   }
 
   function getTitle(index: number): string {
-    return editedTitles.get(index) ?? folders[index].parsedMetadata.title;
+    return editedTitles.get(index) ?? entries[index].parsedMetadata.title;
   }
 
   function getArtist(index: number): string {
     return (
-      editedArtists.get(index) ?? folders[index].parsedMetadata.artist ?? ""
+      editedArtists.get(index) ?? entries[index].parsedMetadata.artist ?? ""
     );
   }
 
@@ -145,22 +165,22 @@
       selected.clear();
     } else {
       selected.clear();
-      folders.forEach((f, i) => {
-        if (!f.alreadyRegistered) selected.add(i);
+      entries.forEach((e, i) => {
+        if (!e.alreadyRegistered) selected.add(i);
       });
     }
   }
 
   let selectableCount = $derived(
-    folders.filter((f) => !f.alreadyRegistered).length,
+    entries.filter((e) => !e.alreadyRegistered).length,
   );
 
   async function executeImport() {
     const requests: ImportRequest[] = [];
     for (const index of selected) {
-      const folder = folders[index];
+      const entry = entries[index];
       requests.push({
-        sourcePath: folder.path,
+        sourcePath: entry.path,
         title: getTitle(index),
         artist: getArtist(index) || null,
         year: null,
@@ -168,6 +188,7 @@
         circle: null,
         origin: null,
         mode,
+        kind: entry.kind,
       });
     }
 
@@ -184,7 +205,7 @@
 
   function resetToDiscover() {
     step = "discover";
-    folders = [];
+    entries = [];
     skippedFolders = [];
     showSkippedDetails = false;
     selected.clear();
@@ -193,23 +214,24 @@
     discoverStatus = "";
   }
 
-  async function loadFromEntries(entries: UnregisteredEntry[]) {
+  async function loadFromEntries(items: UnregisteredEntry[]) {
     const parsed = await Promise.all(
-      entries.map((entry) =>
+      items.map((entry) =>
         invoke<ParsedMetadata>("parse_folder_name", {
           folderName: entry.folderName,
         }),
       ),
     );
-    folders = entries.map((entry, i) => ({
+    entries = items.map((entry, i) => ({
+      kind: "folder",
       path: entry.path,
-      folderName: entry.folderName,
+      displayName: entry.folderName,
       imageCount: entry.imageCount,
       parsedMetadata: parsed[i],
       alreadyRegistered: false,
     }));
     selected.clear();
-    folders.forEach((_, i) => selected.add(i));
+    entries.forEach((_, i) => selected.add(i));
     editedTitles.clear();
     editedArtists.clear();
     mode = "move";
@@ -254,7 +276,7 @@
     <section class="import-section">
       <h2>取り込み対象の確認</h2>
       <p class="import-description">
-        {folders.length} フォルダ検出 / {selected.size} 件選択中
+        {entries.length} 件検出 / {selected.size} 件選択中
       </p>
 
       {#if skippedFolders.length > 0}
@@ -313,7 +335,8 @@
           <thead>
             <tr>
               <th class="bulk-th-check"></th>
-              <th class="bulk-th-folder">フォルダ</th>
+              <th class="bulk-th-kind">種別</th>
+              <th class="bulk-th-folder">名前</th>
               <th class="bulk-th-count">画像数</th>
               <th class="bulk-th-title">タイトル</th>
               <th class="bulk-th-artist">アーティスト</th>
@@ -321,26 +344,29 @@
             </tr>
           </thead>
           <tbody>
-            {#each folders as folder, i (folder.path)}
-              <tr class:bulk-row-disabled={folder.alreadyRegistered}>
+            {#each entries as entry, i (entry.path)}
+              <tr class:bulk-row-disabled={entry.alreadyRegistered}>
                 <td>
                   <input
                     type="checkbox"
                     checked={selected.has(i)}
-                    disabled={folder.alreadyRegistered}
+                    disabled={entry.alreadyRegistered}
                     onchange={() => toggleSelect(i)}
                   />
                 </td>
-                <td class="bulk-cell-folder" title={folder.path}>
-                  {folder.folderName}
+                <td class="bulk-cell-kind">
+                  {entry.kind === "folder" ? "フォルダ" : "画像"}
                 </td>
-                <td class="bulk-cell-count">{folder.imageCount}</td>
+                <td class="bulk-cell-folder" title={entry.path}>
+                  {entry.displayName}
+                </td>
+                <td class="bulk-cell-count">{entry.imageCount}</td>
                 <td>
                   <input
                     type="text"
                     class="bulk-inline-input"
                     value={getTitle(i)}
-                    disabled={folder.alreadyRegistered}
+                    disabled={entry.alreadyRegistered}
                     oninput={(e) =>
                       editedTitles.set(i, (e.target as HTMLInputElement).value)}
                   />
@@ -350,7 +376,7 @@
                     type="text"
                     class="bulk-inline-input"
                     value={getArtist(i)}
-                    disabled={folder.alreadyRegistered}
+                    disabled={entry.alreadyRegistered}
                     oninput={(e) =>
                       editedArtists.set(
                         i,
@@ -359,7 +385,7 @@
                   />
                 </td>
                 <td class="bulk-cell-status">
-                  {#if folder.alreadyRegistered}
+                  {#if entry.alreadyRegistered}
                     <span class="bulk-registered">登録済み</span>
                   {:else}
                     <span class="bulk-new">新規</span>
