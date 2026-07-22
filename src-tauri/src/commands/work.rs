@@ -1,6 +1,29 @@
+use std::path::{Path, PathBuf};
+
 use crate::db::{self, WorkDetail, WorkSummary};
 use crate::integrity::{self, IntegrityCheckProgress, IntegrityReport};
 use crate::AppState;
+
+/// work_id の登録パスを取得し、lib_path 配下にあることを canonicalize して検証する。
+/// ライブラリルート外を指していた場合は out_of_root_message をそのままエラーとして返す
+/// （delete/trash 分岐でエラー文言を変えないためのパラメータ化）。
+fn validated_work_path(
+    conn: &rusqlite::Connection,
+    work_id: i64,
+    lib_path: &Path,
+    out_of_root_message: &str,
+) -> Result<PathBuf, String> {
+    let work = db::get_work(conn, work_id).map_err(|e| e.to_string())?;
+    let path = PathBuf::from(&work.path);
+    let canonical_lib = lib_path
+        .canonicalize()
+        .unwrap_or_else(|_| lib_path.to_path_buf());
+    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.clone());
+    if !canonical_path.starts_with(&canonical_lib) {
+        return Err(out_of_root_message.to_string());
+    }
+    Ok(path)
+}
 
 #[tauri::command]
 pub(crate) async fn list_works(
@@ -77,43 +100,35 @@ pub(crate) async fn delete_work(
         .with_active_db(move |db, active| {
             match file_action.as_str() {
                 "delete" => {
-                    let work = db::get_work(&db.conn, work_id).map_err(|e| e.to_string())?;
-                    let path = std::path::Path::new(&work.path);
                     let lib_path = active
                         .path
                         .as_ref()
                         .ok_or("ライブラリルートが設定されていません")?;
-                    let canonical_lib =
-                        lib_path.canonicalize().unwrap_or_else(|_| lib_path.clone());
-                    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-                    if !canonical_path.starts_with(&canonical_lib) {
-                        return Err(
-                            "作品パスがライブラリルート外にあるため削除できません".to_string()
-                        );
-                    }
+                    let path = validated_work_path(
+                        &db.conn,
+                        work_id,
+                        lib_path,
+                        "作品パスがライブラリルート外にあるため削除できません",
+                    )?;
                     if path.exists() {
                         if path.is_dir() {
-                            std::fs::remove_dir_all(path).map_err(|e| e.to_string())?;
+                            std::fs::remove_dir_all(&path).map_err(|e| e.to_string())?;
                         } else {
-                            std::fs::remove_file(path).map_err(|e| e.to_string())?;
+                            std::fs::remove_file(&path).map_err(|e| e.to_string())?;
                         }
                     }
                 }
                 "trash" => {
-                    let work = db::get_work(&db.conn, work_id).map_err(|e| e.to_string())?;
-                    let src = std::path::Path::new(&work.path);
                     let lib_path = active
                         .path
                         .as_ref()
                         .ok_or("ライブラリルートが設定されていません")?;
-                    let canonical_lib =
-                        lib_path.canonicalize().unwrap_or_else(|_| lib_path.clone());
-                    let canonical_src = src.canonicalize().unwrap_or_else(|_| src.to_path_buf());
-                    if !canonical_src.starts_with(&canonical_lib) {
-                        return Err(
-                            "作品パスがライブラリルート外にあるため移動できません".to_string()
-                        );
-                    }
+                    let src = validated_work_path(
+                        &db.conn,
+                        work_id,
+                        lib_path,
+                        "作品パスがライブラリルート外にあるため移動できません",
+                    )?;
                     if src.exists() {
                         let trash_dir = lib_path.join(".trash");
                         std::fs::create_dir_all(&trash_dir).map_err(|e| e.to_string())?;
@@ -135,7 +150,7 @@ pub(crate) async fn delete_work(
                                 .unwrap_or_default();
                             dest = trash_dir.join(format!("{}_{}{}", stem, timestamp, ext));
                         }
-                        std::fs::rename(src, &dest).map_err(|e| e.to_string())?;
+                        std::fs::rename(&src, &dest).map_err(|e| e.to_string())?;
                     }
                 }
                 _ => {} // "none" — metadata only
