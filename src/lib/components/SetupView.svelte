@@ -131,27 +131,26 @@
     </p>
 
     <div class="setup-mode-select">
-      <label class="resource-mode-option">
+      <label class="radio-option">
         <input
           type="radio"
           name="setup-resource-mode"
           checked={selectedMode === "full"}
           onchange={() => (selectedMode = "full")}
         />
-        <span class="resource-mode-label">すべて管理</span>
-        <span class="resource-mode-desc"
-          >テンプレートに基づきファイルを配置</span
+        <span class="radio-option-label">すべて管理</span>
+        <span class="radio-option-desc">テンプレートに基づきファイルを配置</span
         >
       </label>
-      <label class="resource-mode-option">
+      <label class="radio-option">
         <input
           type="radio"
           name="setup-resource-mode"
           checked={selectedMode === "metadata_only"}
           onchange={() => (selectedMode = "metadata_only")}
         />
-        <span class="resource-mode-label">メタデータのみ管理</span>
-        <span class="resource-mode-desc"
+        <span class="radio-option-label">メタデータのみ管理</span>
+        <span class="radio-option-desc"
           >ファイルを移動せず、メタデータのみ管理</span
         >
       </label>

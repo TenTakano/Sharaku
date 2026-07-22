@@ -292,28 +292,28 @@
       <section class="settings-section">
         <h2>リソース管理モード</h2>
         <p class="settings-description">作品ファイルの管理方法を選択します。</p>
-        <div class="resource-mode-select">
-          <label class="resource-mode-option">
+        <div class="radio-option-group">
+          <label class="radio-option">
             <input
               type="radio"
               name="resource-mode"
               checked={resourceMode === "metadata_only"}
               onchange={() => setResourceMode("metadata_only")}
             />
-            <span class="resource-mode-label">メタデータのみ管理</span>
-            <span class="resource-mode-desc"
+            <span class="radio-option-label">メタデータのみ管理</span>
+            <span class="radio-option-desc"
               >ファイルを移動せず、メタデータのみ管理</span
             >
           </label>
-          <label class="resource-mode-option">
+          <label class="radio-option">
             <input
               type="radio"
               name="resource-mode"
               checked={resourceMode === "full"}
               onchange={() => setResourceMode("full")}
             />
-            <span class="resource-mode-label">すべて管理</span>
-            <span class="resource-mode-desc"
+            <span class="radio-option-label">すべて管理</span>
+            <span class="radio-option-desc"
               >テンプレートに基づきファイルを配置</span
             >
           </label>
@@ -369,8 +369,8 @@
             <p class="settings-description">
               作品削除時にローカルファイルをどのように扱うかを設定します。
             </p>
-            <div class="resource-mode-select">
-              <label class="resource-mode-option">
+            <div class="radio-option-group">
+              <label class="radio-option">
                 <input
                   type="radio"
                   name="delete-file-action"
@@ -378,10 +378,10 @@
                   onchange={() => setDeleteFileAction("ask")}
                   disabled={resourceMode === "metadata_only"}
                 />
-                <span class="resource-mode-label">実行時に確認する</span>
-                <span class="resource-mode-desc">削除時に処理方法を選択</span>
+                <span class="radio-option-label">実行時に確認する</span>
+                <span class="radio-option-desc">削除時に処理方法を選択</span>
               </label>
-              <label class="resource-mode-option">
+              <label class="radio-option">
                 <input
                   type="radio"
                   name="delete-file-action"
@@ -389,14 +389,14 @@
                   onchange={() => setDeleteFileAction("trash")}
                   disabled={resourceMode === "metadata_only"}
                 />
-                <span class="resource-mode-label"
+                <span class="radio-option-label"
                   >非追跡ディレクトリに退避させる</span
                 >
-                <span class="resource-mode-desc"
+                <span class="radio-option-desc"
                   >ライブラリ内の .trash ディレクトリに移動</span
                 >
               </label>
-              <label class="resource-mode-option">
+              <label class="radio-option">
                 <input
                   type="radio"
                   name="delete-file-action"
@@ -404,8 +404,8 @@
                   onchange={() => setDeleteFileAction("delete")}
                   disabled={resourceMode === "metadata_only"}
                 />
-                <span class="resource-mode-label">合わせて削除する</span>
-                <span class="resource-mode-desc"
+                <span class="radio-option-label">合わせて削除する</span>
+                <span class="radio-option-desc"
                   >ローカルファイルを完全に削除</span
                 >
               </label>
