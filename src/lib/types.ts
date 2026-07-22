@@ -1,5 +1,14 @@
 export type TimerHandle = ReturnType<typeof setTimeout> | null;
 
+export type ViewKind =
+  | "library"
+  | "viewer"
+  | "settings"
+  | "import"
+  | "bulk-import"
+  | "add-library"
+  | "app-settings";
+
 export interface WorkSummary {
   id: number;
   title: string;

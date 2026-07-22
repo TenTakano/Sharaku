@@ -1,13 +1,14 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
+  import { onMount } from "svelte";
   import AppSettingsView from "./lib/components/AppSettingsView.svelte";
   import BulkImportView from "./lib/components/BulkImportView.svelte";
   import ImportBanner from "./lib/components/ImportBanner.svelte";
   import ImportView from "./lib/components/ImportView.svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
   import SetupView from "./lib/components/SetupView.svelte";
-  import SettingsView from "./lib/components/SettingsView.svelte";
+  import LibrarySettingsView from "./lib/components/LibrarySettingsView.svelte";
   import WorkGrid from "./lib/components/WorkGrid.svelte";
   import Toast from "./lib/components/Toast.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
@@ -19,20 +20,13 @@
     Tag,
     TagSearchMode,
     UnregisteredEntry,
+    ViewKind,
   } from "./lib/types";
 
   let reloadTrigger = $state(0);
   let filterTags = $state<Tag[]>([]);
   let tagSearchMode = $state<TagSearchMode>("and");
-  let currentView = $state<
-    | "library"
-    | "viewer"
-    | "settings"
-    | "import"
-    | "bulk-import"
-    | "add-library"
-    | "app-settings"
-  >("library");
+  let currentView = $state<ViewKind>("library");
   let selectedWorkId = $state<number | null>(null);
   let workIds = $state<number[]>([]);
   let activeLibrary = $state<Library | null>(null);
@@ -43,7 +37,7 @@
   let pendingBulkImportEntries = $state<UnregisteredEntry[] | undefined>(
     undefined,
   );
-  let previousView = $state<typeof currentView>("library");
+  let previousView = $state<ViewKind>("library");
 
   async function loadActiveLibrary() {
     try {
@@ -118,8 +112,8 @@
     currentView = activeLibrary ? previousView : "library";
   }
 
-  function handleSidebarNavigate(view: string) {
-    currentView = view as typeof currentView;
+  function handleSidebarNavigate(view: ViewKind) {
+    currentView = view;
   }
 
   function handleSidebarTagSelect(tag: Tag) {
@@ -138,7 +132,7 @@
     return invoke<string>("resolve_drop_path", { path });
   }
 
-  $effect(() => {
+  onMount(() => {
     initTheme();
     initBannerAutoClose();
   });
@@ -267,7 +261,7 @@
       </div>
 
       {#if currentView === "settings"}
-        <SettingsView
+        <LibrarySettingsView
           libraryId={activeLibrary.id}
           libraryName={activeLibrary.name}
           libraryPath={activeLibrary.path}

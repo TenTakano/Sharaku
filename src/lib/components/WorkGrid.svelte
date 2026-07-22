@@ -49,7 +49,7 @@
   let editingWork = $state<WorkDetail | null>(null);
   let deletingWork = $state<{ id: number; title: string } | null>(null);
   let deleteFileAction = $state<DeleteFileAction>("ask");
-  let selectedFileAction = $state<string>("none");
+  let selectedFileAction = $state<DeleteFileAction | "none">("none");
   let isFullMode = $state(false);
 
   const CARD_WIDTH = 180;
@@ -151,7 +151,7 @@
     deletingWork = { id: work.id, title: work.title };
   }
 
-  function resolveFileAction(): string {
+  function resolveEffectiveDeleteAction(): DeleteFileAction | "none" {
     if (!isFullMode) return "none";
     if (deleteFileAction === "ask") return selectedFileAction;
     return deleteFileAction;
@@ -163,7 +163,7 @@
     try {
       await invoke("delete_work", {
         workId: id,
-        fileAction: resolveFileAction(),
+        fileAction: resolveEffectiveDeleteAction(),
       });
       addToast("success", `「${title}」を削除しました`);
       deletingWork = null;

@@ -14,13 +14,14 @@
     IntegrityReport,
     IntegrityCheckProgress,
     UnregisteredEntry,
+    ViewKind,
   } from "../types";
 
   interface Props {
     libraryId: string;
     libraryName: string;
     libraryPath: string | null;
-    onNavigate: (view: string) => void;
+    onNavigate: (view: ViewKind) => void;
     onImportUnregistered: (entries: UnregisteredEntry[]) => void;
     onDeleteLibrary: () => void;
   }

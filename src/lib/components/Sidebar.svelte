@@ -2,14 +2,15 @@
   import { invoke } from "@tauri-apps/api/core";
   import { SvelteSet } from "svelte/reactivity";
   import { createLatestRequestGuard } from "../utils/latestRequest";
-  import type { Library, Tag } from "../types";
+  import { groupTagsByCategory } from "../utils/tagGrouping";
+  import type { Library, Tag, ViewKind } from "../types";
 
   interface Props {
     activeLibrary: Library;
-    currentView: string;
+    currentView: ViewKind;
     reloadTrigger: number;
     onSwitchLibrary: (library: Library) => void;
-    onNavigate: (view: string) => void;
+    onNavigate: (view: ViewKind) => void;
     onTagSelect: (tag: Tag) => void;
     onNavigateToAppSettings: () => void;
     selectedTagIds: number[];
@@ -30,30 +31,7 @@
   let tags = $state<Tag[]>([]);
   let expandedCategories = new SvelteSet<string>();
 
-  interface TagsByCategory {
-    category: string | null;
-    displayName: string;
-    tags: Tag[];
-  }
-
-  let tagsByCategory = $derived.by(() => {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable in $derived, not reactive state
-    const map = new Map<string | null, Tag[]>();
-    for (const tag of tags) {
-      const key = tag.category ?? null;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(tag);
-    }
-    const result: TagsByCategory[] = [];
-    for (const [category, categoryTags] of map) {
-      result.push({
-        category,
-        displayName: category ?? "other",
-        tags: categoryTags,
-      });
-    }
-    return result;
-  });
+  let tagsByCategory = $derived(groupTagsByCategory(tags));
 
   async function loadLibraries() {
     try {
