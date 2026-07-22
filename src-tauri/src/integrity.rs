@@ -37,6 +37,7 @@ pub struct IntegrityReport {
     pub unregistered_entries: Vec<UnregisteredEntry>,
 }
 
+// keep-in-sync: src/lib/types.ts の IntegrityCheckProgress タグ付きユニオンと対応。
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum IntegrityCheckProgress {

@@ -73,6 +73,10 @@ export interface TemplateValidation {
   error: string | null;
 }
 
+// keep-in-sync: src-tauri/src/template.rs の WorkMetadata と対応。
+// Rust側は #[serde(default)] 付きの work_type: Option<String> を追加で持つ
+// （プレースホルダーレンダリング時にサーバー側で解決したtype labelを詰めるためのフィールドで、
+// フロントエンドからのIPCペイロードには含まれない）。
 export interface WorkMetadata {
   title: string;
   artist: string | null;
@@ -82,6 +86,8 @@ export interface WorkMetadata {
   origin: string | null;
 }
 
+// keep-in-sync: src-tauri/src/importer.rs の ImportMode（#[serde(rename_all = "camelCase")]）と対応。
+// Rust側の Copy/Move が camelCase 化されて "copy"/"move" になる。
 export type ImportMode = "copy" | "move";
 
 export interface ImportRequest {
@@ -105,6 +111,7 @@ export interface ParsedMetadata {
   artist: string | null;
 }
 
+// keep-in-sync: src-tauri/src/relocator.rs の RelocationProgress enum と対応。
 export type RelocationProgress =
   | { type: "started"; total: number }
   | { type: "moving"; current: number; total: number; title: string }
@@ -126,10 +133,13 @@ export interface DiscoveredFolder {
   alreadyRegistered: boolean;
 }
 
+// keep-in-sync: src-tauri/src/importer.rs の DiscoverProgress enum と対応。
 export type DiscoverProgress =
   | { type: "scanning"; scannedDirs: number }
   | { type: "completed"; found: number };
 
+// Rust側に対応するenumはなく、フロントエンド（BulkImportView）がImportQueueEventの
+// 連続イベントから合成するローカル専用の進捗表現。keep-in-sync対象外。
 export type BulkImportProgress =
   | { type: "started"; total: number }
   | { type: "importing"; current: number; total: number; title: string }
@@ -160,11 +170,13 @@ export interface IntegrityReport {
   unregisteredEntries: UnregisteredEntry[];
 }
 
+// keep-in-sync: src-tauri/src/integrity.rs の IntegrityCheckProgress enum と対応。
 export type IntegrityCheckProgress =
   | { type: "checkingWorks"; checked: number; total: number }
   | { type: "scanningDirectory"; scannedDirs: number }
   | { type: "completed" };
 
+// keep-in-sync: src-tauri/src/import_queue.rs の ImportQueueEvent enum と対応。
 export type ImportQueueEvent =
   | { type: "enqueued"; jobId: string; total: number }
   | { type: "jobStarted"; jobId: string; total: number }

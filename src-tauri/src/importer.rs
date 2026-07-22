@@ -38,6 +38,8 @@ pub struct ParsedMetadata {
     pub artist: Option<String>,
 }
 
+// keep-in-sync: src/lib/types.ts の ImportMode（"copy" | "move"）と対応。
+// rename_all = "camelCase" により Copy/Move はそれぞれ "copy"/"move" にシリアライズされる。
 #[derive(Deserialize, Clone, Copy, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ImportMode {
@@ -255,6 +257,7 @@ pub struct DiscoveredFolder {
     pub already_registered: bool,
 }
 
+// keep-in-sync: src/lib/types.ts の DiscoverProgress タグ付きユニオンと対応。
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DiscoverProgress {

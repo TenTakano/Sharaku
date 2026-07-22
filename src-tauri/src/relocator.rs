@@ -9,6 +9,7 @@ use crate::importer;
 use crate::settings;
 use crate::template::{self, WorkMetadata};
 
+// keep-in-sync: src/lib/types.ts の RelocationProgress タグ付きユニオンと対応。
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum RelocationProgress {

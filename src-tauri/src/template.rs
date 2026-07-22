@@ -9,6 +9,9 @@ const KNOWN_PLACEHOLDERS: &[&str] = &[
 ];
 const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
+// keep-in-sync: src/lib/types.ts の WorkMetadata と対応。
+// work_type はフロントエンドのIPCペイロードには存在しないため #[serde(default)] を付与し、
+// プレースホルダーレンダリング時にサーバー側で解決したtype labelを詰める用途に限定する。
 #[derive(Deserialize)]
 pub struct WorkMetadata {
     pub title: String,
