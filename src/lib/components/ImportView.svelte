@@ -2,6 +2,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
   import { addToast } from "../stores/toast.svelte";
+  import { debounce } from "../utils/debounce";
+  import { createLatestRequestGuard } from "../utils/latestRequest";
   import type {
     AppSettings,
     ResourceMode,
@@ -32,27 +34,32 @@
   let mode = $state<ImportMode>("copy");
   let previewPath = $state<string | null>(null);
   let submitting = $state(false);
-  let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
-  let previewRequestId = 0;
+  const previewRequestGuard = createLatestRequestGuard();
+
+  async function resolveMetadataFromPath(
+    path: string,
+  ): Promise<{ title: string; artist: string }> {
+    const sep = path.includes("\\") ? "\\" : "/";
+    const folderName = path.split(sep).pop() ?? path;
+
+    try {
+      const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
+        folderName,
+      });
+      return { title: parsed.title, artist: parsed.artist ?? "" };
+    } catch {
+      return { title: folderName, artist: "" };
+    }
+  }
 
   async function selectFolder() {
     const selected = await open({ directory: true });
     if (!selected) return;
 
     sourcePath = selected;
-    const sep = selected.includes("\\") ? "\\" : "/";
-    const folderName = selected.split(sep).pop() ?? selected;
-
-    try {
-      const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
-        folderName,
-      });
-      title = parsed.title;
-      artist = parsed.artist ?? "";
-    } catch {
-      title = folderName;
-      artist = "";
-    }
+    const resolved = await resolveMetadataFromPath(selected);
+    title = resolved.title;
+    artist = resolved.artist;
 
     step = "metadata";
     updatePreview();
@@ -69,29 +76,30 @@
     };
   }
 
-  async function updatePreview() {
+  const debouncedFetchPreview = debounce(async () => {
+    if (!title.trim()) {
+      previewPath = null;
+      return;
+    }
+    const requestId = previewRequestGuard.next();
+    try {
+      const path = await invoke<string>("preview_import_path", {
+        metadata: buildMetadata(),
+      });
+      if (!previewRequestGuard.isLatest(requestId)) return;
+      previewPath = path;
+    } catch {
+      if (!previewRequestGuard.isLatest(requestId)) return;
+      previewPath = null;
+    }
+  }, 300);
+
+  function updatePreview() {
     if (resourceMode === "metadata_only") {
       previewPath = null;
       return;
     }
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-      if (!title.trim()) {
-        previewPath = null;
-        return;
-      }
-      const requestId = ++previewRequestId;
-      try {
-        const path = await invoke<string>("preview_import_path", {
-          metadata: buildMetadata(),
-        });
-        if (requestId !== previewRequestId) return;
-        previewPath = path;
-      } catch {
-        if (requestId !== previewRequestId) return;
-        previewPath = null;
-      }
-    }, 300);
+    debouncedFetchPreview();
   }
 
   async function executeImport() {
@@ -126,19 +134,9 @@
 
   async function loadFromPath(path: string) {
     sourcePath = path;
-    const sep = path.includes("\\") ? "\\" : "/";
-    const folderName = path.split(sep).pop() ?? path;
-
-    try {
-      const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
-        folderName,
-      });
-      title = parsed.title;
-      artist = parsed.artist ?? "";
-    } catch {
-      title = folderName;
-      artist = "";
-    }
+    const resolved = await resolveMetadataFromPath(path);
+    title = resolved.title;
+    artist = resolved.artist;
 
     step = "metadata";
     updatePreview();

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { SvelteSet } from "svelte/reactivity";
+  import { createLatestRequestGuard } from "../utils/latestRequest";
   import type { Library, Tag } from "../types";
 
   interface Props {
@@ -62,17 +63,17 @@
     }
   }
 
-  let tagLoadId = 0;
+  const tagLoadGuard = createLatestRequestGuard();
 
   async function loadTags() {
-    const currentId = ++tagLoadId;
+    const currentId = tagLoadGuard.next();
     try {
       const result = await invoke<Tag[]>("list_tags");
-      if (currentId === tagLoadId) {
+      if (tagLoadGuard.isLatest(currentId)) {
         tags = result;
       }
     } catch {
-      if (currentId === tagLoadId) {
+      if (tagLoadGuard.isLatest(currentId)) {
         tags = [];
       }
     }

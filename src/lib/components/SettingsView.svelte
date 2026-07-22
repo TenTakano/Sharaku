@@ -2,6 +2,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { Channel } from "@tauri-apps/api/core";
   import { addToast } from "../stores/toast.svelte";
+  import { debounce } from "../utils/debounce";
+  import { createLatestRequestGuard } from "../utils/latestRequest";
   import type {
     AppSettings,
     ResourceMode,
@@ -44,8 +46,7 @@
     error: null,
   });
   let templatePreview = $state<string | null>(null);
-  let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
-  let validationRequestId = 0;
+  const validationRequestGuard = createLatestRequestGuard();
 
   let savedDirectoryTemplate = $state("");
   let relocationPreviews = $state<RelocationPreview[]>([]);
@@ -160,23 +161,23 @@
       templatePreview = null;
       return;
     }
-    const requestId = ++validationRequestId;
+    const requestId = validationRequestGuard.next();
     try {
       await invoke("validate_template", { template: trimmed });
-      if (requestId !== validationRequestId) return;
+      if (!validationRequestGuard.isLatest(requestId)) return;
       templateValidation = { valid: true, error: null };
       try {
         const preview = await invoke<string>("preview_template", {
           template: trimmed,
         });
-        if (requestId !== validationRequestId) return;
+        if (!validationRequestGuard.isLatest(requestId)) return;
         templatePreview = preview;
       } catch {
-        if (requestId !== validationRequestId) return;
+        if (!validationRequestGuard.isLatest(requestId)) return;
         templatePreview = null;
       }
     } catch (e) {
-      if (requestId !== validationRequestId) return;
+      if (!validationRequestGuard.isLatest(requestId)) return;
       templateValidation = { valid: false, error: String(e) };
       templatePreview = null;
     }
@@ -200,13 +201,12 @@
     }
   }
 
+  const debouncedValidateAndPreview = debounce((value: string) => {
+    validateAndPreviewTemplate(value);
+  }, 300);
+
   function onTemplateInput() {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-    debounceTimer = setTimeout(() => {
-      validateAndPreviewTemplate(directoryTemplate);
-    }, 300);
+    debouncedValidateAndPreview(directoryTemplate);
   }
 
   async function runIntegrityCheck() {

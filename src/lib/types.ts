@@ -1,8 +1,4 @@
-export interface Work {
-  id: number;
-  title: string;
-  thumbnail: number[];
-}
+export type TimerHandle = ReturnType<typeof setTimeout> | null;
 
 export interface WorkSummary {
   id: number;

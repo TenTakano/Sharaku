@@ -1,7 +1,13 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import type { WorkDetail, FitMode, SlideshowMode, Tag } from "../types";
+  import type {
+    WorkDetail,
+    FitMode,
+    SlideshowMode,
+    Tag,
+    TimerHandle,
+  } from "../types";
   import TagInput from "./TagInput.svelte";
   import EditWorkDialog from "./EditWorkDialog.svelte";
 
@@ -34,7 +40,7 @@
   let slideshowTick = $state(0);
   let isFullscreen = $state(false);
   let controlsVisible = $state(true);
-  let controlsTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
+  let controlsTimeoutId = $state<TimerHandle>(null);
   let intervalInputFocused = $state(false);
   let tagInputFocused = $state(false);
   let workTags = $state<Tag[]>([]);

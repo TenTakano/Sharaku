@@ -1,12 +1,12 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { VList } from "virtua/svelte";
-  import WorkCardComponent from "./WorkCard.svelte";
-  import { WorkCard } from "./WorkCard.svelte";
+  import WorkCard from "./WorkCard.svelte";
   import ContextMenu from "./ContextMenu.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import EditWorkDialog from "./EditWorkDialog.svelte";
   import { addToast } from "../stores/toast.svelte";
+  import { clearThumbnailCache } from "../thumbnailCache";
   import type {
     WorkSummary,
     WorkDetail,
@@ -84,7 +84,7 @@
   }
 
   async function loadWorks() {
-    WorkCard.clearCache();
+    clearThumbnailCache();
     if (filterTags.length > 0) {
       const filtered: WorkSummary[] = await invoke("search_works_by_tags", {
         tagIds: filterTags.map((t) => t.id),
@@ -246,7 +246,7 @@
           style="gap: {GAP}px; grid-template-columns: repeat({columnCount}, {CARD_WIDTH}px);"
         >
           {#each row as work (work.id)}
-            <WorkCardComponent
+            <WorkCard
               {work}
               onclick={onSelectWork}
               oncontextmenu={handleContextMenu}
