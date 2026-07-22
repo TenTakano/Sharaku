@@ -13,6 +13,10 @@ mod template;
 mod thumbnail;
 mod viewer;
 
+#[cfg(test)]
+#[path = "tests/common.rs"]
+mod test_common;
+
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 

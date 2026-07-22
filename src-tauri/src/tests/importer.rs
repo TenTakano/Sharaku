@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use tempfile::TempDir;
+
 use super::*;
 
 // parse_folder_name tests
@@ -64,53 +66,43 @@ fn parse_japanese_dash() {
 
 #[test]
 fn list_images_finds_image_files() {
-    let dir = std::env::temp_dir().join("sharaku_test_list_images");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    let dir = TempDir::new().unwrap();
+    let dir = dir.path();
 
     std::fs::write(dir.join("01.jpg"), b"fake").unwrap();
     std::fs::write(dir.join("02.png"), b"fake").unwrap();
     std::fs::write(dir.join("readme.txt"), b"text").unwrap();
 
-    let images = list_images_in_folder(&dir).unwrap();
+    let images = list_images_in_folder(dir).unwrap();
     assert_eq!(images.len(), 2);
     assert!(
         images[0].file_name().unwrap().to_str().unwrap()
             <= images[1].file_name().unwrap().to_str().unwrap()
     );
-
-    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 #[test]
 fn list_images_empty_folder() {
-    let dir = std::env::temp_dir().join("sharaku_test_list_images_empty");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    let dir = TempDir::new().unwrap();
 
-    let images = list_images_in_folder(&dir).unwrap();
+    let images = list_images_in_folder(dir.path()).unwrap();
     assert!(images.is_empty());
-
-    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 #[test]
 fn list_images_sorted_order() {
-    let dir = std::env::temp_dir().join("sharaku_test_list_sorted");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    let dir = TempDir::new().unwrap();
+    let dir = dir.path();
 
     std::fs::write(dir.join("c.jpg"), b"fake").unwrap();
     std::fs::write(dir.join("a.jpg"), b"fake").unwrap();
     std::fs::write(dir.join("b.jpg"), b"fake").unwrap();
 
-    let images = list_images_in_folder(&dir).unwrap();
+    let images = list_images_in_folder(dir).unwrap();
     assert_eq!(images.len(), 3);
     assert_eq!(images[0].file_name().unwrap(), "a.jpg");
     assert_eq!(images[1].file_name().unwrap(), "b.jpg");
     assert_eq!(images[2].file_name().unwrap(), "c.jpg");
-
-    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 // preview_import_path tests
@@ -164,9 +156,8 @@ fn paths_overlap_partial_name_no_overlap() {
 
 #[test]
 fn list_images_natural_sort_order() {
-    let dir = std::env::temp_dir().join("sharaku_test_natord");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    let dir = TempDir::new().unwrap();
+    let dir = dir.path();
 
     std::fs::write(dir.join("page1.jpg"), b"fake").unwrap();
     std::fs::write(dir.join("page2.jpg"), b"fake").unwrap();
@@ -174,24 +165,21 @@ fn list_images_natural_sort_order() {
     std::fs::write(dir.join("page20.jpg"), b"fake").unwrap();
     std::fs::write(dir.join("page3.jpg"), b"fake").unwrap();
 
-    let images = list_images_in_folder(&dir).unwrap();
+    let images = list_images_in_folder(dir).unwrap();
     assert_eq!(images.len(), 5);
     assert_eq!(images[0].file_name().unwrap(), "page1.jpg");
     assert_eq!(images[1].file_name().unwrap(), "page2.jpg");
     assert_eq!(images[2].file_name().unwrap(), "page3.jpg");
     assert_eq!(images[3].file_name().unwrap(), "page10.jpg");
     assert_eq!(images[4].file_name().unwrap(), "page20.jpg");
-
-    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 // count_direct_images tests
 
 #[test]
 fn count_direct_images_only_counts_immediate() {
-    let dir = std::env::temp_dir().join("sharaku_test_count_direct");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    let dir = TempDir::new().unwrap();
+    let dir = dir.path();
 
     std::fs::write(dir.join("a.jpg"), b"fake").unwrap();
     std::fs::write(dir.join("b.png"), b"fake").unwrap();
@@ -201,18 +189,12 @@ fn count_direct_images_only_counts_immediate() {
     std::fs::create_dir_all(&sub).unwrap();
     std::fs::write(sub.join("c.jpg"), b"fake").unwrap();
 
-    assert_eq!(crate::scanner::count_direct_images(&dir), 2);
-
-    std::fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(crate::scanner::count_direct_images(dir), 2);
 }
 
 #[test]
 fn count_direct_images_empty_dir() {
-    let dir = std::env::temp_dir().join("sharaku_test_count_empty");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    let dir = TempDir::new().unwrap();
 
-    assert_eq!(crate::scanner::count_direct_images(&dir), 0);
-
-    std::fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(crate::scanner::count_direct_images(dir.path()), 0);
 }

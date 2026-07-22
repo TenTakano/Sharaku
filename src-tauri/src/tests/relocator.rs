@@ -1,23 +1,17 @@
 use std::path::Path;
 
 use rusqlite::Connection;
+use tempfile::TempDir;
 
 use crate::db::{self, WorkRecord};
-use crate::library;
+use crate::test_common::test_db_with_library;
 
 use super::*;
 
 const TEST_LIBRARY_ID: &str = "test_lib_relocator";
 
 fn setup_test_db() -> Connection {
-    let conn = db::open_db_in_memory().unwrap();
-    library::add_library(&conn, "Test", Some("/test")).ok();
-    conn.execute(
-        "UPDATE libraries SET id = ?1 WHERE id = (SELECT id FROM libraries LIMIT 1)",
-        [TEST_LIBRARY_ID],
-    )
-    .unwrap();
-    conn
+    test_db_with_library(TEST_LIBRARY_ID)
 }
 
 fn insert_folder_work(conn: &Connection, title: &str, path: &str, artist: Option<&str>) {
@@ -116,8 +110,8 @@ fn preview_multiple_works_different_paths() {
 
 #[test]
 fn execute_moves_files_and_updates_db() {
-    let temp = std::env::temp_dir().join("sharaku_test_relocate_exec");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let library_root = temp.join("library");
     let old_dir = library_root.join("old_folder");
@@ -146,8 +140,6 @@ fn execute_moves_files_and_updates_db() {
     assert!(new_dir.join("01.jpg").exists());
     assert!(new_dir.join("02.png").exists());
     assert!(!old_dir.exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }
 
 #[test]
@@ -165,8 +157,8 @@ fn compute_plan_handles_path_collision() {
 
 #[test]
 fn copy_work_files_preserves_source() {
-    let temp = std::env::temp_dir().join("sharaku_test_copy_preserves");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let src = temp.join("src_folder");
     let dst = temp.join("dst_folder");
@@ -180,14 +172,12 @@ fn copy_work_files_preserves_source() {
     assert!(dst.join("02.png").exists());
     assert!(src.join("01.jpg").exists());
     assert!(src.join("02.png").exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }
 
 #[test]
 fn cleanup_empty_ancestors_removes_empty_dirs() {
-    let temp = std::env::temp_dir().join("sharaku_test_cleanup_ancestors");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let stop = temp.join("library");
     let nested = stop.join("a").join("b").join("c");
@@ -199,14 +189,12 @@ fn cleanup_empty_ancestors_removes_empty_dirs() {
 
     assert!(!stop.join("a").exists());
     assert!(stop.exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }
 
 #[test]
 fn cleanup_empty_ancestors_stops_at_non_empty() {
-    let temp = std::env::temp_dir().join("sharaku_test_cleanup_nonempty");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let stop = temp.join("library");
     let parent = stop.join("artist");
@@ -219,6 +207,4 @@ fn cleanup_empty_ancestors_stops_at_non_empty() {
     cleanup_empty_ancestors(&child, &stop);
 
     assert!(parent.exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }
