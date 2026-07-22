@@ -4,9 +4,9 @@ use crate::db::{self, WorkDetail, WorkSummary};
 use crate::integrity::{self, IntegrityCheckProgress, IntegrityReport};
 use crate::AppState;
 
-/// work_id の登録パスを取得し、lib_path 配下にあることを canonicalize して検証する。
-/// ライブラリルート外を指していた場合は out_of_root_message をそのままエラーとして返す
-/// （delete/trash 分岐でエラー文言を変えないためのパラメータ化）。
+/// Fetches the registered path for work_id and canonicalizes it to verify it is under lib_path.
+/// If it points outside the library root, returns out_of_root_message as-is as the error
+/// (parameterized so each delete/trash call site can supply its own error wording).
 fn validated_work_path(
     conn: &rusqlite::Connection,
     work_id: i64,
@@ -70,7 +70,8 @@ pub(crate) async fn update_work(
     circle: Option<String>,
     origin: Option<String>,
 ) -> Result<(), String> {
-    if title.trim().is_empty() {
+    let trimmed_title = title.trim().to_string();
+    if trimmed_title.is_empty() {
         return Err("タイトルは空にできません".to_string());
     }
     state
@@ -78,7 +79,7 @@ pub(crate) async fn update_work(
             db::update_work(
                 &db.conn,
                 id,
-                title.trim(),
+                &trimmed_title,
                 artist.as_deref(),
                 year,
                 genre.as_deref(),
@@ -186,3 +187,7 @@ pub(crate) async fn delete_orphan_works(
         })
         .await
 }
+
+#[cfg(test)]
+#[path = "tests/work.rs"]
+mod tests;

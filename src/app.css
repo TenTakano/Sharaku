@@ -242,9 +242,6 @@ button:disabled {
 }
 
 .setup-mode-select {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   margin-bottom: 20px;
   text-align: left;
 }

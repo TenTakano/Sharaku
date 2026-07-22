@@ -38,8 +38,8 @@ pub struct ParsedMetadata {
     pub artist: Option<String>,
 }
 
-// keep-in-sync: src/lib/types.ts の ImportMode（"copy" | "move"）と対応。
-// rename_all = "camelCase" により Copy/Move はそれぞれ "copy"/"move" にシリアライズされる。
+// keep-in-sync: corresponds to ImportMode ("copy" | "move") in src/lib/types.ts.
+// rename_all = "camelCase" serializes Copy/Move as "copy"/"move" respectively.
 #[derive(Deserialize, Clone, Copy, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ImportMode {
@@ -224,15 +224,15 @@ fn paths_overlap(a: &Path, b: &Path) -> bool {
     a.starts_with(b) || b.starts_with(a)
 }
 
-/// images を dest にコピーする。ensure_dest_dir が true の場合は dest の作成も担う
-/// （呼び出し元が既に create_dir_all 済みの場合は false を渡す）。
-/// err はファイル名取得失敗時に生成するエラーの variant を呼び出し元から指定する
-/// （ImportError / RelocationError でエラー文言を変えないため）。
+/// Copies images into dest. When ensure_dest_dir is true, this also creates dest
+/// (pass false when the caller has already run create_dir_all).
+/// build_error lets the caller choose which AppError variant to construct on
+/// filename-extraction failure (ImportError vs RelocationError differ by caller).
 pub(crate) fn copy_images_to_dir(
     images: &[PathBuf],
     dest: &Path,
     ensure_dest_dir: bool,
-    err: impl Fn(String) -> AppError,
+    build_error: impl Fn(String) -> AppError,
 ) -> Result<(), AppError> {
     if ensure_dest_dir {
         std::fs::create_dir_all(dest)?;
@@ -240,7 +240,7 @@ pub(crate) fn copy_images_to_dir(
     for image in images {
         let file_name = image
             .file_name()
-            .ok_or_else(|| err("無効なファイル名".to_string()))?;
+            .ok_or_else(|| build_error("無効なファイル名".to_string()))?;
         let dest_file = dest.join(file_name);
         std::fs::copy(image, &dest_file)?;
     }
@@ -257,7 +257,7 @@ pub struct DiscoveredFolder {
     pub already_registered: bool,
 }
 
-// keep-in-sync: src/lib/types.ts の DiscoverProgress タグ付きユニオンと対応。
+// keep-in-sync: corresponds to the DiscoverProgress tagged union in src/lib/types.ts.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DiscoverProgress {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { debounce } from "../utils/debounce";
+  import { createLatestRequestGuard } from "../utils/latestRequest";
   import type { Tag } from "../types";
 
   interface Props {
@@ -25,7 +26,7 @@
   let highlightIndex = $state(-1);
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  let searchGeneration = 0;
+  const searchRequestGuard = createLatestRequestGuard();
 
   async function search(q: string) {
     if (!q.trim()) {
@@ -33,18 +34,18 @@
       open = false;
       return;
     }
-    const gen = ++searchGeneration;
+    const requestId = searchRequestGuard.next();
     try {
       const results: Tag[] = await invoke("search_tags", {
         query: q.trim(),
         category: null,
       });
-      if (gen !== searchGeneration) return;
+      if (!searchRequestGuard.isLatest(requestId)) return;
       suggestions = results.filter((t) => !excludeTagIds.includes(t.id));
       open = true;
       highlightIndex = -1;
     } catch {
-      if (gen !== searchGeneration) return;
+      if (!searchRequestGuard.isLatest(requestId)) return;
       suggestions = [];
     }
   }

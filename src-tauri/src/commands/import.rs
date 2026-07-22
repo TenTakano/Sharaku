@@ -77,16 +77,13 @@ pub(crate) async fn enqueue_import(
     state: tauri::State<'_, AppState>,
     requests: Vec<importer::ImportRequest>,
 ) -> Result<EnqueueResult, String> {
-    let (library_id, library_root, resource_mode) = {
-        let guard = state.db.lock().unwrap();
-        let active = guard
-            .active_library
-            .as_ref()
-            .ok_or("ライブラリが選択されていません")?;
-        let mode =
-            settings::get_resource_mode(&guard.conn, &active.id).map_err(|e| e.to_string())?;
-        (active.id.clone(), active.path.clone(), mode)
-    };
+    let (library_id, library_root, resource_mode) = state
+        .with_active_db(|db, active| {
+            let mode =
+                settings::get_resource_mode(&db.conn, &active.id).map_err(|e| e.to_string())?;
+            Ok((active.id.clone(), active.path.clone(), mode))
+        })
+        .await?;
 
     if resource_mode == "full" && library_root.is_none() {
         return Err("ライブラリルートが設定されていません".to_string());

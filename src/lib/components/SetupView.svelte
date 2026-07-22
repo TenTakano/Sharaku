@@ -130,7 +130,7 @@
       ライブラリでのファイル管理方法を選択します。
     </p>
 
-    <div class="setup-mode-select">
+    <div class="radio-option-group setup-mode-select">
       <label class="radio-option">
         <input
           type="radio"

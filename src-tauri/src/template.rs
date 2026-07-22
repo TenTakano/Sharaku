@@ -9,9 +9,9 @@ const KNOWN_PLACEHOLDERS: &[&str] = &[
 ];
 const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
-// keep-in-sync: src/lib/types.ts の WorkMetadata と対応。
-// work_type はフロントエンドのIPCペイロードには存在しないため #[serde(default)] を付与し、
-// プレースホルダーレンダリング時にサーバー側で解決したtype labelを詰める用途に限定する。
+// keep-in-sync: corresponds to WorkMetadata in src/lib/types.ts.
+// work_type is absent from the frontend IPC payload, so it carries #[serde(default)]
+// and is only populated server-side with the resolved type label during placeholder rendering.
 #[derive(Deserialize)]
 pub struct WorkMetadata {
     pub title: String,
@@ -171,13 +171,13 @@ fn normalize_path(path: &Path) -> PathBuf {
     components.iter().collect()
 }
 
-/// base が is_taken 述語で「空き」と判定されればそのまま返し、
-/// そうでなければ `{base}_0001`, `{base}_0002`, ... の順に空きを探して返す。
+/// Returns base as-is if the is_taken predicate judges it "free";
+/// otherwise searches `{base}_0001`, `{base}_0002`, ... in order and returns the first free one.
 pub fn unique_path(base: &Path, is_taken: impl Fn(&Path) -> bool) -> PathBuf {
     if !is_taken(base) {
         return base.to_path_buf();
     }
-    // base は resolve_work_path / 既存の作品パスに由来し、常にファイル名セグメントを持つ。
+    // base originates from resolve_work_path / an existing work path, so it always has a file name segment.
     let base_name = base
         .file_name()
         .expect("base always has a file name segment")

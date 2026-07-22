@@ -10,7 +10,7 @@ use super::*;
 
 const TEST_LIBRARY_ID: &str = "test_lib_relocator";
 
-fn setup_test_db() -> Connection {
+fn test_conn() -> Connection {
     test_db_with_library(TEST_LIBRARY_ID)
 }
 
@@ -36,7 +36,7 @@ fn insert_folder_work(conn: &Connection, title: &str, path: &str, artist: Option
 
 #[test]
 fn preview_empty_when_no_folder_works() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     let previews =
         preview_relocation(&conn, TEST_LIBRARY_ID, Path::new("/library"), "{title}").unwrap();
     assert!(previews.is_empty());
@@ -44,7 +44,7 @@ fn preview_empty_when_no_folder_works() {
 
 #[test]
 fn preview_empty_when_path_unchanged() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "MyWork", "/library/MyWork", None);
     let previews =
         preview_relocation(&conn, TEST_LIBRARY_ID, Path::new("/library"), "{title}").unwrap();
@@ -53,7 +53,7 @@ fn preview_empty_when_path_unchanged() {
 
 #[test]
 fn preview_shows_changed_paths() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "MyWork", "/library/old_location", Some("Artist"));
     let previews = preview_relocation(
         &conn,
@@ -70,7 +70,7 @@ fn preview_shows_changed_paths() {
 
 #[test]
 fn preview_skips_image_type_works() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     db::insert_work(
         &conn,
         &WorkRecord {
@@ -95,7 +95,7 @@ fn preview_skips_image_type_works() {
 
 #[test]
 fn preview_multiple_works_different_paths() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "Work1", "/library/old1", Some("A"));
     insert_folder_work(&conn, "Work2", "/library/old2", Some("B"));
     let previews = preview_relocation(
@@ -119,7 +119,7 @@ fn execute_moves_files_and_updates_db() {
     std::fs::write(old_dir.join("01.jpg"), b"image_data").unwrap();
     std::fs::write(old_dir.join("02.png"), b"image_data2").unwrap();
 
-    let conn = setup_test_db();
+    let conn = test_conn();
     crate::settings::set_directory_template(&conn, TEST_LIBRARY_ID, "{title}").unwrap();
     insert_folder_work(&conn, "MyWork", &old_dir.to_string_lossy(), Some("Artist"));
 
@@ -144,7 +144,7 @@ fn execute_moves_files_and_updates_db() {
 
 #[test]
 fn compute_plan_handles_path_collision() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "SameTitle", "/library/folder_a", Some("Artist"));
     insert_folder_work(&conn, "SameTitle", "/library/folder_b", Some("Artist"));
 

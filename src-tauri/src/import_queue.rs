@@ -17,7 +17,7 @@ pub struct ImportJob {
     pub requests: Vec<ImportRequest>,
 }
 
-// keep-in-sync: src/lib/types.ts の ImportQueueEvent タグ付きユニオンと対応。
+// keep-in-sync: corresponds to the ImportQueueEvent tagged union in src/lib/types.ts.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum ImportQueueEvent {

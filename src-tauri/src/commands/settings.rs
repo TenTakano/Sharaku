@@ -75,12 +75,13 @@ pub(crate) async fn set_directory_template(
     state: tauri::State<'_, AppState>,
     template: String,
 ) -> Result<(), String> {
-    if !template.trim().is_empty() {
-        template::validate_template(template.trim()).map_err(|e| e.to_string())?;
+    let trimmed = template.trim().to_string();
+    if !trimmed.is_empty() {
+        template::validate_template(&trimmed).map_err(|e| e.to_string())?;
     }
     state
         .with_active_db(move |db, active| {
-            settings::set_directory_template(&db.conn, &active.id, template.trim())
+            settings::set_directory_template(&db.conn, &active.id, &trimmed)
                 .map_err(|e| e.to_string())
         })
         .await
@@ -97,14 +98,16 @@ pub(crate) async fn set_type_labels(
     image_label: String,
     folder_label: String,
 ) -> Result<(), String> {
-    if image_label.trim().is_empty() || folder_label.trim().is_empty() {
+    let trimmed_image_label = image_label.trim().to_string();
+    let trimmed_folder_label = folder_label.trim().to_string();
+    if trimmed_image_label.is_empty() || trimmed_folder_label.is_empty() {
         return Err("ラベルは空にできません".to_string());
     }
     state
         .with_active_db(move |db, active| {
-            settings::set_type_label_image(&db.conn, &active.id, image_label.trim())
+            settings::set_type_label_image(&db.conn, &active.id, &trimmed_image_label)
                 .map_err(|e| e.to_string())?;
-            settings::set_type_label_folder(&db.conn, &active.id, folder_label.trim())
+            settings::set_type_label_folder(&db.conn, &active.id, &trimmed_folder_label)
                 .map_err(|e| e.to_string())
         })
         .await

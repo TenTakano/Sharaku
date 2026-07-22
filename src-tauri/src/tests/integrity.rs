@@ -10,7 +10,7 @@ use crate::test_common::test_db_with_library;
 
 const TEST_LIBRARY_ID: &str = "test_lib_integrity";
 
-fn setup_test_db() -> Connection {
+fn test_conn() -> Connection {
     test_db_with_library(TEST_LIBRARY_ID)
 }
 
@@ -44,7 +44,7 @@ fn no_issues_when_all_files_exist() {
     let file_path = tmp.path().join("image.jpg");
     fs::write(&file_path, b"fake").unwrap();
 
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_work(&conn, "Image1", &file_path.to_string_lossy(), "image");
 
     let report =
@@ -57,7 +57,7 @@ fn no_issues_when_all_files_exist() {
 
 #[test]
 fn detects_orphan_when_file_missing() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_work(&conn, "Missing", "/nonexistent/image.jpg", "image");
 
     let report = check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
@@ -70,7 +70,7 @@ fn detects_orphan_when_file_missing() {
 
 #[test]
 fn detects_orphan_folder_when_dir_missing() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_work(&conn, "MissingFolder", "/nonexistent/folder", "folder");
 
     let report = check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
@@ -93,7 +93,7 @@ fn detects_unregistered_directory() {
     fs::write(unregistered_dir.join("01.png"), b"fake").unwrap();
     fs::write(unregistered_dir.join("02.jpg"), b"fake").unwrap();
 
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_work(
         &conn,
         "Registered",
@@ -116,7 +116,7 @@ fn skips_phase2_when_metadata_only() {
     fs::create_dir_all(&unregistered_dir).unwrap();
     fs::write(unregistered_dir.join("01.jpg"), b"fake").unwrap();
 
-    let conn = setup_test_db();
+    let conn = test_conn();
     settings::set_resource_mode(&conn, TEST_LIBRARY_ID, "metadata_only").unwrap();
 
     let report =
@@ -127,7 +127,7 @@ fn skips_phase2_when_metadata_only() {
 
 #[test]
 fn skips_phase2_when_library_root_is_none() {
-    let conn = setup_test_db();
+    let conn = test_conn();
 
     let report = check_integrity_core(&conn, TEST_LIBRARY_ID, None, noop_progress).unwrap();
 
@@ -138,7 +138,7 @@ fn skips_phase2_when_library_root_is_none() {
 
 #[test]
 fn deletes_specified_orphan_works() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_work(&conn, "Work1", "/path/a", "image");
     insert_work(&conn, "Work2", "/path/b", "image");
     insert_work(&conn, "Work3", "/path/c", "image");
@@ -157,7 +157,7 @@ fn deletes_specified_orphan_works() {
 
 #[test]
 fn handles_nonexistent_ids_gracefully() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_work(&conn, "Keep", "/path/keep", "image");
 
     let deleted = delete_orphan_works(&conn, TEST_LIBRARY_ID, &[9999, 8888]).unwrap();

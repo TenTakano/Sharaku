@@ -81,35 +81,18 @@ fn has_image_subfolders_detects_deeply_nested_images() {
 }
 
 #[test]
-fn content_type_jpeg() {
-    assert_eq!(content_type_from_path("/path/to/image.jpg"), "image/jpeg");
-    assert_eq!(content_type_from_path("/path/to/image.JPEG"), "image/jpeg");
-}
+fn content_type_from_path_maps_extensions_to_mime_types() {
+    let cases = [
+        ("/path/to/image.jpg", "image/jpeg"),
+        ("/path/to/image.JPEG", "image/jpeg"),
+        ("/path/to/image.png", "image/png"),
+        ("/path/to/image.gif", "image/gif"),
+        ("/path/to/image.webp", "image/webp"),
+        ("/path/to/image.bmp", "image/bmp"),
+        ("/path/to/file.xyz", "application/octet-stream"),
+    ];
 
-#[test]
-fn content_type_png() {
-    assert_eq!(content_type_from_path("/path/to/image.png"), "image/png");
-}
-
-#[test]
-fn content_type_gif() {
-    assert_eq!(content_type_from_path("/path/to/image.gif"), "image/gif");
-}
-
-#[test]
-fn content_type_webp() {
-    assert_eq!(content_type_from_path("/path/to/image.webp"), "image/webp");
-}
-
-#[test]
-fn content_type_bmp() {
-    assert_eq!(content_type_from_path("/path/to/image.bmp"), "image/bmp");
-}
-
-#[test]
-fn content_type_unknown() {
-    assert_eq!(
-        content_type_from_path("/path/to/file.xyz"),
-        "application/octet-stream"
-    );
+    for (path, expected) in cases {
+        assert_eq!(content_type_from_path(path), expected, "path: {}", path);
+    }
 }

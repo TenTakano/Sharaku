@@ -3,9 +3,9 @@ use rusqlite::Connection;
 use crate::db;
 use crate::library;
 
-/// インメモリDBを開き、テスト用ライブラリを1件追加してIDを test_library_id に固定する。
-/// テストヘルパー共通化: tests/{db, relocator, integrity, settings}.rs で重複していた
-/// セットアップをここに集約する。
+/// Opens an in-memory DB, adds a single test library, and pins its ID to test_library_id.
+/// Test helper consolidation: gathers here the setup that was duplicated across
+/// tests/{db, relocator, integrity, settings}.rs.
 pub(crate) fn test_db_with_library(test_library_id: &str) -> Connection {
     let conn = db::open_db_in_memory().unwrap();
     library::add_library(&conn, "Test", Some("/test")).ok();

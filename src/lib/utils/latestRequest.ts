@@ -4,9 +4,10 @@ export interface LatestRequestGuard {
 }
 
 /**
- * 非同期リクエストを連投したとき、最後に発行したリクエストの結果だけを
- * 反映するためのガード。next() で取得したIDをレスポンス受信時に
- * isLatest() で照合し、古いレスポンスの反映を防ぐ。
+ * Guard for applying only the result of the most recently issued request when
+ * async requests fire in quick succession. Match the ID obtained from next()
+ * against isLatest() upon receiving a response, to prevent stale responses
+ * from being applied.
  */
 export function createLatestRequestGuard(): LatestRequestGuard {
   let currentId = 0;

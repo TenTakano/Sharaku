@@ -49,8 +49,8 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// AppDb を spawn_blocking 上でロックし、クロージャに渡す。
-    /// アクティブライブラリの選択有無は問わない。
+    /// Locks the AppDb on spawn_blocking and passes it to the closure.
+    /// Does not require an active library to be selected.
     async fn with_db<F, T>(&self, f: F) -> Result<T, String>
     where
         F: FnOnce(&AppDb) -> Result<T, String> + Send + 'static,
@@ -65,7 +65,7 @@ impl AppState {
         .map_err(|e| e.to_string())?
     }
 
-    /// AppDb を可変で spawn_blocking 上でロックし、クロージャに渡す（ライブラリCRUD等の状態更新用）。
+    /// Locks the AppDb mutably on spawn_blocking and passes it to the closure (for state updates like library CRUD).
     async fn with_db_mut<F, T>(&self, f: F) -> Result<T, String>
     where
         F: FnOnce(&mut AppDb) -> Result<T, String> + Send + 'static,
@@ -80,7 +80,7 @@ impl AppState {
         .map_err(|e| e.to_string())?
     }
 
-    /// アクティブライブラリを要求し、conn とアクティブライブラリの両方をクロージャに渡す。
+    /// Requires an active library, passing both conn and the active library to the closure.
     async fn with_active_db<F, T>(&self, f: F) -> Result<T, String>
     where
         F: FnOnce(&AppDb, &ActiveLibrary) -> Result<T, String> + Send + 'static,
@@ -93,7 +93,7 @@ impl AppState {
         .await
     }
 
-    /// アクティブライブラリの選択有無のみをガードとして確認し、conn だけをクロージャに渡す。
+    /// Only checks whether an active library is selected as a guard, passing just conn to the closure.
     async fn with_guarded_db<F, T>(&self, f: F) -> Result<T, String>
     where
         F: FnOnce(&AppDb) -> Result<T, String> + Send + 'static,
