@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Serialize;
 use tauri::ipc::Channel;
@@ -67,7 +67,9 @@ fn compute_relocation_plan(
 
         let new_path =
             if used_paths.contains(&base_str) || (base_path.exists() && base_str != work.path) {
-                make_unique_path(&base_path, &used_paths)
+                template::unique_path(&base_path, |p| {
+                    used_paths.contains(&p.to_string_lossy().to_string()) || p.exists()
+                })
             } else {
                 base_path
             };
@@ -85,19 +87,6 @@ fn compute_relocation_plan(
     }
 
     previews
-}
-
-fn make_unique_path(base: &Path, used_paths: &std::collections::HashSet<String>) -> PathBuf {
-    let base_name = base.file_name().unwrap().to_string_lossy().to_string();
-    for i in 1u32.. {
-        let dir_name = format!("{}_{:04x}", base_name, i);
-        let candidate = base.with_file_name(&dir_name);
-        let candidate_str = candidate.to_string_lossy().to_string();
-        if !used_paths.contains(&candidate_str) && !candidate.exists() {
-            return candidate;
-        }
-    }
-    unreachable!()
 }
 
 pub fn preview_relocation(
@@ -185,18 +174,8 @@ pub fn execute_relocation(
 }
 
 fn copy_work_files(old_path: &Path, new_path: &Path) -> Result<(), AppError> {
-    std::fs::create_dir_all(new_path)?;
-
     let images = importer::list_images_in_folder(old_path)?;
-    for image in &images {
-        let file_name = image
-            .file_name()
-            .ok_or_else(|| AppError::RelocationError("無効なファイル名".into()))?;
-        let dest = new_path.join(file_name);
-        std::fs::copy(image, &dest)?;
-    }
-
-    Ok(())
+    importer::copy_images_to_dir(&images, new_path, true, AppError::RelocationError)
 }
 
 fn remove_work_files(path: &Path) {

@@ -130,19 +130,7 @@ pub fn import_work(
 
         db::insert_work(
             conn,
-            &WorkRecord {
-                library_id,
-                title: &request.title,
-                path: &source_str,
-                work_type: "folder",
-                page_count: page_count as i32,
-                thumbnail: &thumb,
-                artist: request.artist.as_deref(),
-                year: request.year,
-                genre: request.genre.as_deref(),
-                circle: request.circle.as_deref(),
-                origin: request.origin.as_deref(),
-            },
+            &build_work_record(request, library_id, &source_str, page_count as i32, &thumb),
         )?;
 
         return Ok(ImportResult {
@@ -180,7 +168,7 @@ pub fn import_work(
         let _ = std::fs::remove_dir_all(dest);
     };
 
-    if let Err(e) = copy_images_to_dest(&images, &dest) {
+    if let Err(e) = copy_images_to_dir(&images, &dest, false, AppError::ImportError) {
         rollback(&dest);
         return Err(e);
     }
@@ -189,19 +177,7 @@ pub fn import_work(
 
     if let Err(e) = db::insert_work(
         conn,
-        &WorkRecord {
-            library_id,
-            title: &request.title,
-            path: &dest_str,
-            work_type: "folder",
-            page_count: page_count as i32,
-            thumbnail: &thumb,
-            artist: request.artist.as_deref(),
-            year: request.year,
-            genre: request.genre.as_deref(),
-            circle: request.circle.as_deref(),
-            origin: request.origin.as_deref(),
-        },
+        &build_work_record(request, library_id, &dest_str, page_count as i32, &thumb),
     ) {
         rollback(&dest);
         return Err(e);
@@ -220,15 +196,49 @@ pub fn import_work(
     })
 }
 
+fn build_work_record<'a>(
+    request: &'a ImportRequest,
+    library_id: &'a str,
+    path: &'a str,
+    page_count: i32,
+    thumbnail: &'a [u8],
+) -> WorkRecord<'a> {
+    WorkRecord {
+        library_id,
+        title: &request.title,
+        path,
+        work_type: "folder",
+        page_count,
+        thumbnail,
+        artist: request.artist.as_deref(),
+        year: request.year,
+        genre: request.genre.as_deref(),
+        circle: request.circle.as_deref(),
+        origin: request.origin.as_deref(),
+    }
+}
+
 fn paths_overlap(a: &Path, b: &Path) -> bool {
     a.starts_with(b) || b.starts_with(a)
 }
 
-fn copy_images_to_dest(images: &[PathBuf], dest: &Path) -> Result<(), AppError> {
+/// images を dest にコピーする。ensure_dest_dir が true の場合は dest の作成も担う
+/// （呼び出し元が既に create_dir_all 済みの場合は false を渡す）。
+/// err はファイル名取得失敗時に生成するエラーの variant を呼び出し元から指定する
+/// （ImportError / RelocationError でエラー文言を変えないため）。
+pub(crate) fn copy_images_to_dir(
+    images: &[PathBuf],
+    dest: &Path,
+    ensure_dest_dir: bool,
+    err: impl Fn(String) -> AppError,
+) -> Result<(), AppError> {
+    if ensure_dest_dir {
+        std::fs::create_dir_all(dest)?;
+    }
     for image in images {
         let file_name = image
             .file_name()
-            .ok_or_else(|| AppError::ImportError("無効なファイル名".to_string()))?;
+            .ok_or_else(|| err("無効なファイル名".to_string()))?;
         let dest_file = dest.join(file_name);
         std::fs::copy(image, &dest_file)?;
     }

@@ -52,27 +52,15 @@ fn load_image(
         })?;
         let file_path = images.get(page_index).ok_or(404u16)?;
         let data = std::fs::read(file_path).map_err(|_| 404u16)?;
-        let content_type = content_type_from_path(&file_path.to_string_lossy());
+        let content_type = crate::scanner::content_type_from_path(&file_path.to_string_lossy());
         Ok((data, content_type))
     } else {
         if page_index != 0 {
             return Err(404);
         }
         let data = std::fs::read(&work.path).map_err(|_| 404u16)?;
-        let content_type = content_type_from_path(&work.path);
+        let content_type = crate::scanner::content_type_from_path(&work.path);
         Ok((data, content_type))
-    }
-}
-
-fn content_type_from_path(path: &str) -> &'static str {
-    let ext = path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
-    match ext.as_str() {
-        "jpg" | "jpeg" => "image/jpeg",
-        "png" => "image/png",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "bmp" => "image/bmp",
-        _ => "application/octet-stream",
     }
 }
 

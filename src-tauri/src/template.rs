@@ -168,24 +168,35 @@ fn normalize_path(path: &Path) -> PathBuf {
     components.iter().collect()
 }
 
+/// base が is_taken 述語で「空き」と判定されればそのまま返し、
+/// そうでなければ `{base}_0001`, `{base}_0002`, ... の順に空きを探して返す。
+pub fn unique_path(base: &Path, is_taken: impl Fn(&Path) -> bool) -> PathBuf {
+    if !is_taken(base) {
+        return base.to_path_buf();
+    }
+    // base は resolve_work_path / 既存の作品パスに由来し、常にファイル名セグメントを持つ。
+    let base_name = base
+        .file_name()
+        .expect("base always has a file name segment")
+        .to_string_lossy()
+        .to_string();
+    for i in 1u32.. {
+        let dir_name = format!("{}_{:04x}", base_name, i);
+        let candidate = base.with_file_name(&dir_name);
+        if !is_taken(&candidate) {
+            return candidate;
+        }
+    }
+    unreachable!()
+}
+
 pub fn resolve_unique_work_path(
     library_root: &Path,
     template: &str,
     metadata: &WorkMetadata,
 ) -> PathBuf {
     let base = resolve_work_path(library_root, template, metadata);
-    if !base.exists() {
-        return base;
-    }
-    let base_name = base.file_name().unwrap().to_string_lossy().to_string();
-    for i in 1u32.. {
-        let dir_name = format!("{}_{:04x}", base_name, i);
-        let candidate = base.with_file_name(&dir_name);
-        if !candidate.exists() {
-            return candidate;
-        }
-    }
-    unreachable!()
+    unique_path(&base, |p| p.exists())
 }
 
 pub fn sample_metadata() -> WorkMetadata {

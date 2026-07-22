@@ -33,6 +33,18 @@ pub(crate) fn has_image_subfolders(dir: &Path) -> bool {
         .any(|e| count_direct_images(e.path()) > 0)
 }
 
+pub(crate) fn content_type_from_path(path: &str) -> &'static str {
+    let ext = path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "bmp" => "image/bmp",
+        _ => "application/octet-stream",
+    }
+}
+
 #[cfg(test)]
 #[path = "tests/scanner.rs"]
 mod tests;
