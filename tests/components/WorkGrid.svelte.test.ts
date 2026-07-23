@@ -184,6 +184,7 @@ describe("WorkGrid コンポーネント", () => {
   });
 
   it("作品クリックで onSelectWork が呼ばれる", async () => {
+    const user = userEvent.setup();
     const props = createProps();
     render(WorkGrid, props);
 
@@ -192,7 +193,7 @@ describe("WorkGrid コンポーネント", () => {
     });
 
     const workButtons = screen.getAllByRole("button", { name: /風景画A/ });
-    await userEvent.setup().click(workButtons[0]);
+    await user.click(workButtons[0]);
 
     expect(props.onSelectWork).toHaveBeenCalledWith(1);
   });

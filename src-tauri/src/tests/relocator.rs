@@ -52,6 +52,15 @@ fn preview_empty_when_path_unchanged() {
 }
 
 #[test]
+fn preview_empty_when_path_matches_legacy_scheme() {
+    let conn = test_conn();
+    insert_folder_work(&conn, "MyWork", "/library/MyWork", None);
+    let previews =
+        preview_relocation(&conn, TEST_LIBRARY_ID, Path::new("/library"), "{title}").unwrap();
+    assert!(previews.is_empty());
+}
+
+#[test]
 fn preview_shows_changed_paths() {
     let conn = test_conn();
     insert_folder_work(&conn, "MyWork", "/library/old_location", Some("Artist"));

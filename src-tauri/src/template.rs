@@ -158,14 +158,8 @@ pub fn render_template(template: &str, metadata: &WorkMetadata) -> String {
         .join("/")
 }
 
-pub fn resolve_work_path(
-    library_root: &Path,
-    template: &str,
-    metadata: &WorkMetadata,
-    work_kind: &str,
-) -> PathBuf {
-    let rendered = render_template(template, metadata);
-    let resolved = library_root.join(top_level_for(work_kind)).join(&rendered);
+fn resolve_relative_to_root(library_root: &Path, relative: &Path) -> PathBuf {
+    let resolved = library_root.join(relative);
     let normalized = normalize_path(&resolved);
     let root_normalized = normalize_path(library_root);
     if !normalized.starts_with(&root_normalized) {
@@ -173,6 +167,30 @@ pub fn resolve_work_path(
     } else {
         normalized
     }
+}
+
+pub fn resolve_work_path(
+    library_root: &Path,
+    template: &str,
+    metadata: &WorkMetadata,
+    work_kind: &str,
+) -> PathBuf {
+    let rendered = render_template(template, metadata);
+    let relative = Path::new(top_level_for(work_kind)).join(&rendered);
+    resolve_relative_to_root(library_root, &relative)
+}
+
+/// Resolves the path a work would have had before work_kind-based top-level
+/// directories ("works/" / "pictures/") were introduced. Used to recognize
+/// pre-existing works whose on-disk path predates that change, so they are
+/// not misclassified as needing relocation just because of it.
+pub fn resolve_legacy_work_path(
+    library_root: &Path,
+    template: &str,
+    metadata: &WorkMetadata,
+) -> PathBuf {
+    let rendered = render_template(template, metadata);
+    resolve_relative_to_root(library_root, Path::new(&rendered))
 }
 
 fn normalize_path(path: &Path) -> PathBuf {

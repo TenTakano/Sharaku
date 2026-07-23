@@ -1,8 +1,34 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
+use tauri::ipc::Channel;
 use tempfile::TempDir;
 
 use super::*;
+use crate::test_common::test_db_with_library;
+
+fn write_test_image(path: &Path) {
+    let img = image::RgbImage::new(2, 2);
+    img.save(path).unwrap();
+}
+
+fn make_request(source_path: &Path, title: &str, mode: ImportMode) -> ImportRequest {
+    ImportRequest {
+        source_path: source_path.to_string_lossy().to_string(),
+        title: title.to_string(),
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        mode,
+        kind: ImportKind::Image,
+    }
+}
+
+fn noop_progress_channel() -> Channel<DiscoverProgress> {
+    Channel::new(|_| Ok(()))
+}
 
 // parse_folder_name tests
 
@@ -370,6 +396,129 @@ fn import_single_image_rejects_non_image_file() {
 }
 
 #[test]
+fn import_single_image_metadata_only_registers_source_path_without_copy() {
+    const LIB_ID: &str = "test_lib_import_single_metadata_only";
+    let temp = TempDir::new().unwrap();
+    let library_root = temp.path().join("library");
+    std::fs::create_dir_all(&library_root).unwrap();
+    let source = temp.path().join("source.png");
+    write_test_image(&source);
+
+    let conn = test_db_with_library(LIB_ID);
+    crate::settings::set_resource_mode(&conn, LIB_ID, "metadata_only").unwrap();
+
+    let request = make_request(&source, "MyImage", ImportMode::Copy);
+    let result = import_single_image(&request, &conn, LIB_ID, &library_root).unwrap();
+
+    assert_eq!(result.destination_path, source.to_string_lossy());
+    assert_eq!(result.page_count, 1);
+    assert!(source.exists());
+
+    let works = crate::db::list_works(&conn, LIB_ID, "created_at", "desc").unwrap();
+    assert_eq!(works.len(), 1);
+}
+
+#[test]
+fn import_single_image_full_copy_creates_file_and_keeps_source() {
+    const LIB_ID: &str = "test_lib_import_single_full_copy";
+    let temp = TempDir::new().unwrap();
+    let library_root = temp.path().join("library");
+    std::fs::create_dir_all(&library_root).unwrap();
+    let source = temp.path().join("source.png");
+    write_test_image(&source);
+
+    let conn = test_db_with_library(LIB_ID);
+    crate::settings::set_directory_template(&conn, LIB_ID, "{title}").unwrap();
+
+    let request = make_request(&source, "MyImage", ImportMode::Copy);
+    let result = import_single_image(&request, &conn, LIB_ID, &library_root).unwrap();
+
+    let dest = Path::new(&result.destination_path);
+    assert!(dest.exists());
+    assert!(dest.starts_with(library_root.join("pictures")));
+    assert!(source.exists());
+
+    let works = crate::db::list_works(&conn, LIB_ID, "created_at", "desc").unwrap();
+    assert_eq!(works.len(), 1);
+}
+
+#[test]
+fn import_single_image_move_removes_source_file() {
+    const LIB_ID: &str = "test_lib_import_single_move";
+    let temp = TempDir::new().unwrap();
+    let library_root = temp.path().join("library");
+    std::fs::create_dir_all(&library_root).unwrap();
+    let source = temp.path().join("source.png");
+    write_test_image(&source);
+
+    let conn = test_db_with_library(LIB_ID);
+    crate::settings::set_directory_template(&conn, LIB_ID, "{title}").unwrap();
+
+    let request = make_request(&source, "MyImage", ImportMode::Move);
+    let result = import_single_image(&request, &conn, LIB_ID, &library_root).unwrap();
+
+    let dest = Path::new(&result.destination_path);
+    assert!(dest.exists());
+    assert!(!source.exists());
+}
+
+#[test]
+fn import_single_image_rolls_back_dest_dir_on_db_insert_failure() {
+    const LIB_ID: &str = "test_lib_import_single_rollback";
+    let temp = TempDir::new().unwrap();
+    let library_root = temp.path().join("library");
+    std::fs::create_dir_all(&library_root).unwrap();
+    let source = temp.path().join("source.png");
+    write_test_image(&source);
+
+    let conn = test_db_with_library(LIB_ID);
+    crate::settings::set_directory_template(&conn, LIB_ID, "{title}").unwrap();
+
+    let request = make_request(&source, "MyImage", ImportMode::Copy);
+
+    // Pre-register a work whose path collides with the path import_single_image will
+    // compute (resolve_unique_work_path only checks filesystem existence, not the DB,
+    // so it cannot detect this in advance). This forces the UNIQUE(library_id, path)
+    // constraint to fail on insert, exercising the rollback branch.
+    let dest_dir = template::resolve_unique_work_path(
+        &library_root,
+        "{title}",
+        &WorkMetadata {
+            title: "MyImage".to_string(),
+            artist: None,
+            year: None,
+            genre: None,
+            circle: None,
+            origin: None,
+            work_type: None,
+        },
+        template::WORK_KIND_IMAGE,
+    );
+    let colliding_path = dest_dir.join("source.png");
+    crate::db::insert_work(
+        &conn,
+        &crate::db::WorkRecord {
+            library_id: LIB_ID,
+            title: "Existing",
+            path: &colliding_path.to_string_lossy(),
+            work_type: "image",
+            page_count: 1,
+            thumbnail: b"thumb",
+            artist: None,
+            year: None,
+            genre: None,
+            circle: None,
+            origin: None,
+        },
+    )
+    .unwrap();
+
+    let result = import_single_image(&request, &conn, LIB_ID, &library_root);
+    assert!(result.is_err());
+    assert!(!dest_dir.exists());
+}
+
+#[test]
 fn import_single_image_rejects_directory_path() {
     let dir = std::env::temp_dir().join("sharaku_test_import_single_dir_reject");
     let _ = std::fs::remove_dir_all(&dir);
@@ -399,4 +548,215 @@ fn import_single_image_rejects_directory_path() {
     assert!(result.is_err());
 
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn discover_from_paths_handles_mixed_folder_and_image_roots() {
+    const LIB_ID: &str = "test_lib_discover_mixed";
+    let temp = TempDir::new().unwrap();
+
+    let folder_root = temp.path().join("folder1");
+    std::fs::create_dir_all(&folder_root).unwrap();
+    std::fs::write(folder_root.join("01.jpg"), b"a").unwrap();
+    std::fs::write(folder_root.join("02.jpg"), b"b").unwrap();
+
+    let image_root = temp.path().join("standalone.png");
+    std::fs::write(&image_root, b"c").unwrap();
+
+    let conn = test_db_with_library(LIB_ID);
+    let roots = vec![folder_root.clone(), image_root.clone()];
+    let result = discover_from_paths(&roots, &conn, LIB_ID, &noop_progress_channel()).unwrap();
+
+    assert_eq!(result.folders.len(), 1);
+    assert_eq!(result.folders[0].path, folder_root.to_string_lossy());
+    assert_eq!(result.images.len(), 1);
+    assert_eq!(result.images[0].path, image_root.to_string_lossy());
+    assert!(result.skipped_folders.is_empty());
+}
+
+#[test]
+fn discover_from_paths_marks_already_registered_entries() {
+    const LIB_ID: &str = "test_lib_discover_already_registered";
+    let temp = TempDir::new().unwrap();
+
+    let registered_folder = temp.path().join("folder_registered");
+    std::fs::create_dir_all(&registered_folder).unwrap();
+    std::fs::write(registered_folder.join("01.jpg"), b"a").unwrap();
+
+    let unregistered_folder = temp.path().join("folder_unregistered");
+    std::fs::create_dir_all(&unregistered_folder).unwrap();
+    std::fs::write(unregistered_folder.join("01.jpg"), b"a").unwrap();
+
+    let registered_image = temp.path().join("registered.png");
+    std::fs::write(&registered_image, b"a").unwrap();
+
+    let unregistered_image = temp.path().join("unregistered.png");
+    std::fs::write(&unregistered_image, b"a").unwrap();
+
+    let conn = test_db_with_library(LIB_ID);
+    db::insert_work(
+        &conn,
+        &WorkRecord {
+            library_id: LIB_ID,
+            title: "Existing Folder",
+            path: &registered_folder.to_string_lossy(),
+            work_type: "folder",
+            page_count: 1,
+            thumbnail: b"thumb",
+            artist: None,
+            year: None,
+            genre: None,
+            circle: None,
+            origin: None,
+        },
+    )
+    .unwrap();
+    db::insert_work(
+        &conn,
+        &WorkRecord {
+            library_id: LIB_ID,
+            title: "Existing Image",
+            path: &registered_image.to_string_lossy(),
+            work_type: "image",
+            page_count: 1,
+            thumbnail: b"thumb",
+            artist: None,
+            year: None,
+            genre: None,
+            circle: None,
+            origin: None,
+        },
+    )
+    .unwrap();
+
+    let roots = vec![
+        registered_folder.clone(),
+        unregistered_folder.clone(),
+        registered_image.clone(),
+        unregistered_image.clone(),
+    ];
+    let result = discover_from_paths(&roots, &conn, LIB_ID, &noop_progress_channel()).unwrap();
+
+    let folder = result
+        .folders
+        .iter()
+        .find(|f| f.path == registered_folder.to_string_lossy())
+        .unwrap();
+    assert!(folder.already_registered);
+
+    let folder = result
+        .folders
+        .iter()
+        .find(|f| f.path == unregistered_folder.to_string_lossy())
+        .unwrap();
+    assert!(!folder.already_registered);
+
+    let image = result
+        .images
+        .iter()
+        .find(|i| i.path == registered_image.to_string_lossy())
+        .unwrap();
+    assert!(image.already_registered);
+
+    let image = result
+        .images
+        .iter()
+        .find(|i| i.path == unregistered_image.to_string_lossy())
+        .unwrap();
+    assert!(!image.already_registered);
+}
+
+#[test]
+fn discover_from_paths_dedupes_duplicate_roots() {
+    struct Case {
+        lib_id: &'static str,
+        setup: fn(&Path) -> PathBuf,
+        assert_result: fn(&DiscoverResult),
+    }
+
+    let cases = [
+        Case {
+            lib_id: "test_lib_discover_dedup_folder",
+            setup: |dir| {
+                let folder_root = dir.join("folder1");
+                std::fs::create_dir_all(&folder_root).unwrap();
+                std::fs::write(folder_root.join("01.jpg"), b"a").unwrap();
+                folder_root
+            },
+            assert_result: |result| assert_eq!(result.folders.len(), 1),
+        },
+        Case {
+            lib_id: "test_lib_discover_dedup_image",
+            setup: |dir| {
+                let image_root = dir.join("standalone.png");
+                std::fs::write(&image_root, b"a").unwrap();
+                image_root
+            },
+            assert_result: |result| assert_eq!(result.images.len(), 1),
+        },
+    ];
+
+    for case in cases {
+        let temp = TempDir::new().unwrap();
+        let root = (case.setup)(temp.path());
+
+        let conn = test_db_with_library(case.lib_id);
+        let roots = vec![root.clone(), root.clone()];
+        let result =
+            discover_from_paths(&roots, &conn, case.lib_id, &noop_progress_channel()).unwrap();
+
+        (case.assert_result)(&result);
+    }
+}
+
+#[test]
+fn discover_from_paths_skips_unsupported_and_missing_paths() {
+    const LIB_ID: &str = "test_lib_discover_skips";
+    let temp = TempDir::new().unwrap();
+
+    let text_file = temp.path().join("note.txt");
+    std::fs::write(&text_file, b"not an image").unwrap();
+    let missing_path = temp.path().join("does_not_exist");
+
+    let conn = test_db_with_library(LIB_ID);
+    let roots = vec![text_file, missing_path];
+    let result = discover_from_paths(&roots, &conn, LIB_ID, &noop_progress_channel()).unwrap();
+
+    assert!(result.folders.is_empty());
+    assert!(result.images.is_empty());
+    assert!(result.skipped_folders.is_empty());
+}
+
+#[test]
+fn discover_from_paths_sends_completed_progress_with_total_found() {
+    const LIB_ID: &str = "test_lib_discover_progress";
+    let temp = TempDir::new().unwrap();
+
+    let folder_root = temp.path().join("folder1");
+    std::fs::create_dir_all(&folder_root).unwrap();
+    std::fs::write(folder_root.join("01.jpg"), b"a").unwrap();
+
+    let image_root = temp.path().join("standalone.png");
+    std::fs::write(&image_root, b"a").unwrap();
+
+    let conn = test_db_with_library(LIB_ID);
+    let messages: Arc<Mutex<Vec<serde_json::Value>>> = Arc::new(Mutex::new(Vec::new()));
+    let messages_clone = messages.clone();
+    let channel = Channel::new(move |body| {
+        if let tauri::ipc::InvokeResponseBody::Json(json) = body {
+            let progress: serde_json::Value = serde_json::from_str(&json).unwrap();
+            messages_clone.lock().unwrap().push(progress);
+        }
+        Ok(())
+    });
+
+    let roots = vec![folder_root, image_root];
+    discover_from_paths(&roots, &conn, LIB_ID, &channel).unwrap();
+
+    let received = messages.lock().unwrap();
+    let last = received
+        .last()
+        .expect("expected at least one progress message");
+    assert_eq!(last["type"], "completed");
+    assert_eq!(last["found"], 2);
 }

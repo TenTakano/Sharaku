@@ -153,7 +153,14 @@ pub fn import_work(
 
         db::insert_work(
             conn,
-            &build_work_record(request, library_id, &source_str, page_count as i32, &thumb),
+            &build_work_record(
+                request,
+                library_id,
+                &source_str,
+                template::WORK_KIND_FOLDER,
+                page_count as i32,
+                &thumb,
+            ),
         )?;
 
         return Ok(ImportResult {
@@ -166,7 +173,7 @@ pub fn import_work(
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
 
-    let type_label = settings::resolve_type_label(conn, library_id, "folder")?;
+    let type_label = settings::resolve_type_label(conn, library_id, template::WORK_KIND_FOLDER)?;
     let metadata = WorkMetadata {
         title: request.title.clone(),
         artist: request.artist.clone(),
@@ -205,7 +212,14 @@ pub fn import_work(
 
     if let Err(e) = db::insert_work(
         conn,
-        &build_work_record(request, library_id, &dest_str, page_count as i32, &thumb),
+        &build_work_record(
+            request,
+            library_id,
+            &dest_str,
+            template::WORK_KIND_FOLDER,
+            page_count as i32,
+            &thumb,
+        ),
     ) {
         rollback(&dest);
         return Err(e);
@@ -228,6 +242,7 @@ fn build_work_record<'a>(
     request: &'a ImportRequest,
     library_id: &'a str,
     path: &'a str,
+    work_type: &'static str,
     page_count: i32,
     thumbnail: &'a [u8],
 ) -> WorkRecord<'a> {
@@ -235,7 +250,7 @@ fn build_work_record<'a>(
         library_id,
         title: &request.title,
         path,
-        work_type: "folder",
+        work_type,
         page_count,
         thumbnail,
         artist: request.artist.as_deref(),
@@ -294,19 +309,14 @@ pub fn import_single_image(
 
         db::insert_work(
             conn,
-            &WorkRecord {
+            &build_work_record(
+                request,
                 library_id,
-                title: &request.title,
-                path: &source_str,
-                work_type: "image",
-                page_count: 1,
-                thumbnail: &thumb,
-                artist: request.artist.as_deref(),
-                year: request.year,
-                genre: request.genre.as_deref(),
-                circle: request.circle.as_deref(),
-                origin: request.origin.as_deref(),
-            },
+                &source_str,
+                template::WORK_KIND_IMAGE,
+                1,
+                &thumb,
+            ),
         )?;
 
         return Ok(ImportResult {
@@ -319,7 +329,7 @@ pub fn import_single_image(
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
 
-    let type_label = settings::resolve_type_label(conn, library_id, "image")?;
+    let type_label = settings::resolve_type_label(conn, library_id, template::WORK_KIND_IMAGE)?;
     let metadata = WorkMetadata {
         title: request.title.clone(),
         artist: request.artist.clone(),
@@ -363,19 +373,14 @@ pub fn import_single_image(
 
     if let Err(e) = db::insert_work(
         conn,
-        &WorkRecord {
+        &build_work_record(
+            request,
             library_id,
-            title: &request.title,
-            path: &dest_str,
-            work_type: "image",
-            page_count: 1,
-            thumbnail: &thumb,
-            artist: request.artist.as_deref(),
-            year: request.year,
-            genre: request.genre.as_deref(),
-            circle: request.circle.as_deref(),
-            origin: request.origin.as_deref(),
-        },
+            &dest_str,
+            template::WORK_KIND_IMAGE,
+            1,
+            &thumb,
+        ),
     ) {
         rollback(&dest_dir);
         return Err(e);
@@ -401,7 +406,6 @@ pub struct DiscoveredFolder {
     pub already_registered: bool,
 }
 
-// keep-in-sync: corresponds to the DiscoverProgress tagged union in src/lib/types.ts.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkippedFolder {
@@ -427,6 +431,7 @@ pub struct DiscoverResult {
     pub skipped_folders: Vec<SkippedFolder>,
 }
 
+// keep-in-sync: corresponds to the DiscoverProgress tagged union in src/lib/types.ts.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DiscoverProgress {

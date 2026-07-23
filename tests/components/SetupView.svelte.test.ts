@@ -123,11 +123,21 @@ describe("SetupView コンポーネント", () => {
       expect(screen.getByText("作成")).toBeDisabled();
     });
 
-    it("作成ボタンで create_library が呼ばれ onComplete が発火する", async () => {
-      const user = await goToNameOnlyStep();
-      const props = createProps({ initialStep: "mode-select" });
-
+    it("作成ボタンで create_library が正しい引数で呼ばれ onComplete が発火する", async () => {
+      const createLibrarySpy = vi.fn(() => ({
+        id: "lib-1",
+        name: "テストライブラリ",
+        path: "/path",
+      }));
       cleanup();
+      mockIPC((cmd: string, args: Record<string, unknown>) => {
+        if (cmd === "validate_template") return undefined;
+        if (cmd === "create_library") return createLibrarySpy(args);
+        if (cmd === "plugin:dialog|open") return "/selected/path";
+      });
+
+      const user = userEvent.setup();
+      const props = createProps({ initialStep: "mode-select" });
       const { container } = render(SetupView, props);
       const radios = container.querySelectorAll<HTMLInputElement>(
         'input[name="setup-resource-mode"]',
@@ -145,6 +155,9 @@ describe("SetupView コンポーネント", () => {
       await user.click(screen.getByText("作成"));
 
       await waitFor(() => {
+        expect(createLibrarySpy).toHaveBeenCalledWith(
+          expect.objectContaining({ name: "テスト" }),
+        );
         expect(props.onComplete).toHaveBeenCalled();
       });
     });

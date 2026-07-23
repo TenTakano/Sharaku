@@ -6,6 +6,7 @@ import {
   waitFor,
   fireEvent,
 } from "@testing-library/svelte";
+import userEvent from "@testing-library/user-event";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import WorkViewer from "../../src/lib/components/WorkViewer.svelte";
 import type { WorkDetail, Tag } from "../../src/lib/types";
@@ -105,9 +106,7 @@ describe("WorkViewer コンポーネント", () => {
 
   describe("ページナビゲーション", () => {
     it("次へボタンクリックでページが進む", async () => {
-      const user = (
-        await import("@testing-library/user-event")
-      ).default.setup();
+      const user = userEvent.setup();
       render(WorkViewer, createProps());
       await waitFor(() => {
         expect(screen.getByText(/1\/3/)).toBeInTheDocument();
@@ -121,9 +120,7 @@ describe("WorkViewer コンポーネント", () => {
     });
 
     it("前へボタンクリックでページが戻る", async () => {
-      const user = (
-        await import("@testing-library/user-event")
-      ).default.setup();
+      const user = userEvent.setup();
       render(WorkViewer, createProps());
       await waitFor(() => {
         expect(screen.getByText(/1\/3/)).toBeInTheDocument();
@@ -225,9 +222,7 @@ describe("WorkViewer コンポーネント", () => {
 
   describe("編集ダイアログ", () => {
     it("Edit ボタンで編集ダイアログが表示される", async () => {
-      const user = (
-        await import("@testing-library/user-event")
-      ).default.setup();
+      const user = userEvent.setup();
       render(WorkViewer, createProps());
 
       await waitFor(() => {

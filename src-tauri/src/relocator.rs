@@ -71,6 +71,15 @@ fn compute_relocation_plan(
         );
         let base_str = base_path.to_string_lossy().to_string();
 
+        // A work whose current path already matches the pre-existing (no
+        // work_kind top-level directory) rendering of the same template is
+        // left in place: the work_kind top-level directory is a presentation
+        // change for new imports, not a mandate to relocate every existing work.
+        let legacy_path = template::resolve_legacy_work_path(library_root, new_template, &metadata);
+        if legacy_path.to_string_lossy() == work.path {
+            continue;
+        }
+
         let new_path =
             if used_paths.contains(&base_str) || (base_path.exists() && base_str != work.path) {
                 template::unique_path(&base_path, |p| {

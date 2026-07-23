@@ -111,19 +111,7 @@ describe("EditWorkDialog コンポーネント", () => {
     });
   });
 
-  it("保存成功時に成功トーストが表示される", async () => {
-    const user = userEvent.setup();
-    render(EditWorkDialog, createProps());
-
-    await user.click(screen.getByText("保存"));
-
-    await waitFor(() => {
-      const toasts = getToasts();
-      expect(toasts.some((t) => t.type === "success")).toBe(true);
-    });
-  });
-
-  it("保存成功時に onUpdated と onClose が呼ばれる", async () => {
+  it("保存成功時に成功トーストが表示され onUpdated と onClose が呼ばれる", async () => {
     const user = userEvent.setup();
     const props = createProps();
     render(EditWorkDialog, props);
@@ -131,6 +119,8 @@ describe("EditWorkDialog コンポーネント", () => {
     await user.click(screen.getByText("保存"));
 
     await waitFor(() => {
+      const toasts = getToasts();
+      expect(toasts.some((t) => t.type === "success")).toBe(true);
       expect(props.onUpdated).toHaveBeenCalledWith(1);
       expect(props.onClose).toHaveBeenCalled();
     });
