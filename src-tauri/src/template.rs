@@ -9,6 +9,9 @@ const KNOWN_PLACEHOLDERS: &[&str] = &[
 ];
 const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
+// keep-in-sync: corresponds to WorkMetadata in src/lib/types.ts.
+// work_type is absent from the frontend IPC payload, so it carries #[serde(default)]
+// and is only populated server-side with the resolved type label during placeholder rendering.
 pub const WORK_KIND_FOLDER: &str = "folder";
 pub const WORK_KIND_IMAGE: &str = "image";
 
@@ -155,14 +158,8 @@ pub fn render_template(template: &str, metadata: &WorkMetadata) -> String {
         .join("/")
 }
 
-pub fn resolve_work_path(
-    library_root: &Path,
-    template: &str,
-    metadata: &WorkMetadata,
-    work_kind: &str,
-) -> PathBuf {
-    let rendered = render_template(template, metadata);
-    let resolved = library_root.join(top_level_for(work_kind)).join(&rendered);
+fn resolve_relative_to_root(library_root: &Path, relative: &Path) -> PathBuf {
+    let resolved = library_root.join(relative);
     let normalized = normalize_path(&resolved);
     let root_normalized = normalize_path(library_root);
     if !normalized.starts_with(&root_normalized) {
@@ -170,6 +167,30 @@ pub fn resolve_work_path(
     } else {
         normalized
     }
+}
+
+pub fn resolve_work_path(
+    library_root: &Path,
+    template: &str,
+    metadata: &WorkMetadata,
+    work_kind: &str,
+) -> PathBuf {
+    let rendered = render_template(template, metadata);
+    let relative = Path::new(top_level_for(work_kind)).join(&rendered);
+    resolve_relative_to_root(library_root, &relative)
+}
+
+/// Resolves the path a work would have had before work_kind-based top-level
+/// directories ("works/" / "pictures/") were introduced. Used to recognize
+/// pre-existing works whose on-disk path predates that change, so they are
+/// not misclassified as needing relocation just because of it.
+pub fn resolve_legacy_work_path(
+    library_root: &Path,
+    template: &str,
+    metadata: &WorkMetadata,
+) -> PathBuf {
+    let rendered = render_template(template, metadata);
+    resolve_relative_to_root(library_root, Path::new(&rendered))
 }
 
 fn normalize_path(path: &Path) -> PathBuf {
@@ -186,6 +207,28 @@ fn normalize_path(path: &Path) -> PathBuf {
     components.iter().collect()
 }
 
+/// Returns base as-is if the is_taken predicate judges it "free";
+/// otherwise searches `{base}_0001`, `{base}_0002`, ... in order and returns the first free one.
+pub fn unique_path(base: &Path, is_taken: impl Fn(&Path) -> bool) -> PathBuf {
+    if !is_taken(base) {
+        return base.to_path_buf();
+    }
+    // base originates from resolve_work_path / an existing work path, so it always has a file name segment.
+    let base_name = base
+        .file_name()
+        .expect("base always has a file name segment")
+        .to_string_lossy()
+        .to_string();
+    for i in 1u32.. {
+        let dir_name = format!("{}_{:04x}", base_name, i);
+        let candidate = base.with_file_name(&dir_name);
+        if !is_taken(&candidate) {
+            return candidate;
+        }
+    }
+    unreachable!()
+}
+
 pub fn resolve_unique_work_path(
     library_root: &Path,
     template: &str,
@@ -193,18 +236,7 @@ pub fn resolve_unique_work_path(
     work_kind: &str,
 ) -> PathBuf {
     let base = resolve_work_path(library_root, template, metadata, work_kind);
-    if !base.exists() {
-        return base;
-    }
-    let base_name = base.file_name().unwrap().to_string_lossy().to_string();
-    for i in 1u32.. {
-        let dir_name = format!("{}_{:04x}", base_name, i);
-        let candidate = base.with_file_name(&dir_name);
-        if !candidate.exists() {
-            return candidate;
-        }
-    }
-    unreachable!()
+    unique_path(&base, |p| p.exists())
 }
 
 pub fn sample_metadata() -> WorkMetadata {

@@ -51,13 +51,16 @@ src/                  # フロントエンド（Svelte 5）
   lib/
     components/       # Svelteコンポーネント
     stores/           # Svelte stores
+    utils/            # 共通ユーティリティ関数
+    thumbnailCache.ts # サムネイルキャッシュ
     types.ts          # TypeScript型定義
   App.svelte          # ルートコンポーネント
   main.ts             # エントリポイント
 src-tauri/            # バックエンド（Rust + Tauri 2）
   src/                # Rustソースコード
+    commands/         # Tauriコマンド
+    tests/            # Rustテスト
   migrations/         # SQLiteマイグレーション
-  tests/              # Rustテスト
   Cargo.toml
   tauri.conf.json     # Tauri設定
 docs/                 # 機能仕様書

@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
@@ -12,15 +12,17 @@ pub struct Library {
     pub path: Option<String>,
 }
 
+fn map_library_row(row: &rusqlite::Row) -> rusqlite::Result<Library> {
+    Ok(Library {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        path: row.get::<_, Option<String>>(2)?,
+    })
+}
+
 pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, AppError> {
     let mut stmt = conn.prepare_cached("SELECT id, name, path FROM libraries ORDER BY rowid")?;
-    let rows = stmt.query_map([], |row| {
-        Ok(Library {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            path: row.get::<_, Option<String>>(2)?,
-        })
-    })?;
+    let rows = stmt.query_map([], map_library_row)?;
     let mut libs = Vec::new();
     for row in rows {
         libs.push(row?);
@@ -84,15 +86,7 @@ pub fn remove_library(conn: &Connection, id: &str) -> Result<(), AppError> {
 
 pub fn find_library_by_id(conn: &Connection, id: &str) -> Result<Option<Library>, AppError> {
     let mut stmt = conn.prepare_cached("SELECT id, name, path FROM libraries WHERE id = ?1")?;
-    let result = stmt
-        .query_row([id], |row| {
-            Ok(Library {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                path: row.get::<_, Option<String>>(2)?,
-            })
-        })
-        .optional();
+    let result = stmt.query_row([id], map_library_row).optional();
     match result {
         Ok(lib) => Ok(lib),
         Err(e) => Err(AppError::Database(e)),
@@ -102,15 +96,7 @@ pub fn find_library_by_id(conn: &Connection, id: &str) -> Result<Option<Library>
 pub fn active_library(conn: &Connection) -> Result<Option<Library>, AppError> {
     let mut stmt =
         conn.prepare_cached("SELECT id, name, path FROM libraries WHERE is_active = 1 LIMIT 1")?;
-    let result = stmt
-        .query_row([], |row| {
-            Ok(Library {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                path: row.get::<_, Option<String>>(2)?,
-            })
-        })
-        .optional();
+    let result = stmt.query_row([], map_library_row).optional();
     match result {
         Ok(lib) => Ok(lib),
         Err(e) => Err(AppError::Database(e)),
@@ -138,8 +124,6 @@ fn generate_id() -> String {
     let nanos = duration.as_nanos();
     format!("{:016x}", nanos & 0xFFFFFFFFFFFFFFFF)
 }
-
-use rusqlite::OptionalExtension;
 
 #[cfg(test)]
 #[path = "tests/library.rs"]

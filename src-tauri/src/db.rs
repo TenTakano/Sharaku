@@ -135,6 +135,40 @@ pub struct WorkDetail {
     pub origin: Option<String>,
 }
 
+fn map_work_summary_row(row: &rusqlite::Row) -> rusqlite::Result<WorkSummary> {
+    Ok(WorkSummary {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        work_type: row.get(2)?,
+        page_count: row.get(3)?,
+        created_at: row.get(4)?,
+    })
+}
+
+fn map_work_detail_row(row: &rusqlite::Row) -> rusqlite::Result<WorkDetail> {
+    Ok(WorkDetail {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        path: row.get(2)?,
+        work_type: row.get(3)?,
+        page_count: row.get(4)?,
+        created_at: row.get(5)?,
+        artist: row.get(6)?,
+        year: row.get(7)?,
+        genre: row.get(8)?,
+        circle: row.get(9)?,
+        origin: row.get(10)?,
+    })
+}
+
+fn map_tag_row(row: &rusqlite::Row) -> rusqlite::Result<Tag> {
+    Ok(Tag {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        category: row.get(2)?,
+    })
+}
+
 pub fn list_works(
     conn: &Connection,
     library_id: &str,
@@ -154,15 +188,7 @@ pub fn list_works(
         column, order
     );
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map([library_id], |row| {
-        Ok(WorkSummary {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            work_type: row.get(2)?,
-            page_count: row.get(3)?,
-            created_at: row.get(4)?,
-        })
-    })?;
+    let rows = stmt.query_map([library_id], map_work_summary_row)?;
     let mut works = Vec::new();
     for row in rows {
         works.push(row?);
@@ -185,21 +211,7 @@ pub fn list_folder_works(conn: &Connection, library_id: &str) -> Result<Vec<Work
     let mut stmt = conn.prepare_cached(
         "SELECT id, title, path, type, page_count, created_at, artist, year, genre, circle, origin FROM works WHERE library_id = ?1 AND type = 'folder'",
     )?;
-    let rows = stmt.query_map([library_id], |row| {
-        Ok(WorkDetail {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            path: row.get(2)?,
-            work_type: row.get(3)?,
-            page_count: row.get(4)?,
-            created_at: row.get(5)?,
-            artist: row.get(6)?,
-            year: row.get(7)?,
-            genre: row.get(8)?,
-            circle: row.get(9)?,
-            origin: row.get(10)?,
-        })
-    })?;
+    let rows = stmt.query_map([library_id], map_work_detail_row)?;
     let mut works = Vec::new();
     for row in rows {
         works.push(row?);
@@ -240,25 +252,11 @@ pub fn get_work(conn: &Connection, work_id: i64) -> Result<WorkDetail, AppError>
     let mut stmt = conn.prepare_cached(
         "SELECT id, title, path, type, page_count, created_at, artist, year, genre, circle, origin FROM works WHERE id = ?1",
     )?;
-    stmt.query_row([work_id], |row| {
-        Ok(WorkDetail {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            path: row.get(2)?,
-            work_type: row.get(3)?,
-            page_count: row.get(4)?,
-            created_at: row.get(5)?,
-            artist: row.get(6)?,
-            year: row.get(7)?,
-            genre: row.get(8)?,
-            circle: row.get(9)?,
-            origin: row.get(10)?,
+    stmt.query_row([work_id], map_work_detail_row)
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => AppError::NotFound,
+            other => AppError::Database(other),
         })
-    })
-    .map_err(|e| match e {
-        rusqlite::Error::QueryReturnedNoRows => AppError::NotFound,
-        other => AppError::Database(other),
-    })
 }
 
 pub fn create_tag(
@@ -312,13 +310,10 @@ pub fn search_tags(
     let mut stmt = conn.prepare(
         "SELECT id, name, category FROM tags WHERE library_id = ?1 AND name LIKE ?2 AND (?3 IS NULL OR category = ?3) ORDER BY name LIMIT 50",
     )?;
-    let rows = stmt.query_map(rusqlite::params![library_id, pattern, category], |row| {
-        Ok(Tag {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            category: row.get(2)?,
-        })
-    })?;
+    let rows = stmt.query_map(
+        rusqlite::params![library_id, pattern, category],
+        map_tag_row,
+    )?;
     let mut tags = Vec::new();
     for row in rows {
         tags.push(row?);
@@ -330,13 +325,7 @@ pub fn list_tags(conn: &Connection, library_id: &str) -> Result<Vec<Tag>, AppErr
     let mut stmt = conn.prepare(
         "SELECT id, name, category FROM tags WHERE library_id = ?1 ORDER BY category, name",
     )?;
-    let rows = stmt.query_map([library_id], |row| {
-        Ok(Tag {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            category: row.get(2)?,
-        })
-    })?;
+    let rows = stmt.query_map([library_id], map_tag_row)?;
     let mut tags = Vec::new();
     for row in rows {
         tags.push(row?);
@@ -364,13 +353,7 @@ pub fn get_tags_for_work(conn: &Connection, work_id: i64) -> Result<Vec<Tag>, Ap
     let mut stmt = conn.prepare(
         "SELECT t.id, t.name, t.category FROM tags t INNER JOIN works_tags wt ON t.id = wt.tag_id WHERE wt.work_id = ?1 ORDER BY t.name",
     )?;
-    let rows = stmt.query_map([work_id], |row| {
-        Ok(Tag {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            category: row.get(2)?,
-        })
-    })?;
+    let rows = stmt.query_map([work_id], map_tag_row)?;
     let mut tags = Vec::new();
     for row in rows {
         tags.push(row?);
@@ -429,15 +412,7 @@ pub fn search_works_by_tags(
     }
 
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(params_from_iter(params.iter()), |row| {
-        Ok(WorkSummary {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            work_type: row.get(2)?,
-            page_count: row.get(3)?,
-            created_at: row.get(4)?,
-        })
-    })?;
+    let rows = stmt.query_map(params_from_iter(params.iter()), map_work_summary_row)?;
     let mut works = Vec::new();
     for row in rows {
         works.push(row?);

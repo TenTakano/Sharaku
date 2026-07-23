@@ -1,12 +1,12 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { VList } from "virtua/svelte";
-  import WorkCardComponent from "./WorkCard.svelte";
-  import { WorkCard } from "./WorkCard.svelte";
+  import WorkCard from "./WorkCard.svelte";
   import ContextMenu from "./ContextMenu.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import EditWorkDialog from "./EditWorkDialog.svelte";
   import { addToast } from "../stores/toast.svelte";
+  import { clearThumbnailCache } from "../thumbnailCache";
   import type {
     WorkSummary,
     WorkDetail,
@@ -49,7 +49,7 @@
   let editingWork = $state<WorkDetail | null>(null);
   let deletingWork = $state<{ id: number; title: string } | null>(null);
   let deleteFileAction = $state<DeleteFileAction>("ask");
-  let selectedFileAction = $state<string>("none");
+  let selectedFileAction = $state<DeleteFileAction | "none">("none");
   let isFullMode = $state(false);
 
   const CARD_WIDTH = 180;
@@ -84,7 +84,7 @@
   }
 
   async function loadWorks() {
-    WorkCard.clearCache();
+    clearThumbnailCache();
     if (filterTags.length > 0) {
       const filtered: WorkSummary[] = await invoke("search_works_by_tags", {
         tagIds: filterTags.map((t) => t.id),
@@ -151,7 +151,7 @@
     deletingWork = { id: work.id, title: work.title };
   }
 
-  function resolveFileAction(): string {
+  function resolveEffectiveDeleteAction(): DeleteFileAction | "none" {
     if (!isFullMode) return "none";
     if (deleteFileAction === "ask") return selectedFileAction;
     return deleteFileAction;
@@ -163,7 +163,7 @@
     try {
       await invoke("delete_work", {
         workId: id,
-        fileAction: resolveFileAction(),
+        fileAction: resolveEffectiveDeleteAction(),
       });
       addToast("success", `「${title}」を削除しました`);
       deletingWork = null;
@@ -246,7 +246,7 @@
           style="gap: {GAP}px; grid-template-columns: repeat({columnCount}, {CARD_WIDTH}px);"
         >
           {#each row as work (work.id)}
-            <WorkCardComponent
+            <WorkCard
               {work}
               onclick={onSelectWork}
               oncontextmenu={handleContextMenu}

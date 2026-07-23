@@ -1,19 +1,11 @@
 use super::*;
 
-use crate::db;
-use crate::library;
+use crate::test_common::test_db_with_library;
 
 const TEST_LIBRARY_ID: &str = "test_lib_settings";
 
 fn test_conn() -> rusqlite::Connection {
-    let conn = db::open_db_in_memory().unwrap();
-    library::add_library(&conn, "Test", Some("/test")).ok();
-    conn.execute(
-        "UPDATE libraries SET id = ?1 WHERE id = (SELECT id FROM libraries LIMIT 1)",
-        [TEST_LIBRARY_ID],
-    )
-    .unwrap();
-    conn
+    test_db_with_library(TEST_LIBRARY_ID)
 }
 
 #[test]

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { mockIPC } from "@tauri-apps/api/mocks";
-import SettingsView from "../../src/lib/components/SettingsView.svelte";
+import SettingsView from "../../src/lib/components/LibrarySettingsView.svelte";
 import type { AppSettings } from "../../src/lib/types";
 import { getToasts, removeToast } from "../../src/lib/stores/toast.svelte";
 

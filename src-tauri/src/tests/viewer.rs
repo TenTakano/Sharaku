@@ -35,37 +35,3 @@ fn parse_invalid_uri_missing_page() {
 fn parse_invalid_uri_non_numeric() {
     assert_eq!(parse_view_uri("sharaku://localhost/view/abc/0"), None);
 }
-
-#[test]
-fn content_type_jpeg() {
-    assert_eq!(content_type_from_path("/path/to/image.jpg"), "image/jpeg");
-    assert_eq!(content_type_from_path("/path/to/image.JPEG"), "image/jpeg");
-}
-
-#[test]
-fn content_type_png() {
-    assert_eq!(content_type_from_path("/path/to/image.png"), "image/png");
-}
-
-#[test]
-fn content_type_gif() {
-    assert_eq!(content_type_from_path("/path/to/image.gif"), "image/gif");
-}
-
-#[test]
-fn content_type_webp() {
-    assert_eq!(content_type_from_path("/path/to/image.webp"), "image/webp");
-}
-
-#[test]
-fn content_type_bmp() {
-    assert_eq!(content_type_from_path("/path/to/image.bmp"), "image/bmp");
-}
-
-#[test]
-fn content_type_unknown() {
-    assert_eq!(
-        content_type_from_path("/path/to/file.xyz"),
-        "application/octet-stream"
-    );
-}

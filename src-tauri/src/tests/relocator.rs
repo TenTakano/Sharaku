@@ -1,23 +1,17 @@
 use std::path::Path;
 
 use rusqlite::Connection;
+use tempfile::TempDir;
 
 use crate::db::{self, WorkRecord};
-use crate::library;
+use crate::test_common::test_db_with_library;
 
 use super::*;
 
 const TEST_LIBRARY_ID: &str = "test_lib_relocator";
 
-fn setup_test_db() -> Connection {
-    let conn = db::open_db_in_memory().unwrap();
-    library::add_library(&conn, "Test", Some("/test")).ok();
-    conn.execute(
-        "UPDATE libraries SET id = ?1 WHERE id = (SELECT id FROM libraries LIMIT 1)",
-        [TEST_LIBRARY_ID],
-    )
-    .unwrap();
-    conn
+fn test_conn() -> Connection {
+    test_db_with_library(TEST_LIBRARY_ID)
 }
 
 fn insert_folder_work(conn: &Connection, title: &str, path: &str, artist: Option<&str>) {
@@ -42,7 +36,7 @@ fn insert_folder_work(conn: &Connection, title: &str, path: &str, artist: Option
 
 #[test]
 fn preview_empty_when_no_folder_works() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     let previews =
         preview_relocation(&conn, TEST_LIBRARY_ID, Path::new("/library"), "{title}").unwrap();
     assert!(previews.is_empty());
@@ -50,7 +44,7 @@ fn preview_empty_when_no_folder_works() {
 
 #[test]
 fn preview_empty_when_path_unchanged() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "MyWork", "/library/works/MyWork", None);
     let previews =
         preview_relocation(&conn, TEST_LIBRARY_ID, Path::new("/library"), "{title}").unwrap();
@@ -58,8 +52,17 @@ fn preview_empty_when_path_unchanged() {
 }
 
 #[test]
+fn preview_empty_when_path_matches_legacy_scheme() {
+    let conn = test_conn();
+    insert_folder_work(&conn, "MyWork", "/library/MyWork", None);
+    let previews =
+        preview_relocation(&conn, TEST_LIBRARY_ID, Path::new("/library"), "{title}").unwrap();
+    assert!(previews.is_empty());
+}
+
+#[test]
 fn preview_shows_changed_paths() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "MyWork", "/library/old_location", Some("Artist"));
     let previews = preview_relocation(
         &conn,
@@ -76,7 +79,7 @@ fn preview_shows_changed_paths() {
 
 #[test]
 fn preview_skips_image_type_works() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     db::insert_work(
         &conn,
         &WorkRecord {
@@ -101,7 +104,7 @@ fn preview_skips_image_type_works() {
 
 #[test]
 fn preview_multiple_works_different_paths() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "Work1", "/library/old1", Some("A"));
     insert_folder_work(&conn, "Work2", "/library/old2", Some("B"));
     let previews = preview_relocation(
@@ -116,8 +119,8 @@ fn preview_multiple_works_different_paths() {
 
 #[test]
 fn execute_moves_files_and_updates_db() {
-    let temp = std::env::temp_dir().join("sharaku_test_relocate_exec");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let library_root = temp.join("library");
     let old_dir = library_root.join("old_folder");
@@ -125,7 +128,7 @@ fn execute_moves_files_and_updates_db() {
     std::fs::write(old_dir.join("01.jpg"), b"image_data").unwrap();
     std::fs::write(old_dir.join("02.png"), b"image_data2").unwrap();
 
-    let conn = setup_test_db();
+    let conn = test_conn();
     crate::settings::set_directory_template(&conn, TEST_LIBRARY_ID, "{title}").unwrap();
     insert_folder_work(&conn, "MyWork", &old_dir.to_string_lossy(), Some("Artist"));
 
@@ -146,13 +149,11 @@ fn execute_moves_files_and_updates_db() {
     assert!(new_dir.join("01.jpg").exists());
     assert!(new_dir.join("02.png").exists());
     assert!(!old_dir.exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }
 
 #[test]
 fn compute_plan_handles_path_collision() {
-    let conn = setup_test_db();
+    let conn = test_conn();
     insert_folder_work(&conn, "SameTitle", "/library/folder_a", Some("Artist"));
     insert_folder_work(&conn, "SameTitle", "/library/folder_b", Some("Artist"));
 
@@ -165,8 +166,8 @@ fn compute_plan_handles_path_collision() {
 
 #[test]
 fn copy_work_files_preserves_source() {
-    let temp = std::env::temp_dir().join("sharaku_test_copy_preserves");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let src = temp.join("src_folder");
     let dst = temp.join("dst_folder");
@@ -180,14 +181,12 @@ fn copy_work_files_preserves_source() {
     assert!(dst.join("02.png").exists());
     assert!(src.join("01.jpg").exists());
     assert!(src.join("02.png").exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }
 
 #[test]
 fn cleanup_empty_ancestors_removes_empty_dirs() {
-    let temp = std::env::temp_dir().join("sharaku_test_cleanup_ancestors");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let stop = temp.join("library");
     let nested = stop.join("a").join("b").join("c");
@@ -199,14 +198,12 @@ fn cleanup_empty_ancestors_removes_empty_dirs() {
 
     assert!(!stop.join("a").exists());
     assert!(stop.exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }
 
 #[test]
 fn cleanup_empty_ancestors_stops_at_non_empty() {
-    let temp = std::env::temp_dir().join("sharaku_test_cleanup_nonempty");
-    let _ = std::fs::remove_dir_all(&temp);
+    let temp = TempDir::new().unwrap();
+    let temp = temp.path();
 
     let stop = temp.join("library");
     let parent = stop.join("artist");
@@ -219,6 +216,4 @@ fn cleanup_empty_ancestors_stops_at_non_empty() {
     cleanup_empty_ancestors(&child, &stop);
 
     assert!(parent.exists());
-
-    std::fs::remove_dir_all(&temp).unwrap();
 }

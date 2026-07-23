@@ -39,37 +39,36 @@
     <section class="settings-section">
       <h2>テーマ</h2>
       <p class="settings-description">アプリの外観テーマを選択します。</p>
-      <div class="resource-mode-select">
-        <label class="resource-mode-option">
+      <div class="radio-option-group">
+        <label class="radio-option">
           <input
             type="radio"
             name="theme-mode"
             checked={getThemeMode() === "system"}
             onchange={() => handleThemeChange("system")}
           />
-          <span class="resource-mode-label">OS設定に従う</span>
-          <span class="resource-mode-desc">OSのダーク/ライト設定に自動追従</span
-          >
+          <span class="radio-option-label">OS設定に従う</span>
+          <span class="radio-option-desc">OSのダーク/ライト設定に自動追従</span>
         </label>
-        <label class="resource-mode-option">
+        <label class="radio-option">
           <input
             type="radio"
             name="theme-mode"
             checked={getThemeMode() === "light"}
             onchange={() => handleThemeChange("light")}
           />
-          <span class="resource-mode-label">ライト</span>
-          <span class="resource-mode-desc">常にライトテーマを使用</span>
+          <span class="radio-option-label">ライト</span>
+          <span class="radio-option-desc">常にライトテーマを使用</span>
         </label>
-        <label class="resource-mode-option">
+        <label class="radio-option">
           <input
             type="radio"
             name="theme-mode"
             checked={getThemeMode() === "dark"}
             onchange={() => handleThemeChange("dark")}
           />
-          <span class="resource-mode-label">ダーク</span>
-          <span class="resource-mode-desc">常にダークテーマを使用</span>
+          <span class="radio-option-label">ダーク</span>
+          <span class="radio-option-desc">常にダークテーマを使用</span>
         </label>
       </div>
     </section>
@@ -79,16 +78,16 @@
       <p class="settings-description">
         取り込み完了バナーが自動で消えるまでの時間を設定します。エラーがある場合は手動で閉じる必要があります。
       </p>
-      <div class="resource-mode-select">
+      <div class="radio-option-group">
         {#each bannerOptions as option (option.value)}
-          <label class="resource-mode-option">
+          <label class="radio-option">
             <input
               type="radio"
               name="banner-auto-close"
               checked={getBannerAutoClose() === option.value}
               onchange={() => handleBannerAutoCloseChange(option.value)}
             />
-            <span class="resource-mode-label">{option.label}</span>
+            <span class="radio-option-label">{option.label}</span>
           </label>
         {/each}
       </div>

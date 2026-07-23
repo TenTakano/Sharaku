@@ -1,4 +1,4 @@
-# ビューア仕様書
+# Sharaku 仕様書 - ビューア機能
 
 ## 1. 概要
 
@@ -14,7 +14,7 @@ Tauri のプロトコルハンドラが URI を解析し、Rust 側で画像デ�
 ### 作品タイプ別の挙動
 
 - **folder 型**: フォルダ内の画像ファイルを自然順（natord）でソートし、pageIndex 番目の画像を返す
-- **非 folder 型**（将来の image, pdf, archive 型）: path に指定されたファイルを直接読み込む。pageIndex=0 のみ有効
+- **非 folder 型**（image 型、および将来の pdf, archive 型）: path に指定されたファイルを直接読み込む。pageIndex=0 のみ有効
 
 ### Content-Type
 
@@ -128,4 +128,4 @@ workType と path は編集不可。
 
 ## 10. 現状の制約
 
-- 画像配信で folder 型以外の実装はあるが、実際にインポートされる作品はすべて folder 型のため未使用（Issue #164 で image 型が使用される予定）
+- 画像配信の非 folder 型経路は image 型作品のインポート・閲覧で使用される。pdf, archive 型は未実装のため対応する経路は現状未使用

@@ -1,8 +1,13 @@
-export interface Work {
-  id: number;
-  title: string;
-  thumbnail: number[];
-}
+export type TimerHandle = ReturnType<typeof setTimeout> | null;
+
+export type ViewKind =
+  | "library"
+  | "viewer"
+  | "settings"
+  | "import"
+  | "bulk-import"
+  | "add-library"
+  | "app-settings";
 
 export interface WorkSummary {
   id: number;
@@ -68,6 +73,10 @@ export interface TemplateValidation {
   error: string | null;
 }
 
+// keep-in-sync: corresponds to WorkMetadata in src-tauri/src/template.rs.
+// The Rust side additionally has work_type: Option<String> with #[serde(default)]
+// (a field populated server-side with the resolved type label during placeholder
+// rendering; it is not included in the frontend's IPC payload).
 export interface WorkMetadata {
   title: string;
   artist: string | null;
@@ -77,6 +86,8 @@ export interface WorkMetadata {
   origin: string | null;
 }
 
+// keep-in-sync: corresponds to ImportMode in src-tauri/src/importer.rs (#[serde(rename_all = "camelCase")]).
+// The Rust side's Copy/Move become "copy"/"move" once camelCased.
 export type ImportMode = "copy" | "move";
 
 export type ImportKind = "folder" | "image";
@@ -105,6 +116,7 @@ export interface ParsedMetadata {
   artist: string | null;
 }
 
+// keep-in-sync: corresponds to the RelocationProgress enum in src-tauri/src/relocator.rs.
 export type RelocationProgress =
   | { type: "started"; total: number }
   | { type: "moving"; current: number; total: number; title: string }
@@ -145,10 +157,14 @@ export interface DiscoverResult {
   skippedFolders: SkippedFolder[];
 }
 
+// keep-in-sync: corresponds to the DiscoverProgress enum in src-tauri/src/importer.rs.
 export type DiscoverProgress =
   | { type: "scanning"; scannedDirs: number }
   | { type: "completed"; found: number };
 
+// No corresponding enum on the Rust side; this is a local-only progress representation
+// synthesized by the frontend (BulkImportView) from a sequence of ImportQueueEvent events.
+// Not subject to keep-in-sync.
 export type BulkImportProgress =
   | { type: "started"; total: number }
   | { type: "importing"; current: number; total: number; title: string }
@@ -179,11 +195,13 @@ export interface IntegrityReport {
   unregisteredEntries: UnregisteredEntry[];
 }
 
+// keep-in-sync: corresponds to the IntegrityCheckProgress enum in src-tauri/src/integrity.rs.
 export type IntegrityCheckProgress =
   | { type: "checkingWorks"; checked: number; total: number }
   | { type: "scanningDirectory"; scannedDirs: number }
   | { type: "completed" };
 
+// keep-in-sync: corresponds to the ImportQueueEvent enum in src-tauri/src/import_queue.rs.
 export type ImportQueueEvent =
   | { type: "enqueued"; jobId: string; total: number }
   | { type: "jobStarted"; jobId: string; total: number }

@@ -2,6 +2,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
   import { addToast } from "../stores/toast.svelte";
+  import { debounce } from "../utils/debounce";
+  import { createLatestRequestGuard } from "../utils/latestRequest";
   import type {
     AppSettings,
     ResourceMode,
@@ -37,8 +39,7 @@
   let mode = $state<ImportMode>("copy");
   let previewPath = $state<string | null>(null);
   let submitting = $state(false);
-  let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
-  let previewRequestId = 0;
+  const previewRequestGuard = createLatestRequestGuard();
 
   function basenameOf(path: string): string {
     const sep = path.includes("\\") ? "\\" : "/";
@@ -48,6 +49,22 @@
   function stripExtension(fileName: string): string {
     const dot = fileName.lastIndexOf(".");
     return dot > 0 ? fileName.slice(0, dot) : fileName;
+  }
+
+  async function resolveMetadataFromPath(
+    path: string,
+  ): Promise<{ title: string; artist: string }> {
+    const base = basenameOf(path);
+    const nameForParse = kind === "image" ? stripExtension(base) : base;
+
+    try {
+      const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
+        folderName: nameForParse,
+      });
+      return { title: parsed.title, artist: parsed.artist ?? "" };
+    } catch {
+      return { title: nameForParse, artist: "" };
+    }
   }
 
   async function selectSource() {
@@ -74,30 +91,31 @@
     };
   }
 
-  async function updatePreview() {
+  const debouncedFetchPreview = debounce(async () => {
+    if (!title.trim()) {
+      previewPath = null;
+      return;
+    }
+    const requestId = previewRequestGuard.next();
+    try {
+      const path = await invoke<string>("preview_import_path", {
+        metadata: buildMetadata(),
+        kind,
+      });
+      if (!previewRequestGuard.isLatest(requestId)) return;
+      previewPath = path;
+    } catch {
+      if (!previewRequestGuard.isLatest(requestId)) return;
+      previewPath = null;
+    }
+  }, 300);
+
+  function updatePreview() {
     if (resourceMode === "metadata_only") {
       previewPath = null;
       return;
     }
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-      if (!title.trim()) {
-        previewPath = null;
-        return;
-      }
-      const requestId = ++previewRequestId;
-      try {
-        const path = await invoke<string>("preview_import_path", {
-          metadata: buildMetadata(),
-          kind,
-        });
-        if (requestId !== previewRequestId) return;
-        previewPath = path;
-      } catch {
-        if (requestId !== previewRequestId) return;
-        previewPath = null;
-      }
-    }, 300);
+    debouncedFetchPreview();
   }
 
   async function executeImport() {
@@ -133,19 +151,9 @@
 
   async function loadFromPath(path: string) {
     sourcePath = path;
-    const base = basenameOf(path);
-    const nameForParse = kind === "image" ? stripExtension(base) : base;
-
-    try {
-      const parsed = await invoke<ParsedMetadata>("parse_folder_name", {
-        folderName: nameForParse,
-      });
-      title = parsed.title;
-      artist = parsed.artist ?? "";
-    } catch {
-      title = nameForParse;
-      artist = "";
-    }
+    const resolved = await resolveMetadataFromPath(path);
+    title = resolved.title;
+    artist = resolved.artist;
 
     step = "metadata";
     updatePreview();

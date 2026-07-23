@@ -1,18 +1,6 @@
-<script lang="ts" module>
-  export class WorkCard {
-    static _thumbnailCache = new Map<number, string>();
-
-    static clearCache() {
-      for (const url of WorkCard._thumbnailCache.values()) {
-        URL.revokeObjectURL(url);
-      }
-      WorkCard._thumbnailCache.clear();
-    }
-  }
-</script>
-
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { getCachedThumbnail, setCachedThumbnail } from "../thumbnailCache";
   import type { WorkSummary } from "../types";
 
   interface Props {
@@ -25,10 +13,8 @@
   let thumbnailUrl = $state<string | null>(null);
   let loading = $state(true);
 
-  const cache = WorkCard._thumbnailCache;
-
   async function loadThumbnail() {
-    const cached = cache.get(work.id);
+    const cached = getCachedThumbnail(work.id);
     if (cached) {
       thumbnailUrl = cached;
       loading = false;
@@ -40,7 +26,7 @@
       });
       const blob = new Blob([new Uint8Array(bytes)], { type: "image/webp" });
       const url = URL.createObjectURL(blob);
-      cache.set(work.id, url);
+      setCachedThumbnail(work.id, url);
       thumbnailUrl = url;
     } catch {
       thumbnailUrl = null;

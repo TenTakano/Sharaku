@@ -41,6 +41,8 @@ pub struct ParsedMetadata {
     pub artist: Option<String>,
 }
 
+// keep-in-sync: corresponds to ImportMode ("copy" | "move") in src/lib/types.ts.
+// rename_all = "camelCase" serializes Copy/Move as "copy"/"move" respectively.
 #[derive(Deserialize, Clone, Copy, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ImportMode {
@@ -151,19 +153,14 @@ pub fn import_work(
 
         db::insert_work(
             conn,
-            &WorkRecord {
+            &build_work_record(
+                request,
                 library_id,
-                title: &request.title,
-                path: &source_str,
-                work_type: "folder",
-                page_count: page_count as i32,
-                thumbnail: &thumb,
-                artist: request.artist.as_deref(),
-                year: request.year,
-                genre: request.genre.as_deref(),
-                circle: request.circle.as_deref(),
-                origin: request.origin.as_deref(),
-            },
+                &source_str,
+                template::WORK_KIND_FOLDER,
+                page_count as i32,
+                &thumb,
+            ),
         )?;
 
         return Ok(ImportResult {
@@ -176,7 +173,7 @@ pub fn import_work(
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
 
-    let type_label = settings::resolve_type_label(conn, library_id, "folder")?;
+    let type_label = settings::resolve_type_label(conn, library_id, template::WORK_KIND_FOLDER)?;
     let metadata = WorkMetadata {
         title: request.title.clone(),
         artist: request.artist.clone(),
@@ -206,7 +203,7 @@ pub fn import_work(
         let _ = std::fs::remove_dir_all(dest);
     };
 
-    if let Err(e) = copy_images_to_dest(&images, &dest) {
+    if let Err(e) = copy_images_to_dir(&images, &dest, false, AppError::ImportError) {
         rollback(&dest);
         return Err(e);
     }
@@ -215,19 +212,14 @@ pub fn import_work(
 
     if let Err(e) = db::insert_work(
         conn,
-        &WorkRecord {
+        &build_work_record(
+            request,
             library_id,
-            title: &request.title,
-            path: &dest_str,
-            work_type: "folder",
-            page_count: page_count as i32,
-            thumbnail: &thumb,
-            artist: request.artist.as_deref(),
-            year: request.year,
-            genre: request.genre.as_deref(),
-            circle: request.circle.as_deref(),
-            origin: request.origin.as_deref(),
-        },
+            &dest_str,
+            template::WORK_KIND_FOLDER,
+            page_count as i32,
+            &thumb,
+        ),
     ) {
         rollback(&dest);
         return Err(e);
@@ -246,15 +238,50 @@ pub fn import_work(
     })
 }
 
+fn build_work_record<'a>(
+    request: &'a ImportRequest,
+    library_id: &'a str,
+    path: &'a str,
+    work_type: &'static str,
+    page_count: i32,
+    thumbnail: &'a [u8],
+) -> WorkRecord<'a> {
+    WorkRecord {
+        library_id,
+        title: &request.title,
+        path,
+        work_type,
+        page_count,
+        thumbnail,
+        artist: request.artist.as_deref(),
+        year: request.year,
+        genre: request.genre.as_deref(),
+        circle: request.circle.as_deref(),
+        origin: request.origin.as_deref(),
+    }
+}
+
 fn paths_overlap(a: &Path, b: &Path) -> bool {
     a.starts_with(b) || b.starts_with(a)
 }
 
-fn copy_images_to_dest(images: &[PathBuf], dest: &Path) -> Result<(), AppError> {
+/// Copies images into dest. When ensure_dest_dir is true, this also creates dest
+/// (pass false when the caller has already run create_dir_all).
+/// build_error lets the caller choose which AppError variant to construct on
+/// filename-extraction failure (ImportError vs RelocationError differ by caller).
+pub(crate) fn copy_images_to_dir(
+    images: &[PathBuf],
+    dest: &Path,
+    ensure_dest_dir: bool,
+    build_error: impl Fn(String) -> AppError,
+) -> Result<(), AppError> {
+    if ensure_dest_dir {
+        std::fs::create_dir_all(dest)?;
+    }
     for image in images {
         let file_name = image
             .file_name()
-            .ok_or_else(|| AppError::ImportError("無効なファイル名".to_string()))?;
+            .ok_or_else(|| build_error("無効なファイル名".to_string()))?;
         let dest_file = dest.join(file_name);
         std::fs::copy(image, &dest_file)?;
     }
@@ -282,19 +309,14 @@ pub fn import_single_image(
 
         db::insert_work(
             conn,
-            &WorkRecord {
+            &build_work_record(
+                request,
                 library_id,
-                title: &request.title,
-                path: &source_str,
-                work_type: "image",
-                page_count: 1,
-                thumbnail: &thumb,
-                artist: request.artist.as_deref(),
-                year: request.year,
-                genre: request.genre.as_deref(),
-                circle: request.circle.as_deref(),
-                origin: request.origin.as_deref(),
-            },
+                &source_str,
+                template::WORK_KIND_IMAGE,
+                1,
+                &thumb,
+            ),
         )?;
 
         return Ok(ImportResult {
@@ -307,7 +329,7 @@ pub fn import_single_image(
         AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
     })?;
 
-    let type_label = settings::resolve_type_label(conn, library_id, "image")?;
+    let type_label = settings::resolve_type_label(conn, library_id, template::WORK_KIND_IMAGE)?;
     let metadata = WorkMetadata {
         title: request.title.clone(),
         artist: request.artist.clone(),
@@ -351,19 +373,14 @@ pub fn import_single_image(
 
     if let Err(e) = db::insert_work(
         conn,
-        &WorkRecord {
+        &build_work_record(
+            request,
             library_id,
-            title: &request.title,
-            path: &dest_str,
-            work_type: "image",
-            page_count: 1,
-            thumbnail: &thumb,
-            artist: request.artist.as_deref(),
-            year: request.year,
-            genre: request.genre.as_deref(),
-            circle: request.circle.as_deref(),
-            origin: request.origin.as_deref(),
-        },
+            &dest_str,
+            template::WORK_KIND_IMAGE,
+            1,
+            &thumb,
+        ),
     ) {
         rollback(&dest_dir);
         return Err(e);
@@ -414,6 +431,7 @@ pub struct DiscoverResult {
     pub skipped_folders: Vec<SkippedFolder>,
 }
 
+// keep-in-sync: corresponds to the DiscoverProgress tagged union in src/lib/types.ts.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DiscoverProgress {

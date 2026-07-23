@@ -14,6 +14,52 @@ pub struct MigrationError {
 
 const MIGRATED_FLAG_KEY: &str = "_per_library_db_migrated";
 
+pub(crate) fn migrate_libraries_json(conn: &Connection, app_data_dir: &Path) {
+    let json_path = app_data_dir.join("libraries.json");
+    if !json_path.exists() {
+        return;
+    }
+
+    #[derive(serde::Deserialize)]
+    struct LibraryStoreData {
+        libraries: Vec<JsonLibrary>,
+        active_library_id: Option<String>,
+    }
+    #[derive(serde::Deserialize)]
+    struct JsonLibrary {
+        id: String,
+        name: String,
+        path: String,
+    }
+
+    let content = match std::fs::read_to_string(&json_path) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let data: LibraryStoreData = match serde_json::from_str(&content) {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    for lib in &data.libraries {
+        let already_exists: bool = conn
+            .prepare_cached("SELECT 1 FROM libraries WHERE id = ?1")
+            .and_then(|mut stmt| stmt.exists([&lib.id]))
+            .unwrap_or(true);
+        if already_exists {
+            continue;
+        }
+        let is_active = data.active_library_id.as_deref() == Some(&lib.id);
+        let _ = conn.execute(
+            "INSERT INTO libraries (id, name, path, is_active) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![lib.id, lib.name, lib.path, is_active as i32],
+        );
+    }
+
+    let migrated_path = json_path.with_extension("json.migrated");
+    let _ = std::fs::rename(&json_path, &migrated_path);
+}
+
 pub fn migrate_per_library_dbs(conn: &Connection) -> Vec<MigrationError> {
     let libraries = match library::list_libraries(conn) {
         Ok(libs) => libs,

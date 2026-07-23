@@ -1,27 +1,13 @@
 use super::*;
 use crate::library;
+use crate::test_common::test_db_with_library;
 use rusqlite::Connection;
+use tempfile::TempDir;
 
 const TEST_LIBRARY_ID: &str = "test_lib_001";
 
 fn test_conn() -> Connection {
-    let conn = open_db_in_memory().unwrap();
-    setup_test_library(&conn);
-    conn
-}
-
-fn setup_test_library(conn: &Connection) {
-    library::add_library(conn, "Test Library", Some("/test/path")).ok();
-    conn.execute(
-        "UPDATE libraries SET id = ?1 WHERE id = (SELECT id FROM libraries LIMIT 1)",
-        [TEST_LIBRARY_ID],
-    )
-    .unwrap();
-    conn.execute(
-        "UPDATE libraries SET is_active = 1 WHERE id = ?1",
-        [TEST_LIBRARY_ID],
-    )
-    .unwrap();
+    test_db_with_library(TEST_LIBRARY_ID)
 }
 
 fn sample_record<'a>(title: &'a str, path: &'a str) -> WorkRecord<'a> {
@@ -647,18 +633,10 @@ fn update_work_clears_optional_fields() {
 
 // --- database is locked reproduction ---
 
-fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    std::env::temp_dir().join(format!("sharaku_test_{}_{}", prefix, ts))
-}
-
 #[test]
 fn open_db_succeeds_despite_brief_external_lock() {
-    let dir = unique_temp_dir("locked");
-    std::fs::create_dir_all(&dir).unwrap();
+    let tmp = TempDir::new().unwrap();
+    let dir = tmp.path().to_path_buf();
 
     let db_path = dir.join("sharaku.db");
 
@@ -686,5 +664,4 @@ fn open_db_succeeds_despite_brief_external_lock() {
     assert_eq!(works.len(), 0);
 
     drop(conn);
-    let _ = std::fs::remove_dir_all(&dir);
 }

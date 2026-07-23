@@ -242,9 +242,6 @@ button:disabled {
 }
 
 .setup-mode-select {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   margin-bottom: 20px;
   text-align: left;
 }
@@ -1017,13 +1014,13 @@ button:disabled {
   pointer-events: none;
 }
 
-.resource-mode-select {
+.radio-option-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.resource-mode-option {
+.radio-option {
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -1031,11 +1028,11 @@ button:disabled {
   cursor: pointer;
 }
 
-.resource-mode-label {
+.radio-option-label {
   font-weight: 500;
 }
 
-.resource-mode-desc {
+.radio-option-desc {
   color: #666;
   font-size: 0.8125rem;
 }
@@ -1801,6 +1798,7 @@ button:disabled {
 
 .settings-delete-library-btn:hover:not(:disabled) {
   background-color: #b71c1c;
+  border-color: #b71c1c;
 }
 
 .delete-library-overlay {
@@ -1853,10 +1851,6 @@ button:disabled {
 
 .delete-library-confirm:hover:not(:disabled) {
   background-color: #b71c1c;
-  border-color: #b71c1c;
-}
-
-.settings-delete-library-btn:hover:not(:disabled) {
   border-color: #b71c1c;
 }
 

@@ -81,6 +81,23 @@ fn has_image_subfolders_detects_deeply_nested_images() {
 }
 
 #[test]
+fn content_type_from_path_maps_extensions_to_mime_types() {
+    let cases = [
+        ("/path/to/image.jpg", "image/jpeg"),
+        ("/path/to/image.JPEG", "image/jpeg"),
+        ("/path/to/image.png", "image/png"),
+        ("/path/to/image.gif", "image/gif"),
+        ("/path/to/image.webp", "image/webp"),
+        ("/path/to/image.bmp", "image/bmp"),
+        ("/path/to/file.xyz", "application/octet-stream"),
+    ];
+
+    for (path, expected) in cases {
+        assert_eq!(content_type_from_path(path), expected, "path: {}", path);
+    }
+}
+
+#[test]
 fn classify_path_detects_folder() {
     let tmp = TempDir::new().unwrap();
     assert_eq!(classify_path(tmp.path()), DropKind::Folder);

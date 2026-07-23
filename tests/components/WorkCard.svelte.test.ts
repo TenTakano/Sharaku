@@ -8,9 +8,11 @@ import {
 } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { mockIPC } from "@tauri-apps/api/mocks";
-import WorkCardComponent, {
-  WorkCard,
-} from "../../src/lib/components/WorkCard.svelte";
+import WorkCardComponent from "../../src/lib/components/WorkCard.svelte";
+import {
+  getCachedThumbnail,
+  clearThumbnailCache,
+} from "../../src/lib/thumbnailCache";
 import type { WorkSummary } from "../../src/lib/types";
 
 const DUMMY_BYTES = [0x52, 0x49, 0x46, 0x46];
@@ -49,7 +51,7 @@ function createProps(overrides = {}) {
 
 beforeEach(() => {
   cleanup();
-  WorkCard._thumbnailCache.clear();
+  clearThumbnailCache();
   urlCounter = 0;
   createObjectURLMock.mockClear();
   revokeObjectURLMock.mockClear();
@@ -150,16 +152,16 @@ describe("WorkCard コンポーネント", () => {
     expect(props.oncontextmenu).toHaveBeenCalledWith(7, expect.any(MouseEvent));
   });
 
-  it("clearCache で URL.revokeObjectURL が呼ばれキャッシュがクリアされる", async () => {
+  it("clearThumbnailCache で URL.revokeObjectURL が呼ばれキャッシュがクリアされる", async () => {
     const props = createProps();
     render(WorkCardComponent, props);
     await screen.findByRole("img");
 
-    expect(WorkCard._thumbnailCache.size).toBe(1);
+    expect(getCachedThumbnail(1)).toBeDefined();
 
-    WorkCard.clearCache();
+    clearThumbnailCache();
 
     expect(revokeObjectURLMock).toHaveBeenCalledOnce();
-    expect(WorkCard._thumbnailCache.size).toBe(0);
+    expect(getCachedThumbnail(1)).toBeUndefined();
   });
 });
