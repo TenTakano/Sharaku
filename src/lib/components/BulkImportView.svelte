@@ -3,6 +3,11 @@
   import { open } from "@tauri-apps/plugin-dialog";
   import { SvelteSet, SvelteMap } from "svelte/reactivity";
   import { addToast } from "../stores/toast.svelte";
+  import {
+    BULK_IMPORT_METADATA_FIELDS,
+    extractMetadataPlaceholders,
+    type BulkImportMetadataField,
+  } from "../utils/templatePlaceholders";
   import type {
     AppSettings,
     ResourceMode,
@@ -16,6 +21,13 @@
     ParsedMetadata,
     SkippedFolder,
   } from "../types";
+
+  const METADATA_FIELD_LABELS: Record<BulkImportMetadataField, string> = {
+    year: "年",
+    genre: "ジャンル",
+    circle: "サークル",
+    origin: "出典",
+  };
 
   type BulkEntry = {
     kind: ImportKind;
@@ -39,6 +51,7 @@
   type Step = "discover" | "review";
 
   let resourceMode = $state<ResourceMode>("full");
+  let directoryTemplate = $state<string | null>(null);
   let step = $state<Step>("discover");
   let discovering = $state(false);
   let discoverStatus = $state("");
@@ -48,8 +61,49 @@
   let selected = new SvelteSet<number>();
   let editedTitles = new SvelteMap<number, string>();
   let editedArtists = new SvelteMap<number, string>();
+  const editedMetadata: Record<
+    BulkImportMetadataField,
+    SvelteMap<number, string>
+  > = {
+    year: new SvelteMap(),
+    genre: new SvelteMap(),
+    circle: new SvelteMap(),
+    origin: new SvelteMap(),
+  };
   let mode = $state<ImportMode>("copy");
   let submitting = $state(false);
+
+  let activeMetadataFields = $derived(
+    extractMetadataPlaceholders(directoryTemplate),
+  );
+
+  function clearEditedMetadata() {
+    for (const field of BULK_IMPORT_METADATA_FIELDS) {
+      editedMetadata[field].clear();
+    }
+  }
+
+  function getMetadataValue(
+    index: number,
+    field: BulkImportMetadataField,
+  ): string {
+    return editedMetadata[field].get(index) ?? "";
+  }
+
+  function setMetadataValue(
+    index: number,
+    field: BulkImportMetadataField,
+    value: string,
+  ) {
+    editedMetadata[field].set(index, value);
+  }
+
+  function parseYearInput(value: string): number | null {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
 
   function buildEntriesFromResult(result: DiscoverResult): BulkEntry[] {
     const folderEntries: BulkEntry[] = result.folders.map((f) => ({
@@ -81,6 +135,7 @@
     });
     editedTitles.clear();
     editedArtists.clear();
+    clearEditedMetadata();
     step = "review";
   }
 
@@ -181,12 +236,12 @@
       const entry = entries[index];
       requests.push({
         sourcePath: entry.path,
-        title: getTitle(index),
-        artist: getArtist(index) || null,
-        year: null,
-        genre: null,
-        circle: null,
-        origin: null,
+        title: getTitle(index).trim(),
+        artist: getArtist(index).trim() || null,
+        year: parseYearInput(getMetadataValue(index, "year")),
+        genre: getMetadataValue(index, "genre").trim() || null,
+        circle: getMetadataValue(index, "circle").trim() || null,
+        origin: getMetadataValue(index, "origin").trim() || null,
         mode,
         kind: entry.kind,
       });
@@ -211,6 +266,7 @@
     selected.clear();
     editedTitles.clear();
     editedArtists.clear();
+    clearEditedMetadata();
     discoverStatus = "";
   }
 
@@ -234,6 +290,7 @@
     entries.forEach((_, i) => selected.add(i));
     editedTitles.clear();
     editedArtists.clear();
+    clearEditedMetadata();
     mode = "move";
     step = "review";
   }
@@ -241,6 +298,7 @@
   $effect(() => {
     invoke<AppSettings>("get_settings").then((settings) => {
       resourceMode = settings.resourceMode;
+      directoryTemplate = settings.directoryTemplate;
     });
     if (initialEntries) {
       loadFromEntries(initialEntries);
@@ -340,6 +398,9 @@
               <th class="bulk-th-count">画像数</th>
               <th class="bulk-th-title">タイトル</th>
               <th class="bulk-th-artist">アーティスト</th>
+              {#each activeMetadataFields as field (field)}
+                <th class="bulk-th-metadata">{METADATA_FIELD_LABELS[field]}</th>
+              {/each}
               <th class="bulk-th-status">状態</th>
             </tr>
           </thead>
@@ -365,6 +426,7 @@
                   <input
                     type="text"
                     class="bulk-inline-input"
+                    aria-label="タイトル"
                     value={getTitle(i)}
                     disabled={entry.alreadyRegistered}
                     oninput={(e) =>
@@ -375,6 +437,7 @@
                   <input
                     type="text"
                     class="bulk-inline-input"
+                    aria-label="アーティスト"
                     value={getArtist(i)}
                     disabled={entry.alreadyRegistered}
                     oninput={(e) =>
@@ -384,6 +447,23 @@
                       )}
                   />
                 </td>
+                {#each activeMetadataFields as field (field)}
+                  <td>
+                    <input
+                      type="text"
+                      class="bulk-inline-input"
+                      aria-label={METADATA_FIELD_LABELS[field]}
+                      value={getMetadataValue(i, field)}
+                      disabled={entry.alreadyRegistered}
+                      oninput={(e) =>
+                        setMetadataValue(
+                          i,
+                          field,
+                          (e.target as HTMLInputElement).value,
+                        )}
+                    />
+                  </td>
+                {/each}
                 <td class="bulk-cell-status">
                   {#if entry.alreadyRegistered}
                     <span class="bulk-registered">登録済み</span>
