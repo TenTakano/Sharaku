@@ -1,4 +1,6 @@
 use std::path::Path;
+
+use serde::Serialize;
 use walkdir::WalkDir;
 
 const IMAGE_EXTENSION_MIME_TYPES: &[(&str, &str)] = &[
@@ -10,6 +12,14 @@ const IMAGE_EXTENSION_MIME_TYPES: &[(&str, &str)] = &[
     ("bmp", "image/bmp"),
 ];
 
+#[derive(Serialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum DropKind {
+    Folder,
+    Image,
+    Other,
+}
+
 pub(crate) fn is_image_file(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -20,6 +30,16 @@ pub(crate) fn is_image_file(path: &Path) -> bool {
                 .any(|(known_ext, _)| *known_ext == ext)
         })
         .unwrap_or(false)
+}
+
+pub(crate) fn classify_path(path: &Path) -> DropKind {
+    if path.is_dir() {
+        DropKind::Folder
+    } else if path.is_file() && is_image_file(path) {
+        DropKind::Image
+    } else {
+        DropKind::Other
+    }
 }
 
 pub(crate) fn count_direct_images(dir: &Path) -> usize {

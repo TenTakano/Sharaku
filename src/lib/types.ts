@@ -90,6 +90,10 @@ export interface WorkMetadata {
 // The Rust side's Copy/Move become "copy"/"move" once camelCased.
 export type ImportMode = "copy" | "move";
 
+export type ImportKind = "folder" | "image";
+
+export type DropKind = "folder" | "image" | "other";
+
 export interface ImportRequest {
   sourcePath: string;
   title: string;
@@ -99,6 +103,7 @@ export interface ImportRequest {
   circle: string | null;
   origin: string | null;
   mode: ImportMode;
+  kind: ImportKind;
 }
 
 export interface ImportResult {
@@ -131,6 +136,25 @@ export interface DiscoveredFolder {
   imageCount: number;
   parsedMetadata: ParsedMetadata;
   alreadyRegistered: boolean;
+}
+
+export interface DiscoveredImage {
+  path: string;
+  fileName: string;
+  parsedMetadata: ParsedMetadata;
+  alreadyRegistered: boolean;
+}
+
+export interface SkippedFolder {
+  path: string;
+  folderName: string;
+  imageCount: number;
+}
+
+export interface DiscoverResult {
+  folders: DiscoveredFolder[];
+  images: DiscoveredImage[];
+  skippedFolders: SkippedFolder[];
 }
 
 // keep-in-sync: corresponds to the DiscoverProgress enum in src-tauri/src/importer.rs.

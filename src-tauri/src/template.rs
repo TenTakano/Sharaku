@@ -12,6 +12,19 @@ const FORBIDDEN_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|']
 // keep-in-sync: corresponds to WorkMetadata in src/lib/types.ts.
 // work_type is absent from the frontend IPC payload, so it carries #[serde(default)]
 // and is only populated server-side with the resolved type label during placeholder rendering.
+pub const WORK_KIND_FOLDER: &str = "folder";
+pub const WORK_KIND_IMAGE: &str = "image";
+
+const TOP_LEVEL_FOLDER: &str = "works";
+const TOP_LEVEL_IMAGE: &str = "pictures";
+
+pub fn top_level_for(work_kind: &str) -> &'static str {
+    match work_kind {
+        WORK_KIND_IMAGE => TOP_LEVEL_IMAGE,
+        _ => TOP_LEVEL_FOLDER,
+    }
+}
+
 #[derive(Deserialize)]
 pub struct WorkMetadata {
     pub title: String,
@@ -145,9 +158,14 @@ pub fn render_template(template: &str, metadata: &WorkMetadata) -> String {
         .join("/")
 }
 
-pub fn resolve_work_path(library_root: &Path, template: &str, metadata: &WorkMetadata) -> PathBuf {
+pub fn resolve_work_path(
+    library_root: &Path,
+    template: &str,
+    metadata: &WorkMetadata,
+    work_kind: &str,
+) -> PathBuf {
     let rendered = render_template(template, metadata);
-    let resolved = library_root.join(&rendered);
+    let resolved = library_root.join(top_level_for(work_kind)).join(&rendered);
     let normalized = normalize_path(&resolved);
     let root_normalized = normalize_path(library_root);
     if !normalized.starts_with(&root_normalized) {
@@ -197,8 +215,9 @@ pub fn resolve_unique_work_path(
     library_root: &Path,
     template: &str,
     metadata: &WorkMetadata,
+    work_kind: &str,
 ) -> PathBuf {
-    let base = resolve_work_path(library_root, template, metadata);
+    let base = resolve_work_path(library_root, template, metadata, work_kind);
     unique_path(&base, |p| p.exists())
 }
 

@@ -96,3 +96,32 @@ fn content_type_from_path_maps_extensions_to_mime_types() {
         assert_eq!(content_type_from_path(path), expected, "path: {}", path);
     }
 }
+
+#[test]
+fn classify_path_detects_folder() {
+    let tmp = TempDir::new().unwrap();
+    assert_eq!(classify_path(tmp.path()), DropKind::Folder);
+}
+
+#[test]
+fn classify_path_detects_image() {
+    let tmp = TempDir::new().unwrap();
+    let img = tmp.path().join("photo.jpg");
+    fs::write(&img, b"fake").unwrap();
+    assert_eq!(classify_path(&img), DropKind::Image);
+}
+
+#[test]
+fn classify_path_rejects_non_image_file() {
+    let tmp = TempDir::new().unwrap();
+    let txt = tmp.path().join("note.txt");
+    fs::write(&txt, b"text").unwrap();
+    assert_eq!(classify_path(&txt), DropKind::Other);
+}
+
+#[test]
+fn classify_path_nonexistent_is_other() {
+    let tmp = TempDir::new().unwrap();
+    let missing = tmp.path().join("nothing.jpg");
+    assert_eq!(classify_path(&missing), DropKind::Other);
+}

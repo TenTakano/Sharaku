@@ -45,7 +45,7 @@ fn preview_empty_when_no_folder_works() {
 #[test]
 fn preview_empty_when_path_unchanged() {
     let conn = test_conn();
-    insert_folder_work(&conn, "MyWork", "/library/MyWork", None);
+    insert_folder_work(&conn, "MyWork", "/library/works/MyWork", None);
     let previews =
         preview_relocation(&conn, TEST_LIBRARY_ID, Path::new("/library"), "{title}").unwrap();
     assert!(previews.is_empty());
@@ -64,7 +64,7 @@ fn preview_shows_changed_paths() {
     .unwrap();
     assert_eq!(previews.len(), 1);
     assert_eq!(previews[0].old_path, "/library/old_location");
-    assert_eq!(previews[0].new_path, "/library/Artist/MyWork");
+    assert_eq!(previews[0].new_path, "/library/works/Artist/MyWork");
     assert_eq!(previews[0].title, "MyWork");
 }
 

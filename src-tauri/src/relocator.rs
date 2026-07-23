@@ -63,7 +63,12 @@ fn compute_relocation_plan(
 
     for work in works {
         let metadata = work_detail_to_metadata(work, type_label);
-        let base_path = template::resolve_work_path(library_root, new_template, &metadata);
+        let base_path = template::resolve_work_path(
+            library_root,
+            new_template,
+            &metadata,
+            template::WORK_KIND_FOLDER,
+        );
         let base_str = base_path.to_string_lossy().to_string();
 
         let new_path =

@@ -4,7 +4,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 use crate::import_queue::{ImportJob, ImportQueueEvent};
-use crate::importer::{self, DiscoverProgress, DiscoveredFolder, ParsedMetadata};
+use crate::importer::{self, DiscoverProgress, DiscoverResult, ImportKind, ParsedMetadata};
 use crate::relocator::{self, RelocationPreview, RelocationProgress};
 use crate::template::{self, WorkMetadata};
 use crate::{scanner, settings, AppState};
@@ -19,22 +19,9 @@ pub(crate) async fn has_image_subfolders(dir: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub(crate) async fn resolve_drop_path(path: String) -> Result<String, String> {
+pub(crate) async fn classify_drop_path(path: String) -> Result<scanner::DropKind, String> {
     let p = std::path::Path::new(&path);
-    let folder = if p.is_dir() {
-        p.to_path_buf()
-    } else {
-        p.parent()
-            .ok_or_else(|| "親ディレクトリを取得できません".to_string())?
-            .to_path_buf()
-    };
-    if !folder.is_dir() {
-        return Err("有効なディレクトリではありません".to_string());
-    }
-    folder
-        .to_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| "パスの変換に失敗しました".to_string())
+    Ok(scanner::classify_path(p))
 }
 
 #[tauri::command]
@@ -46,7 +33,9 @@ pub(crate) async fn parse_folder_name(folder_name: String) -> Result<ParsedMetad
 pub(crate) async fn preview_import_path(
     state: tauri::State<'_, AppState>,
     metadata: WorkMetadata,
+    kind: Option<ImportKind>,
 ) -> Result<String, String> {
+    let kind = kind.unwrap_or_default();
     state
         .with_active_db(move |db, active| {
             let lib_path = active
@@ -60,6 +49,7 @@ pub(crate) async fn preview_import_path(
                 lib_path,
                 &template_str,
                 &metadata,
+                kind.work_kind(),
             ))
         })
         .await
@@ -116,11 +106,26 @@ pub(crate) async fn discover_folders(
     state: tauri::State<'_, AppState>,
     root_path: String,
     on_progress: tauri::ipc::Channel<DiscoverProgress>,
-) -> Result<Vec<DiscoveredFolder>, String> {
+) -> Result<DiscoverResult, String> {
     let root = PathBuf::from(root_path);
     state
         .with_active_db(move |db, active| {
             importer::discover_image_folders(&root, &db.conn, &active.id, &on_progress)
+                .map_err(|e| e.to_string())
+        })
+        .await
+}
+
+#[tauri::command]
+pub(crate) async fn discover_dropped_paths(
+    state: tauri::State<'_, AppState>,
+    paths: Vec<String>,
+    on_progress: tauri::ipc::Channel<DiscoverProgress>,
+) -> Result<DiscoverResult, String> {
+    let roots: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
+    state
+        .with_active_db(move |db, active| {
+            importer::discover_from_paths(&roots, &db.conn, &active.id, &on_progress)
                 .map_err(|e| e.to_string())
         })
         .await
