@@ -17,6 +17,7 @@
     "{type}/{artist}/{title}",
   ];
 
+  // svelte-ignore state_referenced_locally
   let step = $state<
     "welcome" | "mode-select" | "select" | "template" | "name-only"
   >(initialStep);

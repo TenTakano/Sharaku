@@ -11,11 +11,17 @@
 
   let { work, onClose, onUpdated }: Props = $props();
 
+  // svelte-ignore state_referenced_locally
   let title = $state(work.title);
+  // svelte-ignore state_referenced_locally
   let artist = $state(work.artist ?? "");
+  // svelte-ignore state_referenced_locally
   let year = $state(work.year?.toString() ?? "");
+  // svelte-ignore state_referenced_locally
   let genre = $state(work.genre ?? "");
+  // svelte-ignore state_referenced_locally
   let circle = $state(work.circle ?? "");
+  // svelte-ignore state_referenced_locally
   let origin = $state(work.origin ?? "");
   let saving = $state(false);
 

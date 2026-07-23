@@ -28,6 +28,7 @@
 
   let resourceMode = $state<ResourceMode>("full");
   let step = $state<Step>("select");
+  // svelte-ignore state_referenced_locally
   let kind = $state<ImportKind>(initialKind);
   let sourcePath = $state("");
   let title = $state("");
@@ -283,8 +284,14 @@
 
         {#if resourceMode === "full"}
           <div class="import-field">
-            <label class="import-label">取り込みモード</label>
-            <div class="import-mode-select">
+            <span id="import-mode-label" class="import-label"
+              >取り込みモード</span
+            >
+            <div
+              class="import-mode-select"
+              role="radiogroup"
+              aria-labelledby="import-mode-label"
+            >
               <label class="import-mode-option">
                 <input type="radio" bind:group={mode} value="copy" />
                 コピー
