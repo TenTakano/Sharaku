@@ -34,4 +34,7 @@ pub enum AppError {
 
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("Playlist error: {0}")]
+    PlaylistError(String),
 }

@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 
 use rusqlite::params_from_iter;
@@ -475,6 +476,185 @@ pub fn delete_works_by_ids(
     Ok(total_deleted)
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Playlist {
+    pub id: i64,
+    pub name: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistItem {
+    pub work_id: i64,
+    pub title: String,
+    pub work_type: String,
+    pub page_count: i32,
+    pub created_at: String,
+}
+
+fn map_playlist_row(row: &rusqlite::Row) -> rusqlite::Result<Playlist> {
+    Ok(Playlist {
+        id: row.get(0)?,
+        name: row.get(1)?,
+    })
+}
+
+fn map_playlist_item_row(row: &rusqlite::Row) -> rusqlite::Result<PlaylistItem> {
+    Ok(PlaylistItem {
+        work_id: row.get(0)?,
+        title: row.get(1)?,
+        work_type: row.get(2)?,
+        page_count: row.get(3)?,
+        created_at: row.get(4)?,
+    })
+}
+
+pub fn list_playlists(conn: &Connection, library_id: &str) -> Result<Vec<Playlist>, AppError> {
+    let mut stmt =
+        conn.prepare("SELECT id, name FROM playlists WHERE library_id = ?1 ORDER BY name")?;
+    let rows = stmt.query_map([library_id], map_playlist_row)?;
+    let mut playlists = Vec::new();
+    for row in rows {
+        playlists.push(row?);
+    }
+    Ok(playlists)
+}
+
+pub fn create_playlist(
+    conn: &Connection,
+    library_id: &str,
+    name: &str,
+) -> Result<Playlist, AppError> {
+    conn.execute(
+        "INSERT INTO playlists (library_id, name) VALUES (?1, ?2)",
+        rusqlite::params![library_id, name],
+    )?;
+    Ok(Playlist {
+        id: conn.last_insert_rowid(),
+        name: name.to_string(),
+    })
+}
+
+pub fn rename_playlist(conn: &Connection, id: i64, name: &str) -> Result<(), AppError> {
+    let rows = conn.execute(
+        "UPDATE playlists SET name = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?2",
+        rusqlite::params![name, id],
+    )?;
+    if rows == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(())
+}
+
+pub fn delete_playlist(conn: &Connection, id: i64) -> Result<(), AppError> {
+    let rows = conn.execute("DELETE FROM playlists WHERE id = ?1", [id])?;
+    if rows == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(())
+}
+
+pub fn get_playlist_items(
+    conn: &Connection,
+    playlist_id: i64,
+) -> Result<Vec<PlaylistItem>, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT w.id, w.title, w.type, w.page_count, w.created_at \
+         FROM playlist_items pi \
+         INNER JOIN works w ON w.id = pi.work_id \
+         WHERE pi.playlist_id = ?1 \
+         ORDER BY pi.position",
+    )?;
+    let rows = stmt.query_map([playlist_id], map_playlist_item_row)?;
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(row?);
+    }
+    Ok(items)
+}
+
+pub fn add_item_to_playlist(
+    conn: &Connection,
+    playlist_id: i64,
+    work_id: i64,
+) -> Result<(), AppError> {
+    let next_position: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_items WHERE playlist_id = ?1",
+        [playlist_id],
+        |row| row.get(0),
+    )?;
+    conn.execute(
+        "INSERT OR IGNORE INTO playlist_items (playlist_id, work_id, position) VALUES (?1, ?2, ?3)",
+        rusqlite::params![playlist_id, work_id, next_position],
+    )?;
+    Ok(())
+}
+
+pub fn remove_item_from_playlist(
+    conn: &Connection,
+    playlist_id: i64,
+    work_id: i64,
+) -> Result<(), AppError> {
+    conn.execute(
+        "DELETE FROM playlist_items WHERE playlist_id = ?1 AND work_id = ?2",
+        rusqlite::params![playlist_id, work_id],
+    )?;
+    Ok(())
+}
+
+/// Reassigns positions for every item of `playlist_id` per the order of `work_ids`.
+/// `work_ids` must be exactly the current item set (no missing/extra/duplicate ids),
+/// otherwise the call is rejected before any write happens.
+///
+/// `UNIQUE(playlist_id, position)` is not DEFERRABLE in this schema, so a direct
+/// bulk UPDATE to the final positions can collide mid-transaction. Existing rows are
+/// first staged to negative offsets (guaranteed disjoint from any valid position),
+/// then reassigned to their final 0..n-1 positions.
+pub fn reorder_playlist_items(
+    conn: &mut Connection,
+    playlist_id: i64,
+    work_ids: &[i64],
+) -> Result<(), AppError> {
+    let given: HashSet<i64> = work_ids.iter().copied().collect();
+    if given.len() != work_ids.len() {
+        return Err(AppError::PlaylistError(
+            "reorder work_ids contains duplicates".to_string(),
+        ));
+    }
+
+    let mut existing_stmt =
+        conn.prepare("SELECT work_id FROM playlist_items WHERE playlist_id = ?1")?;
+    let existing: HashSet<i64> = existing_stmt
+        .query_map([playlist_id], |row| row.get(0))?
+        .collect::<rusqlite::Result<HashSet<i64>>>()?;
+    drop(existing_stmt);
+
+    if existing != given {
+        return Err(AppError::PlaylistError(
+            "reorder work_ids does not match the playlist's current items".to_string(),
+        ));
+    }
+
+    let tx = conn.transaction()?;
+    tx.execute(
+        "UPDATE playlist_items SET position = -(position + 1) WHERE playlist_id = ?1",
+        [playlist_id],
+    )?;
+    for (index, work_id) in work_ids.iter().enumerate() {
+        tx.execute(
+            "UPDATE playlist_items SET position = ?1 WHERE playlist_id = ?2 AND work_id = ?3",
+            rusqlite::params![index as i64, playlist_id, work_id],
+        )?;
+    }
+    tx.commit()?;
+    Ok(())
+}
+
 #[cfg(test)]
 #[path = "tests/db.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/playlist.rs"]
+mod playlist_tests;

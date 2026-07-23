@@ -7,7 +7,8 @@ export type ViewKind =
   | "import"
   | "bulk-import"
   | "add-library"
-  | "app-settings";
+  | "app-settings"
+  | "playlist";
 
 export interface WorkSummary {
   id: number;
@@ -35,6 +36,19 @@ export interface Tag {
   id: number;
   name: string;
   category: string | null;
+}
+
+export interface Playlist {
+  id: number;
+  name: string;
+}
+
+export interface PlaylistItem {
+  workId: number;
+  title: string;
+  workType: string;
+  pageCount: number;
+  createdAt: string;
 }
 
 export interface Library {

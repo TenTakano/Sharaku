@@ -105,6 +105,20 @@ impl AppState {
         })
         .await
     }
+
+    /// Same guard as `with_guarded_db`, but passes a mutable `AppDb` for callers that
+    /// need `&mut Connection` (e.g. `Connection::transaction()`).
+    async fn with_guarded_db_mut<F, T>(&self, f: F) -> Result<T, String>
+    where
+        F: FnOnce(&mut AppDb) -> Result<T, String> + Send + 'static,
+        T: Send + 'static,
+    {
+        self.with_db_mut(move |db| {
+            db.active_library()?;
+            f(db)
+        })
+        .await
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -215,6 +229,14 @@ pub fn run() {
             commands::settings::set_theme,
             commands::settings::get_banner_auto_close,
             commands::settings::set_banner_auto_close,
+            commands::playlist::list_playlists,
+            commands::playlist::create_playlist,
+            commands::playlist::rename_playlist,
+            commands::playlist::delete_playlist,
+            commands::playlist::get_playlist_items,
+            commands::playlist::add_item_to_playlist,
+            commands::playlist::remove_item_from_playlist,
+            commands::playlist::reorder_playlist_items,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
