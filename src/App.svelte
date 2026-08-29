@@ -10,6 +10,7 @@
   import SetupView from "./lib/components/SetupView.svelte";
   import LibrarySettingsView from "./lib/components/LibrarySettingsView.svelte";
   import WorkGrid from "./lib/components/WorkGrid.svelte";
+  import PlaylistView from "./lib/components/PlaylistView.svelte";
   import Toast from "./lib/components/Toast.svelte";
   import WorkViewer from "./lib/components/WorkViewer.svelte";
   import { initImportQueueListener } from "./lib/stores/importQueue.svelte";
@@ -20,6 +21,7 @@
     DropKind,
     ImportKind,
     Library,
+    Playlist,
     Tag,
     TagSearchMode,
     UnregisteredEntry,
@@ -27,11 +29,14 @@
   } from "./lib/types";
 
   let reloadTrigger = $state(0);
+  let playlistReloadTrigger = $state(0);
   let filterTags = $state<Tag[]>([]);
   let tagSearchMode = $state<TagSearchMode>("and");
   let currentView = $state<ViewKind>("library");
   let selectedWorkId = $state<number | null>(null);
   let workIds = $state<number[]>([]);
+  let selectedPlaylist = $state<Playlist | null>(null);
+  let viewerOrigin = $state<ViewKind>("library");
   let activeLibrary = $state<Library | null>(null);
   let libraryLoading = $state(true);
   let dragging = $state(false);
@@ -58,10 +63,12 @@
     activeLibrary = library;
     filterTags = [];
     currentView = "library";
+    selectedPlaylist = null;
     reloadTrigger++;
   }
 
   function handleSelectWork(workId: number) {
+    viewerOrigin = currentView === "playlist" ? "playlist" : "library";
     selectedWorkId = workId;
     currentView = "viewer";
   }
@@ -74,11 +81,41 @@
     selectedWorkId = workId;
   }
 
-  function handleBackToLibrary() {
-    currentView = "library";
+  function resetToView(view: ViewKind) {
+    currentView = view;
     selectedWorkId = null;
     importSourcePath = undefined;
     importSourceKind = "folder";
+  }
+
+  function handleBackToLibrary() {
+    resetToView("library");
+  }
+
+  function handleViewerBack() {
+    resetToView(viewerOrigin);
+  }
+
+  function handleSelectPlaylist(playlist: Playlist) {
+    selectedPlaylist = playlist;
+    currentView = "playlist";
+  }
+
+  function handlePlaylistRenamed(playlist: Playlist) {
+    if (selectedPlaylist?.id === playlist.id) {
+      selectedPlaylist = playlist;
+    }
+  }
+
+  function handlePlaylistCreated() {
+    playlistReloadTrigger++;
+  }
+
+  function handlePlaylistDeleted(id: number) {
+    if (selectedPlaylist?.id === id) {
+      selectedPlaylist = null;
+      currentView = "library";
+    }
   }
 
   function handleBackToSettings() {
@@ -228,7 +265,7 @@
     workId={selectedWorkId}
     {workIds}
     libraryName={activeLibrary.name}
-    onBack={handleBackToLibrary}
+    onBack={handleViewerBack}
     onNavigateWork={handleNavigateWork}
   />
 {:else if libraryLoading}
@@ -252,11 +289,16 @@
       {activeLibrary}
       {currentView}
       {reloadTrigger}
+      {playlistReloadTrigger}
       onSwitchLibrary={handleLibrarySwitch}
       onNavigate={handleSidebarNavigate}
       onTagSelect={handleSidebarTagSelect}
       onNavigateToAppSettings={handleNavigateToAppSettings}
       selectedTagIds={filterTags.map((t) => t.id)}
+      selectedPlaylistId={selectedPlaylist?.id ?? null}
+      onSelectPlaylist={handleSelectPlaylist}
+      onPlaylistRenamed={handlePlaylistRenamed}
+      onPlaylistDeleted={handlePlaylistDeleted}
     />
     <main class="content-area">
       <div class="context-bar">
@@ -278,6 +320,11 @@
             <h1 class="context-bar-title">
               一括取り込み: {activeLibrary.name}
             </h1>
+          {:else if currentView === "playlist" && selectedPlaylist}
+            <button class="context-bar-back" onclick={handleBackToLibrary}>
+              ←
+            </button>
+            <h1 class="context-bar-title">{selectedPlaylist.name}</h1>
           {:else}
             <h1 class="context-bar-title">{activeLibrary.name}</h1>
           {/if}
@@ -306,6 +353,12 @@
           initialDroppedPaths={bulkImportDroppedPaths}
           onBack={handleBulkImportBack}
         />
+      {:else if currentView === "playlist" && selectedPlaylist}
+        <PlaylistView
+          playlistId={selectedPlaylist.id}
+          onSelectWork={handleSelectWork}
+          onWorksLoaded={handleWorksLoaded}
+        />
       {:else}
         <WorkGrid
           {reloadTrigger}
@@ -315,6 +368,7 @@
           onWorksLoaded={handleWorksLoaded}
           onFilterTagsChange={(tags) => (filterTags = tags)}
           onTagSearchModeChange={(mode) => (tagSearchMode = mode)}
+          onPlaylistCreated={handlePlaylistCreated}
         />
       {/if}
 

@@ -105,6 +105,7 @@ beforeEach(() => {
       };
     if (cmd === "delete_work") return undefined;
     if (cmd === "search_tags") return [];
+    if (cmd === "list_playlists") return [];
   });
 });
 
@@ -210,7 +211,37 @@ describe("WorkGrid コンポーネント", () => {
 
     await waitFor(() => {
       expect(screen.getByText("メタデータを編集")).toBeInTheDocument();
+      expect(screen.getByText("プレイリストに追加")).toBeInTheDocument();
       expect(screen.getByText("削除")).toBeInTheDocument();
+    });
+  });
+
+  it("コンテキストメニューから「プレイリストに追加」でダイアログを開ける", async () => {
+    const user = userEvent.setup();
+    mockIPC((cmd: string) => {
+      if (cmd === "list_works") return MOCK_WORKS;
+      if (cmd === "get_thumbnail") return DUMMY_BYTES;
+      if (cmd === "list_playlists") return [{ id: 1, name: "お気に入り" }];
+    });
+    render(WorkGrid, createProps());
+
+    await waitFor(() => {
+      expect(screen.getByText("風景画A")).toBeInTheDocument();
+    });
+
+    const workButtons = screen.getAllByRole("button", { name: /風景画A/ });
+    fireEvent.contextMenu(workButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText("プレイリストに追加")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("プレイリストに追加"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("プレイリストに追加", { selector: "h3" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("お気に入り")).toBeInTheDocument();
     });
   });
 

@@ -5,6 +5,7 @@
   import ContextMenu from "./ContextMenu.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import EditWorkDialog from "./EditWorkDialog.svelte";
+  import AddToPlaylistDialog from "./AddToPlaylistDialog.svelte";
   import { addToast } from "../stores/toast.svelte";
   import { clearThumbnailCache } from "../thumbnailCache";
   import type {
@@ -27,6 +28,7 @@
     onWorksLoaded?: (workIds: number[]) => void;
     onFilterTagsChange: (tags: Tag[]) => void;
     onTagSearchModeChange: (mode: TagSearchMode) => void;
+    onPlaylistCreated?: () => void;
   }
 
   let {
@@ -37,6 +39,7 @@
     onWorksLoaded,
     onFilterTagsChange,
     onTagSearchModeChange,
+    onPlaylistCreated,
   }: Props = $props();
 
   let works = $state<WorkSummary[]>([]);
@@ -48,6 +51,7 @@
   );
   let editingWork = $state<WorkDetail | null>(null);
   let deletingWork = $state<{ id: number; title: string } | null>(null);
+  let addingToPlaylistWorkId = $state<number | null>(null);
   let deleteFileAction = $state<DeleteFileAction>("ask");
   let selectedFileAction = $state<DeleteFileAction | "none">("none");
   let isFullMode = $state(false);
@@ -133,6 +137,11 @@
     } catch (e) {
       console.error("Failed to get work:", e);
     }
+  }
+
+  function openAddToPlaylistDialog(workId: number) {
+    contextMenu = null;
+    addingToPlaylistWorkId = workId;
   }
 
   async function openDeleteDialog(workId: number) {
@@ -275,11 +284,23 @@
         action: () => openEditDialog(contextMenu!.workId),
       },
       {
+        label: "プレイリストに追加",
+        action: () => openAddToPlaylistDialog(contextMenu!.workId),
+      },
+      {
         label: "削除",
         action: () => openDeleteDialog(contextMenu!.workId),
       },
     ]}
     onClose={() => (contextMenu = null)}
+  />
+{/if}
+
+{#if addingToPlaylistWorkId !== null}
+  <AddToPlaylistDialog
+    workId={addingToPlaylistWorkId}
+    onClose={() => (addingToPlaylistWorkId = null)}
+    {onPlaylistCreated}
   />
 {/if}
 

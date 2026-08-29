@@ -416,6 +416,7 @@ jpg, jpeg, png, gif, webp, bmp（大文字小文字不問）
 ## 7. 作品の削除
 
 ライブラリ画面の作品グリッドでコンテキストメニュー（右クリック）から実行する。
+同じコンテキストメニューには「プレイリストに追加」も含まれる（詳細は [spec-overview.md](spec-overview.md) のプレイリストを参照）。
 
 ### resource_mode と deleteFileAction の組み合わせ
 
