@@ -187,4 +187,211 @@ describe("BulkImportView コンポーネント", () => {
       });
     });
   });
+
+  describe("ディレクトリテンプレート駆動のメタデータ列", () => {
+    const entries: UnregisteredEntry[] = [
+      {
+        path: "/root/unregistered1",
+        folderName: "unregistered1",
+        imageCount: 7,
+      },
+    ];
+
+    it("テンプレートに含まれるプレースホルダーに対応する列のみ表示される", async () => {
+      mockIPC((cmd: string) => {
+        if (cmd === "get_settings")
+          return {
+            ...MOCK_SETTINGS,
+            directoryTemplate: "{circle}/{year}/{artist}/{title}",
+          };
+        if (cmd === "parse_folder_name")
+          return { title: "パース結果", artist: null };
+        if (cmd === "enqueue_import") return { jobId: "job-1" };
+      });
+
+      render(BulkImportView, createProps({ initialEntries: entries }));
+
+      await waitFor(() => {
+        expect(screen.getByText("取り込み対象の確認")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("年")).toBeInTheDocument();
+      expect(screen.getByText("サークル")).toBeInTheDocument();
+      expect(screen.queryByText("ジャンル")).toBeNull();
+      expect(screen.queryByText("出典")).toBeNull();
+    });
+
+    it("ディレクトリテンプレート未設定の場合は動的列を表示しない", async () => {
+      mockIPC((cmd: string) => {
+        if (cmd === "get_settings")
+          return { ...MOCK_SETTINGS, directoryTemplate: null };
+        if (cmd === "parse_folder_name")
+          return { title: "パース結果", artist: null };
+        if (cmd === "enqueue_import") return { jobId: "job-1" };
+      });
+
+      render(BulkImportView, createProps({ initialEntries: entries }));
+
+      await waitFor(() => {
+        expect(screen.getByText("取り込み対象の確認")).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText("年")).toBeNull();
+      expect(screen.queryByText("サークル")).toBeNull();
+    });
+
+    it("入力した値が ImportRequest に反映され、年は数値変換される", async () => {
+      const user = userEvent.setup();
+      let capturedRequests: Array<{
+        year: number | null;
+        circle: string | null;
+      }> = [];
+      mockIPC((cmd: string, args: Record<string, unknown>) => {
+        if (cmd === "get_settings")
+          return {
+            ...MOCK_SETTINGS,
+            directoryTemplate: "{circle}/{year}/{title}",
+          };
+        if (cmd === "parse_folder_name")
+          return { title: "パース結果", artist: null };
+        if (cmd === "enqueue_import") {
+          capturedRequests = args.requests as typeof capturedRequests;
+          return { jobId: "job-1" };
+        }
+      });
+
+      render(BulkImportView, createProps({ initialEntries: entries }));
+
+      await waitFor(() => {
+        expect(screen.getByText("年")).toBeInTheDocument();
+      });
+
+      const yearInput = screen.getByLabelText("年");
+      const circleInput = screen.getByLabelText("サークル");
+
+      await user.type(yearInput, "2020");
+      await user.type(circleInput, "テストサークル");
+      await user.click(screen.getByText("1 件を取り込み"));
+
+      await waitFor(() => {
+        expect(capturedRequests).toHaveLength(1);
+      });
+      expect(capturedRequests[0].year).toBe(2020);
+      expect(capturedRequests[0].circle).toBe("テストサークル");
+    });
+
+    it("genre・origin を含む全メタデータ列の入力値が ImportRequest に正しくマッピングされる", async () => {
+      const user = userEvent.setup();
+      let capturedRequests: Array<{
+        year: number | null;
+        genre: string | null;
+        circle: string | null;
+        origin: string | null;
+      }> = [];
+      mockIPC((cmd: string, args: Record<string, unknown>) => {
+        if (cmd === "get_settings")
+          return {
+            ...MOCK_SETTINGS,
+            directoryTemplate: "{genre}/{circle}/{origin}/{year}/{title}",
+          };
+        if (cmd === "parse_folder_name")
+          return { title: "パース結果", artist: null };
+        if (cmd === "enqueue_import") {
+          capturedRequests = args.requests as typeof capturedRequests;
+          return { jobId: "job-1" };
+        }
+      });
+
+      render(BulkImportView, createProps({ initialEntries: entries }));
+
+      await waitFor(() => {
+        expect(screen.getByText("ジャンル")).toBeInTheDocument();
+      });
+
+      await user.type(screen.getByLabelText("ジャンル"), "テストジャンル");
+      await user.type(screen.getByLabelText("サークル"), "テストサークル");
+      await user.type(screen.getByLabelText("出典"), "テスト出典");
+      await user.type(screen.getByLabelText("年"), "2021");
+      await user.click(screen.getByText("1 件を取り込み"));
+
+      await waitFor(() => {
+        expect(capturedRequests).toHaveLength(1);
+      });
+      expect(capturedRequests[0].genre).toBe("テストジャンル");
+      expect(capturedRequests[0].circle).toBe("テストサークル");
+      expect(capturedRequests[0].origin).toBe("テスト出典");
+      expect(capturedRequests[0].year).toBe(2021);
+    });
+
+    it("genre・origin が空白のみの場合は trim されて null として送信される", async () => {
+      const user = userEvent.setup();
+      let capturedRequests: Array<{
+        genre: string | null;
+        origin: string | null;
+      }> = [];
+      mockIPC((cmd: string, args: Record<string, unknown>) => {
+        if (cmd === "get_settings")
+          return {
+            ...MOCK_SETTINGS,
+            directoryTemplate: "{genre}/{origin}/{title}",
+          };
+        if (cmd === "parse_folder_name")
+          return { title: "パース結果", artist: null };
+        if (cmd === "enqueue_import") {
+          capturedRequests = args.requests as typeof capturedRequests;
+          return { jobId: "job-1" };
+        }
+      });
+
+      render(BulkImportView, createProps({ initialEntries: entries }));
+
+      await waitFor(() => {
+        expect(screen.getByText("ジャンル")).toBeInTheDocument();
+      });
+
+      await user.type(screen.getByLabelText("ジャンル"), "   ");
+      await user.type(screen.getByLabelText("出典"), "   ");
+      await user.click(screen.getByText("1 件を取り込み"));
+
+      await waitFor(() => {
+        expect(capturedRequests).toHaveLength(1);
+      });
+      expect(capturedRequests[0].genre).toBeNull();
+      expect(capturedRequests[0].origin).toBeNull();
+    });
+
+    it("非数値の年は null として送信される", async () => {
+      const user = userEvent.setup();
+      let capturedRequests: Array<{ year: number | null }> = [];
+      mockIPC((cmd: string, args: Record<string, unknown>) => {
+        if (cmd === "get_settings")
+          return {
+            ...MOCK_SETTINGS,
+            directoryTemplate: "{year}/{title}",
+          };
+        if (cmd === "parse_folder_name")
+          return { title: "パース結果", artist: null };
+        if (cmd === "enqueue_import") {
+          capturedRequests = args.requests as typeof capturedRequests;
+          return { jobId: "job-1" };
+        }
+      });
+
+      render(BulkImportView, createProps({ initialEntries: entries }));
+
+      await waitFor(() => {
+        expect(screen.getByText("年")).toBeInTheDocument();
+      });
+
+      const yearInput = screen.getByLabelText("年");
+
+      await user.type(yearInput, "非数値");
+      await user.click(screen.getByText("1 件を取り込み"));
+
+      await waitFor(() => {
+        expect(capturedRequests).toHaveLength(1);
+      });
+      expect(capturedRequests[0].year).toBeNull();
+    });
+  });
 });
