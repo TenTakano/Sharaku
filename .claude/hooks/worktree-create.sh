@@ -19,6 +19,6 @@ mkdir -p "$(dirname "$WORKTREE_DIR")"
 git -C "$REPO_ROOT" worktree add "$WORKTREE_DIR" >&2
 
 cd "$WORKTREE_DIR"
-npm install >&2
+pnpm install >&2
 
 echo "$WORKTREE_DIR"

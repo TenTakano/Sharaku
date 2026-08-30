@@ -4,7 +4,7 @@ description: 開発データを初期化してアプリを起動する。動作�
 
 ## 概要
 
-開発用データベースを削除してクリーンな状態にし、`npm run tauri dev` でアプリを起動する。
+開発用データベースを削除してクリーンな状態にし、`pnpm run tauri dev` でアプリを起動する。
 
 ## 引数
 
@@ -18,7 +18,7 @@ Bash ツールでコマンド `bash scripts/reset-dev-data.sh` を実行する�
 
 ### 2. アプリの起動
 
-Bash ツールで `npm run tauri dev` をバックグラウンド実行する（`run_in_background: true`）。
+Bash ツールで `pnpm run tauri dev` をバックグラウンド実行する（`run_in_background: true`）。
 
 ### 3. ユーザーへの報告
 
