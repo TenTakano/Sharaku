@@ -13,14 +13,15 @@
 ## 前提条件
 
 - Node.js
+- pnpm（`.tool-versions` に記載のバージョンを使用。`corepack enable` での有効化を推奨）
 - Rust ツールチェーン（`rustup` でインストール）
 - Tauri の[システム依存パッケージ](https://v2.tauri.app/start/prerequisites/)
 
 ## セットアップ
 
 ```bash
-npm install
-npm run tauri dev
+pnpm install
+pnpm run tauri dev
 ```
 
 ### スクリーンショットツール（開発用・任意）
@@ -124,14 +125,14 @@ sudo apt install xdotool imagemagick
 
 ```bash
 # 開発サーバー起動（ホットリロード有効）
-npm run tauri dev
+pnpm run tauri dev
 
 # 型チェック
-npm run check
+pnpm run check
 
 # Lint
-npm run lint
+pnpm run lint
 
 # フォーマット
-npm run format
+pnpm run format
 ```

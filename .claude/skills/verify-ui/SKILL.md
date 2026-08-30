@@ -12,7 +12,7 @@ description: Tauriアプリのウィンドウをスクリーンショットで�
 
 ## 前提条件
 
-- `npm run tauri dev` でアプリが起動していること
+- `pnpm run tauri dev` でアプリが起動していること
 - Linux: `xdotool` と `imagemagick` がインストールされていること
 
 ## 実行フロー

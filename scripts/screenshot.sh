@@ -25,7 +25,7 @@ case "$(uname -s)" in
     WINDOW_ID=$(xdotool search --name "$WINDOW_TITLE" 2>/dev/null | head -n 1)
     if [ -z "$WINDOW_ID" ]; then
       echo "Error: Window '$WINDOW_TITLE' not found." >&2
-      echo "Make sure the app is running with: npm run tauri dev" >&2
+      echo "Make sure the app is running with: pnpm run tauri dev" >&2
       exit 1
     fi
 
@@ -48,7 +48,7 @@ case "$(uname -s)" in
 
     if [ -z "$WINDOW_ID" ]; then
       echo "Error: Window '$WINDOW_TITLE' not found." >&2
-      echo "Make sure the app is running with: npm run tauri dev" >&2
+      echo "Make sure the app is running with: pnpm run tauri dev" >&2
       exit 1
     fi
 
