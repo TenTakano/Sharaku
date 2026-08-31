@@ -37,4 +37,3 @@ fn set_setting_overwrites_existing() {
         Some("new".into())
     );
 }
-
