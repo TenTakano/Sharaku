@@ -161,7 +161,10 @@ fn copy_then_remove_src_keeps_dest_when_src_removal_partially_fails() {
 
     fs::set_permissions(&locked_dir, fs::Permissions::from_mode(0o755)).unwrap();
 
-    assert!(result.is_err(), "src removal must fail for this test to be meaningful");
+    assert!(
+        result.is_err(),
+        "src removal must fail for this test to be meaningful"
+    );
     assert!(
         !src.join("removable.txt").exists(),
         "src's removable entry is expected to be gone before the failure"
