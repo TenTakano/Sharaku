@@ -5,19 +5,14 @@
   import { addToast } from "../stores/toast.svelte";
   import {
     BULK_IMPORT_METADATA_FIELDS,
-    extractMetadataPlaceholders,
     type BulkImportMetadataField,
   } from "../utils/templatePlaceholders";
   import type {
-    AppSettings,
-    ResourceMode,
     DiscoverResult,
     DiscoverProgress,
     ImportKind,
-    ImportMode,
     ImportRequest,
     EnqueueResult,
-    UnregisteredEntry,
     ParsedMetadata,
     SkippedFolder,
   } from "../types";
@@ -39,19 +34,15 @@
   };
 
   interface Props {
-    initialEntries?: UnregisteredEntry[];
     initialRootPath?: string;
     initialDroppedPaths?: string[];
     onBack: () => void;
   }
 
-  let { initialEntries, initialRootPath, initialDroppedPaths, onBack }: Props =
-    $props();
+  let { initialRootPath, initialDroppedPaths, onBack }: Props = $props();
 
   type Step = "discover" | "review";
 
-  let resourceMode = $state<ResourceMode>("full");
-  let directoryTemplate = $state<string | null>(null);
   let step = $state<Step>("discover");
   let discovering = $state(false);
   let discoverStatus = $state("");
@@ -70,12 +61,9 @@
     circle: new SvelteMap(),
     origin: new SvelteMap(),
   };
-  let mode = $state<ImportMode>("copy");
   let submitting = $state(false);
 
-  let activeMetadataFields = $derived(
-    extractMetadataPlaceholders(directoryTemplate),
-  );
+  const activeMetadataFields = BULK_IMPORT_METADATA_FIELDS;
 
   function clearEditedMetadata() {
     for (const field of BULK_IMPORT_METADATA_FIELDS) {
@@ -242,7 +230,6 @@
         genre: getMetadataValue(index, "genre").trim() || null,
         circle: getMetadataValue(index, "circle").trim() || null,
         origin: getMetadataValue(index, "origin").trim() || null,
-        mode,
         kind: entry.kind,
       });
     }
@@ -270,39 +257,8 @@
     discoverStatus = "";
   }
 
-  async function loadFromEntries(items: UnregisteredEntry[]) {
-    const parsed = await Promise.all(
-      items.map((entry) =>
-        invoke<ParsedMetadata>("parse_folder_name", {
-          folderName: entry.folderName,
-        }),
-      ),
-    );
-    entries = items.map((entry, i) => ({
-      kind: "folder",
-      path: entry.path,
-      displayName: entry.folderName,
-      imageCount: entry.imageCount,
-      parsedMetadata: parsed[i],
-      alreadyRegistered: false,
-    }));
-    selected.clear();
-    entries.forEach((_, i) => selected.add(i));
-    editedTitles.clear();
-    editedArtists.clear();
-    clearEditedMetadata();
-    mode = "move";
-    step = "review";
-  }
-
   $effect(() => {
-    invoke<AppSettings>("get_settings").then((settings) => {
-      resourceMode = settings.resourceMode;
-      directoryTemplate = settings.directoryTemplate;
-    });
-    if (initialEntries) {
-      loadFromEntries(initialEntries);
-    } else if (initialDroppedPaths) {
+    if (initialDroppedPaths) {
       discoverFromDroppedPaths(initialDroppedPaths);
     } else if (initialRootPath) {
       discoverFromPath(initialRootPath);
@@ -374,18 +330,6 @@
           />
           すべて選択
         </label>
-        {#if resourceMode === "full"}
-          <div class="import-mode-select">
-            <label class="import-mode-option">
-              <input type="radio" bind:group={mode} value="copy" />
-              コピー
-            </label>
-            <label class="import-mode-option">
-              <input type="radio" bind:group={mode} value="move" />
-              移動
-            </label>
-          </div>
-        {/if}
       </div>
 
       <div class="bulk-table-wrapper">
@@ -478,10 +422,7 @@
       </div>
 
       <div class="import-actions">
-        <button
-          class="settings-back-btn"
-          onclick={initialEntries ? onBack : resetToDiscover}
-        >
+        <button class="settings-back-btn" onclick={resetToDiscover}>
           ← 戻る
         </button>
         <button
