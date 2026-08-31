@@ -7,7 +7,6 @@ mod library;
 mod migration;
 mod scanner;
 mod settings;
-mod template;
 mod thumbnail;
 mod viewer;
 

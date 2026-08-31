@@ -1132,6 +1132,11 @@ button:disabled {
   cursor: pointer;
 }
 
+.radio-option-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .radio-option-label {
   font-weight: 500;
 }
@@ -1295,12 +1300,6 @@ button:disabled {
 .import-field-row {
   display: flex;
   gap: 12px;
-}
-
-.import-mode-select {
-  display: flex;
-  gap: 16px;
-  padding: 4px 0;
 }
 
 .import-mode-option {
@@ -2191,6 +2190,17 @@ button:disabled {
   color: #888;
 }
 
+.confirm-dialog-path-note {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #888;
+  word-break: break-all;
+}
+
+.confirm-dialog-path {
+  word-break: break-all;
+}
+
 .confirm-dialog-file-action {
   display: flex;
   flex-direction: column;
@@ -2205,6 +2215,11 @@ button:disabled {
   font-size: 0.875rem;
   color: #555;
   cursor: pointer;
+}
+
+.confirm-dialog-radio-disabled {
+  color: #bbb;
+  cursor: not-allowed;
 }
 
 .confirm-dialog-actions {
