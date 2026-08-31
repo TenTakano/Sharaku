@@ -1,19 +1,15 @@
-use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 
-use crate::error::AppError;
 use crate::importer::{self, ImportKind, ImportRequest};
-use crate::settings;
 use crate::AppDb;
 
 pub struct ImportJob {
     pub id: String,
     pub library_id: String,
-    pub library_root: Option<PathBuf>,
     pub requests: Vec<ImportRequest>,
 }
 
@@ -99,29 +95,14 @@ async fn worker(
 
             let db_clone = db.clone();
             let library_id = job.library_id.clone();
-            let library_root = job.library_root.clone();
             let request = request.clone();
 
             let result = tokio::task::spawn_blocking(move || {
                 let guard = db_clone.lock().unwrap();
-                let lib_root = match library_root.as_deref() {
-                    Some(path) => path,
-                    None => {
-                        let mode = settings::get_resource_mode(&guard.conn, &library_id)?;
-                        if mode == "full" {
-                            return Err(AppError::ImportError(
-                                "ライブラリルートが設定されていません".to_string(),
-                            ));
-                        }
-                        Path::new("")
-                    }
-                };
                 match request.kind {
-                    ImportKind::Folder => {
-                        importer::import_work(&request, &guard.conn, &library_id, lib_root)
-                    }
+                    ImportKind::Folder => importer::import_work(&request, &guard.conn, &library_id),
                     ImportKind::Image => {
-                        importer::import_single_image(&request, &guard.conn, &library_id, lib_root)
+                        importer::import_single_image(&request, &guard.conn, &library_id)
                     }
                 }
             })
