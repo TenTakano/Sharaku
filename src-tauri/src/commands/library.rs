@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::library::{self, Library};
-use crate::{settings, template, ActiveLibrary, AppState};
+use crate::{ActiveLibrary, AppState};
 
 #[tauri::command]
 pub(crate) async fn list_libraries(
@@ -26,35 +26,12 @@ pub(crate) async fn create_library(
     state: tauri::State<'_, AppState>,
     name: String,
     path: Option<String>,
-    resource_mode: String,
-    directory_template: Option<String>,
 ) -> Result<Library, String> {
-    if resource_mode != "full" && resource_mode != "metadata_only" {
-        return Err("無効なリソース管理モードです".to_string());
-    }
-    if resource_mode == "full" && path.is_none() {
-        return Err("フルモードではパスの指定が必須です".to_string());
-    }
-    if resource_mode == "full" {
-        let tmpl = directory_template
-            .as_deref()
-            .unwrap_or(settings::DEFAULT_DIRECTORY_TEMPLATE);
-        template::validate_template(tmpl).map_err(|e| e.to_string())?;
-    }
     state
         .with_db_mut(move |db| {
             let lib = library::add_library(&db.conn, &name, path.as_deref())
                 .map_err(|e| e.to_string())?;
             library::set_active_library(&db.conn, &lib.id).map_err(|e| e.to_string())?;
-            settings::set_resource_mode(&db.conn, &lib.id, &resource_mode)
-                .map_err(|e| e.to_string())?;
-            if resource_mode == "full" {
-                let tmpl = directory_template
-                    .as_deref()
-                    .unwrap_or(settings::DEFAULT_DIRECTORY_TEMPLATE);
-                settings::set_directory_template(&db.conn, &lib.id, tmpl)
-                    .map_err(|e| e.to_string())?;
-            }
             db.active_library = Some(ActiveLibrary {
                 id: lib.id.clone(),
                 path: lib.path.as_ref().map(PathBuf::from),
