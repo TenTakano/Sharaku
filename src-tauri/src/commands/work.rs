@@ -12,10 +12,7 @@ fn copy_recursive(src: &Path, dest: &Path) -> std::io::Result<()> {
     if metadata.is_symlink() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            format!(
-                "シンボリックリンクはコピーできません: {}",
-                src.display()
-            ),
+            format!("シンボリックリンクはコピーできません: {}", src.display()),
         ));
     }
     if metadata.is_dir() {
@@ -63,9 +60,7 @@ fn copy_then_remove_src(src: &Path, dest: &Path) -> Result<(), String> {
 fn move_path(src: &Path, dest: &Path) -> Result<(), String> {
     match std::fs::rename(src, dest) {
         Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::CrossesDevices => {
-            copy_then_remove_src(src, dest)
-        }
+        Err(e) if e.kind() == std::io::ErrorKind::CrossesDevices => copy_then_remove_src(src, dest),
         Err(e) => Err(e.to_string()),
     }
 }
