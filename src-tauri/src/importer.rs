@@ -8,8 +8,10 @@ use walkdir::WalkDir;
 use crate::db::{self, WorkRecord};
 use crate::error::AppError;
 use crate::scanner;
-use crate::template;
 use crate::thumbnail;
+
+pub const WORK_KIND_FOLDER: &str = "folder";
+pub const WORK_KIND_IMAGE: &str = "image";
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -123,7 +125,7 @@ pub fn import_work(
             request,
             library_id,
             &source_str,
-            template::WORK_KIND_FOLDER,
+            WORK_KIND_FOLDER,
             page_count as i32,
             &thumb,
         ),
@@ -175,14 +177,7 @@ pub fn import_single_image(
 
     db::insert_work(
         conn,
-        &build_work_record(
-            request,
-            library_id,
-            &source_str,
-            template::WORK_KIND_IMAGE,
-            1,
-            &thumb,
-        ),
+        &build_work_record(request, library_id, &source_str, WORK_KIND_IMAGE, 1, &thumb),
     )?;
 
     Ok(ImportResult {
