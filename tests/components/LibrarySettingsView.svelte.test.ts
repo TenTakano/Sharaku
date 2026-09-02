@@ -7,10 +7,6 @@ import type { AppSettings } from "../../src/lib/types";
 import { getToasts, removeToast } from "../../src/lib/stores/toast.svelte";
 
 const MOCK_SETTINGS: AppSettings = {
-  resourceMode: "full",
-  directoryTemplate: "{artist}/{title}",
-  typeLabelImage: "Image",
-  typeLabelFolder: "Folder",
   deleteFileAction: "ask",
 };
 
@@ -32,12 +28,7 @@ beforeEach(() => {
   }
   mockIPC((cmd: string) => {
     if (cmd === "get_settings") return MOCK_SETTINGS;
-    if (cmd === "set_resource_mode") return undefined;
     if (cmd === "set_delete_file_action") return undefined;
-    if (cmd === "validate_template") return { valid: true, error: null };
-    if (cmd === "preview_template") return "/library/Artist/Title";
-    if (cmd === "set_directory_template") return undefined;
-    if (cmd === "set_type_labels") return undefined;
     if (cmd === "remove_library") return undefined;
   });
 });
@@ -53,7 +44,7 @@ describe("SettingsView コンポーネント", () => {
 
     await waitFor(() => {
       expect(screen.getByText("ライブラリルート")).toBeInTheDocument();
-      expect(screen.getByText("リソース管理モード")).toBeInTheDocument();
+      expect(screen.getByText("削除時のファイル処理")).toBeInTheDocument();
     });
   });
 
@@ -73,12 +64,15 @@ describe("SettingsView コンポーネント", () => {
     });
   });
 
-  it("リソース管理モードが表示される", async () => {
+  it("削除時のファイル処理の選択肢が表示される", async () => {
     render(SettingsView, createProps());
 
     await waitFor(() => {
-      expect(screen.getByText("すべて管理")).toBeInTheDocument();
-      expect(screen.getByText("メタデータのみ管理")).toBeInTheDocument();
+      expect(screen.getByText("実行時に確認する")).toBeInTheDocument();
+      expect(
+        screen.getByText("非追跡ディレクトリに退避させる"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("合わせて削除する")).toBeInTheDocument();
     });
   });
 

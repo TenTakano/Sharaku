@@ -70,34 +70,10 @@ export type ThemeMode = "light" | "dark" | "system";
 
 export type BannerAutoClose = 0 | 1 | 3 | 5;
 
-export type ResourceMode = "full" | "metadata_only";
-
 export type DeleteFileAction = "delete" | "trash" | "ask";
 
 export interface AppSettings {
-  resourceMode: ResourceMode;
-  directoryTemplate: string | null;
-  typeLabelImage: string;
-  typeLabelFolder: string;
   deleteFileAction: DeleteFileAction;
-}
-
-export interface TemplateValidation {
-  valid: boolean;
-  error: string | null;
-}
-
-// keep-in-sync: corresponds to WorkMetadata in src-tauri/src/template.rs.
-// The Rust side additionally has work_type: Option<String> with #[serde(default)]
-// (a field populated server-side with the resolved type label during placeholder
-// rendering; it is not included in the frontend's IPC payload).
-export interface WorkMetadata {
-  title: string;
-  artist: string | null;
-  year: number | null;
-  genre: string | null;
-  circle: string | null;
-  origin: string | null;
 }
 
 export type ImportKind = "folder" | "image";

@@ -17,9 +17,6 @@ pub enum AppError {
     #[error("Not found")]
     NotFound,
 
-    #[error("Invalid template: {0}")]
-    InvalidTemplate(String),
-
     #[error("Import error: {0}")]
     ImportError(String),
 
