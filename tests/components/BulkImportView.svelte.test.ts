@@ -3,19 +3,7 @@ import { render, screen, cleanup, waitFor } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import BulkImportView from "../../src/lib/components/BulkImportView.svelte";
-import type {
-  AppSettings,
-  DiscoverResult,
-  UnregisteredEntry,
-} from "../../src/lib/types";
-
-const MOCK_SETTINGS: AppSettings = {
-  resourceMode: "full",
-  directoryTemplate: "{artist}/{title}",
-  typeLabelImage: "Image",
-  typeLabelFolder: "Folder",
-  deleteFileAction: "ask",
-};
+import type { DiscoverResult } from "../../src/lib/types";
 
 const MOCK_DISCOVER_RESULT: DiscoverResult = {
   folders: [
@@ -51,6 +39,20 @@ const MOCK_DISCOVER_RESULT: DiscoverResult = {
   ],
 };
 
+const SINGLE_FOLDER_RESULT: DiscoverResult = {
+  folders: [
+    {
+      path: "/root/unregistered1",
+      folderName: "unregistered1",
+      imageCount: 7,
+      parsedMetadata: { title: "パース結果", artist: null },
+      alreadyRegistered: false,
+    },
+  ],
+  images: [],
+  skippedFolders: [],
+};
+
 function createProps(overrides = {}) {
   return {
     onBack: vi.fn(),
@@ -61,7 +63,6 @@ function createProps(overrides = {}) {
 beforeEach(() => {
   cleanup();
   mockIPC((cmd: string) => {
-    if (cmd === "get_settings") return MOCK_SETTINGS;
     if (cmd === "discover_folders") return MOCK_DISCOVER_RESULT;
     if (cmd === "discover_dropped_paths") return MOCK_DISCOVER_RESULT;
     if (cmd === "parse_folder_name")
@@ -138,106 +139,27 @@ describe("BulkImportView コンポーネント", () => {
     });
   });
 
-  describe("initialEntries でレビューステップ", () => {
-    const entries: UnregisteredEntry[] = [
-      {
-        path: "/root/unregistered1",
-        folderName: "unregistered1",
-        imageCount: 7,
-      },
-      {
-        path: "/root/unregistered2",
-        folderName: "unregistered2",
-        imageCount: 4,
-      },
-    ];
-
-    it("initialEntries が指定されている場合、直接レビューステップに進む", async () => {
-      render(BulkImportView, createProps({ initialEntries: entries }));
-
-      await waitFor(() => {
-        expect(screen.getByText("取り込み対象の確認")).toBeInTheDocument();
-      });
-    });
-
-    it("検出件数・選択件数・すべて選択チェックボックス・取り込みボタンが表示される", async () => {
-      render(BulkImportView, createProps({ initialEntries: entries }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/2 件検出/)).toBeInTheDocument();
-        expect(screen.getByText(/2 件選択中/)).toBeInTheDocument();
-        expect(screen.getByText("すべて選択")).toBeInTheDocument();
-        expect(screen.getByText("2 件を取り込み")).toBeInTheDocument();
-      });
-    });
-
-    it("取り込み実行で enqueue_import が呼ばれ onBack が呼ばれる", async () => {
-      const user = userEvent.setup();
-      const props = createProps({ initialEntries: entries });
-      render(BulkImportView, props);
-
-      await waitFor(() => {
-        expect(screen.getByText("2 件を取り込み")).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText("2 件を取り込み"));
-
-      await waitFor(() => {
-        expect(props.onBack).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe("ディレクトリテンプレート駆動のメタデータ列", () => {
-    const entries: UnregisteredEntry[] = [
-      {
-        path: "/root/unregistered1",
-        folderName: "unregistered1",
-        imageCount: 7,
-      },
-    ];
-
-    it("テンプレートに含まれるプレースホルダーに対応する列のみ表示される", async () => {
+  describe("メタデータ列（年・ジャンル・サークル・出典）", () => {
+    beforeEach(() => {
       mockIPC((cmd: string) => {
-        if (cmd === "get_settings")
-          return {
-            ...MOCK_SETTINGS,
-            directoryTemplate: "{circle}/{year}/{artist}/{title}",
-          };
+        if (cmd === "discover_folders") return SINGLE_FOLDER_RESULT;
         if (cmd === "parse_folder_name")
           return { title: "パース結果", artist: null };
         if (cmd === "enqueue_import") return { jobId: "job-1" };
       });
+    });
 
-      render(BulkImportView, createProps({ initialEntries: entries }));
+    it("常に年・ジャンル・サークル・出典の4列が表示される", async () => {
+      render(BulkImportView, createProps({ initialRootPath: "/root" }));
 
       await waitFor(() => {
         expect(screen.getByText("取り込み対象の確認")).toBeInTheDocument();
       });
 
       expect(screen.getByText("年")).toBeInTheDocument();
+      expect(screen.getByText("ジャンル")).toBeInTheDocument();
       expect(screen.getByText("サークル")).toBeInTheDocument();
-      expect(screen.queryByText("ジャンル")).toBeNull();
-      expect(screen.queryByText("出典")).toBeNull();
-    });
-
-    it("ディレクトリテンプレート未設定の場合は動的列を表示しない", async () => {
-      mockIPC((cmd: string) => {
-        if (cmd === "get_settings")
-          return { ...MOCK_SETTINGS, directoryTemplate: null };
-        if (cmd === "parse_folder_name")
-          return { title: "パース結果", artist: null };
-        if (cmd === "enqueue_import") return { jobId: "job-1" };
-      });
-
-      render(BulkImportView, createProps({ initialEntries: entries }));
-
-      await waitFor(() => {
-        expect(screen.getByText("取り込み対象の確認")).toBeInTheDocument();
-      });
-
-      expect(screen.queryByText("年")).toBeNull();
-      expect(screen.queryByText("サークル")).toBeNull();
+      expect(screen.getByText("出典")).toBeInTheDocument();
     });
 
     it("入力した値が ImportRequest に反映され、年は数値変換される", async () => {
@@ -247,11 +169,7 @@ describe("BulkImportView コンポーネント", () => {
         circle: string | null;
       }> = [];
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings")
-          return {
-            ...MOCK_SETTINGS,
-            directoryTemplate: "{circle}/{year}/{title}",
-          };
+        if (cmd === "discover_folders") return SINGLE_FOLDER_RESULT;
         if (cmd === "parse_folder_name")
           return { title: "パース結果", artist: null };
         if (cmd === "enqueue_import") {
@@ -260,7 +178,7 @@ describe("BulkImportView コンポーネント", () => {
         }
       });
 
-      render(BulkImportView, createProps({ initialEntries: entries }));
+      render(BulkImportView, createProps({ initialRootPath: "/root" }));
 
       await waitFor(() => {
         expect(screen.getByText("年")).toBeInTheDocument();
@@ -289,11 +207,7 @@ describe("BulkImportView コンポーネント", () => {
         origin: string | null;
       }> = [];
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings")
-          return {
-            ...MOCK_SETTINGS,
-            directoryTemplate: "{genre}/{circle}/{origin}/{year}/{title}",
-          };
+        if (cmd === "discover_folders") return SINGLE_FOLDER_RESULT;
         if (cmd === "parse_folder_name")
           return { title: "パース結果", artist: null };
         if (cmd === "enqueue_import") {
@@ -302,7 +216,7 @@ describe("BulkImportView コンポーネント", () => {
         }
       });
 
-      render(BulkImportView, createProps({ initialEntries: entries }));
+      render(BulkImportView, createProps({ initialRootPath: "/root" }));
 
       await waitFor(() => {
         expect(screen.getByText("ジャンル")).toBeInTheDocument();
@@ -330,11 +244,7 @@ describe("BulkImportView コンポーネント", () => {
         origin: string | null;
       }> = [];
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings")
-          return {
-            ...MOCK_SETTINGS,
-            directoryTemplate: "{genre}/{origin}/{title}",
-          };
+        if (cmd === "discover_folders") return SINGLE_FOLDER_RESULT;
         if (cmd === "parse_folder_name")
           return { title: "パース結果", artist: null };
         if (cmd === "enqueue_import") {
@@ -343,7 +253,7 @@ describe("BulkImportView コンポーネント", () => {
         }
       });
 
-      render(BulkImportView, createProps({ initialEntries: entries }));
+      render(BulkImportView, createProps({ initialRootPath: "/root" }));
 
       await waitFor(() => {
         expect(screen.getByText("ジャンル")).toBeInTheDocument();
@@ -364,11 +274,7 @@ describe("BulkImportView コンポーネント", () => {
       const user = userEvent.setup();
       let capturedRequests: Array<{ year: number | null }> = [];
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings")
-          return {
-            ...MOCK_SETTINGS,
-            directoryTemplate: "{year}/{title}",
-          };
+        if (cmd === "discover_folders") return SINGLE_FOLDER_RESULT;
         if (cmd === "parse_folder_name")
           return { title: "パース結果", artist: null };
         if (cmd === "enqueue_import") {
@@ -377,7 +283,7 @@ describe("BulkImportView コンポーネント", () => {
         }
       });
 
-      render(BulkImportView, createProps({ initialEntries: entries }));
+      render(BulkImportView, createProps({ initialRootPath: "/root" }));
 
       await waitFor(() => {
         expect(screen.getByText("年")).toBeInTheDocument();
