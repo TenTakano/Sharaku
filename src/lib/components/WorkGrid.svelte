@@ -24,6 +24,7 @@
     reloadTrigger: number;
     filterTags: Tag[];
     tagSearchMode: TagSearchMode;
+    libraryPath?: string | null;
     onSelectWork: (workId: number) => void;
     onWorksLoaded?: (workIds: number[]) => void;
     onFilterTagsChange: (tags: Tag[]) => void;
@@ -35,6 +36,7 @@
     reloadTrigger,
     filterTags,
     tagSearchMode,
+    libraryPath = null,
     onSelectWork,
     onWorksLoaded,
     onFilterTagsChange,
@@ -50,7 +52,12 @@
     null,
   );
   let editingWork = $state<WorkDetail | null>(null);
-  let deletingWork = $state<{ id: number; title: string } | null>(null);
+  let deletingWork = $state<{
+    id: number;
+    title: string;
+    path: string;
+    workType: string;
+  } | null>(null);
   let addingToPlaylistWorkId = $state<number | null>(null);
   let deleteFileAction = $state<DeleteFileAction>("ask");
   let selectedFileAction = $state<DeleteFileAction | "none">("none");
@@ -153,8 +160,29 @@
     } catch {
       deleteFileAction = "ask";
     }
+    // trash はライブラリルート配下の .trash へ退避するため、
+    // ライブラリにフォルダが未設定だと実行時に必ず失敗する。事前に ask 扱いへ倒す。
+    if (deleteFileAction === "trash" && !libraryPath) {
+      deleteFileAction = "ask";
+    }
     selectedFileAction = "none";
-    deletingWork = { id: work.id, title: work.title };
+    let detail: WorkDetail;
+    try {
+      detail = await invoke("get_work", { workId });
+    } catch (e) {
+      console.error("Failed to get work:", e);
+      addToast(
+        "error",
+        `削除対象のパス取得に失敗したため削除を中止しました: ${e}`,
+      );
+      return;
+    }
+    deletingWork = {
+      id: work.id,
+      title: work.title,
+      path: detail.path,
+      workType: detail.workType,
+    };
   }
 
   function resolveEffectiveDeleteAction(): DeleteFileAction | "none" {
@@ -310,15 +338,31 @@
     onCancel={() => (deletingWork = null)}
   >
     {#snippet extra()}
+      {@const path = deletingWork!.path}
       {#if deleteFileAction === "delete"}
         <p class="confirm-dialog-file-action-note">
-          ※ ローカルファイルも削除されます
+          ※ 以下のローカルファイルを完全に削除します（元に戻せません）:<br
+          /><code class="confirm-dialog-path">{path}</code>
         </p>
+        <p class="confirm-dialog-file-action-note">
+          ※ 上記のファイルはライブラリ管理外の実データである可能性があります。
+        </p>
+        {#if deletingWork!.workType === "folder"}
+          <p class="confirm-dialog-file-action-note">
+            ※
+            対象はフォルダのため、配下のライブラリ未登録のファイル・サブフォルダも含めてすべて削除されます。
+          </p>
+        {/if}
       {:else if deleteFileAction === "trash"}
         <p class="confirm-dialog-file-action-note">
-          ※ ローカルファイルはゴミ箱に退避されます
+          ※ 以下のローカルファイルを非追跡ディレクトリへ移動します:<br /><code
+            class="confirm-dialog-path">{path}</code
+          >
         </p>
       {:else if deleteFileAction === "ask"}
+        <p class="confirm-dialog-path-note">
+          対象パス: <code class="confirm-dialog-path">{path}</code>
+        </p>
         <div class="confirm-dialog-file-action">
           <label class="confirm-dialog-radio">
             <input
@@ -330,15 +374,22 @@
             />
             メタデータのみ削除（ファイルは保持）
           </label>
-          <label class="confirm-dialog-radio">
+          <label
+            class="confirm-dialog-radio"
+            class:confirm-dialog-radio-disabled={!libraryPath}
+          >
             <input
               type="radio"
               name="file-action"
               value="trash"
               checked={selectedFileAction === "trash"}
+              disabled={!libraryPath}
               onchange={() => (selectedFileAction = "trash")}
             />
             ゴミ箱に退避する
+            {#if !libraryPath}
+              （ライブラリにフォルダが未設定のため利用できません）
+            {/if}
           </label>
           <label class="confirm-dialog-radio">
             <input
@@ -351,6 +402,17 @@
             ローカルファイルを完全削除する
           </label>
         </div>
+        {#if selectedFileAction === "delete"}
+          <p class="confirm-dialog-file-action-note">
+            ※ 上記のファイルはライブラリ管理外の実データである可能性があります。
+          </p>
+          {#if deletingWork!.workType === "folder"}
+            <p class="confirm-dialog-file-action-note">
+              ※
+              対象はフォルダのため、配下のライブラリ未登録のファイル・サブフォルダも含めてすべて削除されます。
+            </p>
+          {/if}
+        {/if}
       {/if}
     {/snippet}
   </ConfirmDialog>

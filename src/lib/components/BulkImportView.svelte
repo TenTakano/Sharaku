@@ -6,7 +6,7 @@
   import {
     BULK_IMPORT_METADATA_FIELDS,
     type BulkImportMetadataField,
-  } from "../utils/templatePlaceholders";
+  } from "../utils/bulkImportMetadataFields";
   import type {
     DiscoverResult,
     DiscoverProgress,
@@ -62,8 +62,6 @@
     origin: new SvelteMap(),
   };
   let submitting = $state(false);
-
-  const activeMetadataFields = BULK_IMPORT_METADATA_FIELDS;
 
   function clearEditedMetadata() {
     for (const field of BULK_IMPORT_METADATA_FIELDS) {
@@ -342,7 +340,7 @@
               <th class="bulk-th-count">画像数</th>
               <th class="bulk-th-title">タイトル</th>
               <th class="bulk-th-artist">アーティスト</th>
-              {#each activeMetadataFields as field (field)}
+              {#each BULK_IMPORT_METADATA_FIELDS as field (field)}
                 <th class="bulk-th-metadata">{METADATA_FIELD_LABELS[field]}</th>
               {/each}
               <th class="bulk-th-status">状態</th>
@@ -391,7 +389,7 @@
                       )}
                   />
                 </td>
-                {#each activeMetadataFields as field (field)}
+                {#each BULK_IMPORT_METADATA_FIELDS as field (field)}
                   <td>
                     <input
                       type="text"
