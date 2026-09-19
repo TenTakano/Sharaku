@@ -1,6 +1,5 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { Channel } from "@tauri-apps/api/core";
   import { addToast } from "../stores/toast.svelte";
   import { debounce } from "../utils/debounce";
   import { createLatestRequestGuard } from "../utils/latestRequest";
@@ -9,11 +8,6 @@
     ResourceMode,
     DeleteFileAction,
     TemplateValidation,
-    RelocationPreview,
-    RelocationProgress,
-    IntegrityReport,
-    IntegrityCheckProgress,
-    UnregisteredEntry,
     ViewKind,
   } from "../types";
 
@@ -22,7 +16,6 @@
     libraryName: string;
     libraryPath: string | null;
     onNavigate: (view: ViewKind) => void;
-    onImportUnregistered: (entries: UnregisteredEntry[]) => void;
     onDeleteLibrary: () => void;
   }
 
@@ -31,7 +24,6 @@
     libraryName,
     libraryPath,
     onNavigate,
-    onImportUnregistered,
     onDeleteLibrary,
   }: Props = $props();
 
@@ -49,25 +41,12 @@
   let templatePreview = $state<string | null>(null);
   const validationRequestGuard = createLatestRequestGuard();
 
-  let savedDirectoryTemplate = $state("");
-  let relocationPreviews = $state<RelocationPreview[]>([]);
-
-  let integrityChecking = $state(false);
-  let integrityProgress = $state<IntegrityCheckProgress | null>(null);
-  let integrityReport = $state<IntegrityReport | null>(null);
-  let showIntegrityDialog = $state(false);
-  let deletingOrphans = $state(false);
-  let showRelocationDialog = $state(false);
-  let relocating = $state(false);
-  let relocationProgress = $state<RelocationProgress | null>(null);
-
   async function loadSettings() {
     try {
       const settings = await invoke<AppSettings>("get_settings");
       resourceMode = settings.resourceMode;
       deleteFileAction = settings.deleteFileAction;
       directoryTemplate = settings.directoryTemplate ?? "";
-      savedDirectoryTemplate = directoryTemplate;
       typeLabelImage = settings.typeLabelImage;
       typeLabelFolder = settings.typeLabelFolder;
       if (directoryTemplate) {
@@ -101,57 +80,14 @@
   async function saveDirectoryTemplate() {
     saving = true;
     try {
-      const previews = await invoke<RelocationPreview[]>("preview_relocation", {
-        newTemplate: directoryTemplate.trim(),
+      await invoke("set_directory_template", {
+        template: directoryTemplate.trim(),
       });
-      if (previews.length === 0) {
-        await invoke("set_directory_template", {
-          template: directoryTemplate.trim(),
-        });
-        savedDirectoryTemplate = directoryTemplate;
-        addToast("success", "ディレクトリテンプレートを保存しました");
-      } else {
-        relocationPreviews = previews;
-        showRelocationDialog = true;
-      }
+      addToast("success", "ディレクトリテンプレートを保存しました");
     } catch (e) {
       addToast("error", `保存に失敗しました: ${e}`);
     } finally {
       saving = false;
-    }
-  }
-
-  function cancelRelocation() {
-    showRelocationDialog = false;
-    relocationPreviews = [];
-    relocationProgress = null;
-    directoryTemplate = savedDirectoryTemplate;
-    if (directoryTemplate) {
-      validateAndPreviewTemplate(directoryTemplate);
-    }
-  }
-
-  async function executeRelocation() {
-    relocating = true;
-    relocationProgress = null;
-    try {
-      const channel = new Channel<RelocationProgress>();
-      channel.onmessage = (progress) => {
-        relocationProgress = progress;
-      };
-      await invoke("relocate_works", {
-        newTemplate: directoryTemplate.trim(),
-        onProgress: channel,
-      });
-      showRelocationDialog = false;
-      relocationPreviews = [];
-      savedDirectoryTemplate = directoryTemplate;
-      addToast("success", "テンプレートを保存し、作品を再配置しました");
-    } catch (e) {
-      addToast("error", `再配置に失敗しました: ${e}`);
-    } finally {
-      relocating = false;
-      relocationProgress = null;
     }
   }
 
@@ -208,49 +144,6 @@
 
   function onTemplateInput() {
     debouncedValidateAndPreview(directoryTemplate);
-  }
-
-  async function runIntegrityCheck() {
-    integrityChecking = true;
-    integrityProgress = null;
-    integrityReport = null;
-    try {
-      const channel = new Channel<IntegrityCheckProgress>();
-      channel.onmessage = (progress) => {
-        integrityProgress = progress;
-      };
-      const report = await invoke<IntegrityReport>("check_integrity", {
-        onProgress: channel,
-      });
-      integrityReport = report;
-      showIntegrityDialog = true;
-    } catch (e) {
-      addToast("error", `整合チェックに失敗しました: ${e}`);
-    } finally {
-      integrityChecking = false;
-      integrityProgress = null;
-    }
-  }
-
-  function closeIntegrityDialog() {
-    showIntegrityDialog = false;
-    integrityReport = null;
-  }
-
-  async function deleteOrphanWorks() {
-    if (!integrityReport || integrityReport.orphanWorks.length === 0) return;
-    deletingOrphans = true;
-    try {
-      const ids = integrityReport.orphanWorks.map((w) => w.id);
-      const deleted = await invoke<number>("delete_orphan_works", { ids });
-      addToast("success", `${deleted} 件の孤立レコードを削除しました`);
-      showIntegrityDialog = false;
-      integrityReport = null;
-    } catch (e) {
-      addToast("error", `削除に失敗しました: ${e}`);
-    } finally {
-      deletingOrphans = false;
-    }
   }
 
   let showDeleteConfirm = $state(false);
@@ -473,37 +366,6 @@
         </button>
       </section>
 
-      <section class="settings-section">
-        <h2>ライブラリ整合チェック</h2>
-        <p class="settings-description">
-          DBレコードとファイルシステムの不整合を検出します。
-        </p>
-        <p class="settings-description integrity-warning">
-          ※
-          ネットワークドライブが未接続の場合、正常なレコードが孤立として検出される可能性があります。
-        </p>
-        <button
-          class="settings-bulk-import-btn"
-          onclick={runIntegrityCheck}
-          disabled={integrityChecking}
-        >
-          {#if integrityChecking}
-            チェック中...
-          {:else}
-            整合チェックを実行
-          {/if}
-        </button>
-        {#if integrityChecking && integrityProgress}
-          <p class="integrity-progress">
-            {#if integrityProgress.type === "checkingWorks"}
-              作品レコードを確認中... ({integrityProgress.checked}/{integrityProgress.total})
-            {:else if integrityProgress.type === "scanningDirectory"}
-              ディレクトリを走査中... ({integrityProgress.scannedDirs} フォルダ)
-            {/if}
-          </p>
-        {/if}
-      </section>
-
       <section class="settings-section settings-section-danger">
         <h2>ライブラリを削除</h2>
         <p class="settings-description">
@@ -516,93 +378,6 @@
           ライブラリを削除
         </button>
       </section>
-    </div>
-  </div>
-{/if}
-
-{#if showIntegrityDialog && integrityReport}
-  <div class="integrity-overlay">
-    <div class="integrity-dialog">
-      <h2>整合チェック結果</h2>
-      {#if integrityReport.orphanWorks.length === 0 && integrityReport.unregisteredEntries.length === 0}
-        <p class="integrity-no-issues">問題は見つかりませんでした。</p>
-        <p class="integrity-summary">
-          全作品数: {integrityReport.totalWorks} 件
-        </p>
-      {:else}
-        <p class="integrity-summary">
-          全作品数: {integrityReport.totalWorks} 件 / 孤立レコード: {integrityReport
-            .orphanWorks.length} 件 / 未登録フォルダ: {integrityReport
-            .unregisteredEntries.length} 件
-        </p>
-
-        {#if integrityReport.orphanWorks.length > 0}
-          <h3 class="integrity-section-title">
-            孤立レコード（ファイルが存在しないDBレコード）
-          </h3>
-          <div class="integrity-list">
-            {#each integrityReport.orphanWorks as work (work.id)}
-              <div class="integrity-list-item">
-                <span class="integrity-item-title">{work.title}</span>
-                <code class="integrity-item-path">{work.path}</code>
-              </div>
-            {/each}
-          </div>
-        {/if}
-
-        {#if integrityReport.unregisteredEntries.length > 0}
-          <h3 class="integrity-section-title">
-            未登録フォルダ（DBに登録されていないフォルダ）
-          </h3>
-          <div class="integrity-list">
-            {#each integrityReport.unregisteredEntries as entry (entry.path)}
-              <div class="integrity-list-item">
-                <span class="integrity-item-title">{entry.folderName}</span>
-                <span class="integrity-item-detail"
-                  >画像: {entry.imageCount} 枚</span
-                >
-                <code class="integrity-item-path">{entry.path}</code>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      {/if}
-
-      <div class="integrity-actions">
-        <button
-          class="integrity-close-btn"
-          onclick={closeIntegrityDialog}
-          disabled={deletingOrphans}
-        >
-          閉じる
-        </button>
-        {#if integrityReport.orphanWorks.length > 0}
-          <button
-            class="integrity-delete-btn"
-            onclick={deleteOrphanWorks}
-            disabled={deletingOrphans}
-          >
-            {#if deletingOrphans}
-              削除中...
-            {:else}
-              孤立レコードを削除 ({integrityReport.orphanWorks.length}件)
-            {/if}
-          </button>
-        {/if}
-        {#if integrityReport.unregisteredEntries.length > 0}
-          <button
-            class="integrity-import-btn"
-            onclick={() => {
-              onImportUnregistered(integrityReport!.unregisteredEntries);
-              closeIntegrityDialog();
-            }}
-            disabled={deletingOrphans}
-          >
-            未登録フォルダを取り込む ({integrityReport.unregisteredEntries
-              .length}件)
-          </button>
-        {/if}
-      </div>
     </div>
   </div>
 {/if}
@@ -634,70 +409,6 @@
           {/if}
         </button>
       </div>
-    </div>
-  </div>
-{/if}
-
-{#if showRelocationDialog}
-  <div class="relocation-overlay">
-    <div class="relocation-dialog">
-      {#if !relocating}
-        <h2>作品の再配置</h2>
-        <p class="relocation-warning">
-          テンプレートの変更により、{relocationPreviews.length}
-          件の作品ディレクトリが移動されます。
-        </p>
-        <div class="relocation-preview-list">
-          {#each relocationPreviews as item (item.workId)}
-            <div class="relocation-preview-item">
-              <span class="relocation-preview-title">{item.title}</span>
-              <div class="relocation-paths">
-                <code class="relocation-path-old">{item.oldPath}</code>
-                <span class="relocation-arrow">→</span>
-                <code class="relocation-path-new">{item.newPath}</code>
-              </div>
-            </div>
-          {/each}
-        </div>
-        <div class="relocation-actions">
-          <button class="relocation-cancel-btn" onclick={cancelRelocation}>
-            キャンセル
-          </button>
-          <button class="relocation-execute-btn" onclick={executeRelocation}>
-            実行
-          </button>
-        </div>
-      {:else}
-        <h2>再配置中...</h2>
-        {#if relocationProgress}
-          {#if relocationProgress.type === "started"}
-            <p class="relocation-progress">
-              {relocationProgress.total} 件の作品を処理します...
-            </p>
-          {:else if relocationProgress.type === "moving"}
-            <p class="relocation-progress">
-              ({relocationProgress.current}/{relocationProgress.total})
-              {relocationProgress.title}
-            </p>
-            <progress
-              value={relocationProgress.current}
-              max={relocationProgress.total}
-            ></progress>
-          {:else if relocationProgress.type === "completed"}
-            <p class="relocation-progress">
-              完了: {relocationProgress.relocated} 件移動,
-              {relocationProgress.skipped} 件スキップ,
-              {relocationProgress.failed} 件失敗
-            </p>
-          {:else if relocationProgress.type === "error"}
-            <p class="relocation-progress relocation-progress-error">
-              {relocationProgress.message}
-            </p>
-          {/if}
-        {:else}
-          <p class="relocation-progress">準備中...</p>
-        {/if}
-      {/if}
     </div>
   </div>
 {/if}

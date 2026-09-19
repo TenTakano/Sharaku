@@ -5,8 +5,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::import_queue::{ImportJob, ImportQueueEvent};
 use crate::importer::{self, DiscoverProgress, DiscoverResult, ImportKind, ParsedMetadata};
-use crate::relocator::{self, RelocationPreview, RelocationProgress};
-use crate::template::{self, WorkMetadata};
+use crate::template::WorkMetadata;
 use crate::{scanner, settings, AppState};
 
 #[tauri::command]
@@ -117,45 +116,6 @@ pub(crate) async fn discover_dropped_paths(
     state
         .with_active_db(move |db, active| {
             importer::discover_from_paths(&roots, &db.conn, &active.id, &on_progress)
-                .map_err(|e| e.to_string())
-        })
-        .await
-}
-
-#[tauri::command]
-pub(crate) async fn preview_relocation(
-    state: tauri::State<'_, AppState>,
-    new_template: String,
-) -> Result<Vec<RelocationPreview>, String> {
-    let trimmed = new_template.trim().to_string();
-    template::validate_template(&trimmed).map_err(|e| e.to_string())?;
-    state
-        .with_active_db(move |db, active| {
-            let lib_path = active
-                .path
-                .as_ref()
-                .ok_or("ライブラリルートが設定されていません")?;
-            relocator::preview_relocation(&db.conn, &active.id, lib_path, &trimmed)
-                .map_err(|e| e.to_string())
-        })
-        .await
-}
-
-#[tauri::command]
-pub(crate) async fn relocate_works(
-    state: tauri::State<'_, AppState>,
-    new_template: String,
-    on_progress: tauri::ipc::Channel<RelocationProgress>,
-) -> Result<(), String> {
-    let trimmed = new_template.trim().to_string();
-    template::validate_template(&trimmed).map_err(|e| e.to_string())?;
-    state
-        .with_active_db(move |db, active| {
-            let lib_path = active
-                .path
-                .as_ref()
-                .ok_or("ライブラリルートが設定されていません")?;
-            relocator::execute_relocation(&db.conn, &active.id, lib_path, &trimmed, &on_progress)
                 .map_err(|e| e.to_string())
         })
         .await
