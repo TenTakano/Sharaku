@@ -24,8 +24,8 @@ importers:
         specifier: ^2
         version: 2.5.5
       virtua:
-        specifier: ^0.52.5
-        version: 0.52.5(svelte@5.57.1(@typescript-eslint/types@8.70.1))
+        specifier: ^0.52.7
+        version: 0.52.7(svelte@5.57.1(@typescript-eslint/types@8.70.1))
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -1361,8 +1361,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  virtua@0.52.5:
-    resolution: {integrity: sha512-4iDmQK0IM9uOSY86cd9/llshH1f7j4TxioRn7y+XXc8NzuMPnr44Cea6dGt2AiYP9UZa5uAddkwCurP+jXGShw==}
+  virtua@0.52.7:
+    resolution: {integrity: sha512-3xdhgKCbetu7Gez+DJfjmE+1zI7tsCN+07ZpUBhABDyqqT5r+fji6c0vmQCZlxI8o022d/LdIm2E/9T/LE9rPA==}
     peerDependencies:
       '@angular/common': '>=20.0.0'
       '@angular/core': '>=20.0.0'
@@ -2714,7 +2714,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  virtua@0.52.5(svelte@5.57.1(@typescript-eslint/types@8.70.1)):
+  virtua@0.52.7(svelte@5.57.1(@typescript-eslint/types@8.70.1)):
     optionalDependencies:
       svelte: 5.57.1(@typescript-eslint/types@8.70.1)
 
