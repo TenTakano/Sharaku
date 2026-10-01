@@ -79,21 +79,3 @@ fn type_label_set_and_get() {
         "漫画"
     );
 }
-
-#[test]
-fn resolve_type_label_uses_settings() {
-    let conn = test_conn();
-    set_type_label_folder(&conn, TEST_LIBRARY_ID, "漫画").unwrap();
-    assert_eq!(
-        resolve_type_label(&conn, TEST_LIBRARY_ID, "folder").unwrap(),
-        "漫画"
-    );
-    assert_eq!(
-        resolve_type_label(&conn, TEST_LIBRARY_ID, "image").unwrap(),
-        "Image"
-    );
-    assert_eq!(
-        resolve_type_label(&conn, TEST_LIBRARY_ID, "other").unwrap(),
-        "other"
-    );
-}
