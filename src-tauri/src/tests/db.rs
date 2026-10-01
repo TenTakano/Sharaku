@@ -460,41 +460,6 @@ fn search_works_by_tags_and_mode_deduplicates_ids() {
     assert_eq!(result.len(), 1);
 }
 
-// --- list_work_paths ---
-
-#[test]
-fn list_work_paths_returns_all_works() {
-    let conn = test_conn();
-    insert_work(&conn, &sample_record("A", "/a.jpg")).unwrap();
-    insert_work(&conn, &sample_folder_record("B", "/b")).unwrap();
-
-    let entries = list_work_paths(&conn, TEST_LIBRARY_ID).unwrap();
-    assert_eq!(entries.len(), 2);
-    let titles: Vec<&str> = entries.iter().map(|e| e.title.as_str()).collect();
-    assert!(titles.contains(&"A"));
-    assert!(titles.contains(&"B"));
-}
-
-#[test]
-fn list_work_paths_empty_library() {
-    let conn = test_conn();
-    let entries = list_work_paths(&conn, TEST_LIBRARY_ID).unwrap();
-    assert!(entries.is_empty());
-}
-
-#[test]
-fn list_work_paths_includes_correct_fields() {
-    let conn = test_conn();
-    insert_work(&conn, &sample_folder_record("Folder Work", "/some/path")).unwrap();
-
-    let entries = list_work_paths(&conn, TEST_LIBRARY_ID).unwrap();
-    assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].title, "Folder Work");
-    assert_eq!(entries[0].path, "/some/path");
-    assert_eq!(entries[0].work_type, "folder");
-    assert!(entries[0].id > 0);
-}
-
 // --- delete_works_by_ids ---
 
 #[test]

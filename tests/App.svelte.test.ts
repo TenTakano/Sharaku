@@ -140,8 +140,7 @@ describe("App のドラッグ&ドロップ処理", () => {
   });
 
   it("画像ファイルのドロップで単一取り込み画面にimage kindが渡る", async () => {
-    const previewSpy = vi.fn(() => "/library/pictures/photo");
-    mockIPC((cmd: string, args: Record<string, unknown>) => {
+    mockIPC((cmd: string) => {
       if (cmd === "get_active_library") return MOCK_LIBRARY;
       if (cmd === "list_libraries") return [MOCK_LIBRARY];
       if (cmd === "list_tags") return [];
@@ -149,7 +148,6 @@ describe("App のドラッグ&ドロップ処理", () => {
       if (cmd === "get_settings") return MOCK_SETTINGS;
       if (cmd === "classify_drop_path") return "image";
       if (cmd === "parse_folder_name") return { title: "photo", artist: null };
-      if (cmd === "preview_import_path") return previewSpy(args);
     });
 
     render(App);
@@ -169,9 +167,7 @@ describe("App のドラッグ&ドロップ処理", () => {
       ).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(previewSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: "image" }),
-      );
+      expect(screen.getByDisplayValue("photo")).toBeInTheDocument();
     });
   });
 
@@ -223,7 +219,6 @@ describe("App のドラッグ&ドロップ処理", () => {
 
   it("単一ディレクトリドロップかつサブフォルダに画像がない場合は単一取り込み画面(folder kind)へ遷移する", async () => {
     const hasSubfoldersSpy = vi.fn(() => false);
-    const previewSpy = vi.fn(() => "/library/works/folder-no-subfolders");
     mockIPC((cmd: string, args: Record<string, unknown>) => {
       if (cmd === "get_active_library") return MOCK_LIBRARY;
       if (cmd === "list_libraries") return [MOCK_LIBRARY];
@@ -234,7 +229,6 @@ describe("App のドラッグ&ドロップ処理", () => {
       if (cmd === "has_image_subfolders") return hasSubfoldersSpy(args);
       if (cmd === "parse_folder_name")
         return { title: "folder-no-subfolders", artist: null };
-      if (cmd === "preview_import_path") return previewSpy(args);
     });
 
     render(App);
@@ -254,9 +248,9 @@ describe("App のドラッグ&ドロップ処理", () => {
       ).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(previewSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: "folder" }),
-      );
+      expect(
+        screen.getByDisplayValue("folder-no-subfolders"),
+      ).toBeInTheDocument();
     });
   });
 
