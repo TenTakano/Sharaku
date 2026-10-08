@@ -350,6 +350,7 @@
           {reloadTrigger}
           {filterTags}
           {tagSearchMode}
+          libraryPath={activeLibrary.path}
           onSelectWork={handleSelectWork}
           onWorksLoaded={handleWorksLoaded}
           onFilterTagsChange={(tags) => (filterTags = tags)}
