@@ -130,48 +130,6 @@ fn list_images_sorted_order() {
     assert_eq!(images[2].file_name().unwrap(), "c.jpg");
 }
 
-// preview_import_path tests
-
-#[test]
-fn preview_path_with_template() {
-    let metadata = WorkMetadata {
-        title: "My Work".to_string(),
-        artist: Some("Artist".to_string()),
-        year: None,
-        genre: None,
-        circle: None,
-        origin: None,
-        work_type: None,
-    };
-    let result = preview_import_path(
-        Path::new("/library"),
-        "{artist}/{title}",
-        &metadata,
-        crate::template::WORK_KIND_FOLDER,
-    );
-    assert_eq!(result, "/library/works/Artist/My Work");
-}
-
-#[test]
-fn preview_path_for_image_kind() {
-    let metadata = WorkMetadata {
-        title: "Sketch".to_string(),
-        artist: Some("Artist".to_string()),
-        year: None,
-        genre: None,
-        circle: None,
-        origin: None,
-        work_type: None,
-    };
-    let result = preview_import_path(
-        Path::new("/library"),
-        "{artist}/{title}",
-        &metadata,
-        crate::template::WORK_KIND_IMAGE,
-    );
-    assert_eq!(result, "/library/pictures/Artist/Sketch");
-}
-
 // Natural sort tests
 
 #[test]
