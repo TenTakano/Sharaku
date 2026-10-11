@@ -290,35 +290,16 @@ fn parse_image_file_name_multi_dot() {
 
 #[test]
 fn import_single_image_rejects_non_image_file() {
-    let dir = std::env::temp_dir().join("sharaku_test_import_single_non_image");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    let txt = dir.join("note.txt");
+    const LIB_ID: &str = "test_lib_import_single_non_image";
+    let temp = TempDir::new().unwrap();
+    let txt = temp.path().join("note.txt");
     std::fs::write(&txt, b"text").unwrap();
 
-    let conn = crate::db::open_db_in_memory().unwrap();
-    crate::library::add_library(&conn, "Test", Some("/tmp")).ok();
+    let conn = test_db_with_library(LIB_ID);
 
-    let request = ImportRequest {
-        source_path: txt.to_string_lossy().to_string(),
-        title: "x".into(),
-        artist: None,
-        year: None,
-        genre: None,
-        circle: None,
-        origin: None,
-        kind: ImportKind::Image,
-    };
-
-    let lib_id = {
-        let mut stmt = conn.prepare("SELECT id FROM libraries LIMIT 1").unwrap();
-        stmt.query_row([], |row| row.get::<_, String>(0)).unwrap()
-    };
-
-    let result = import_single_image(&request, &conn, &lib_id);
+    let request = make_request(&txt, "x");
+    let result = import_single_image(&request, &conn, LIB_ID);
     assert!(result.is_err());
-
-    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 #[test]
@@ -377,33 +358,14 @@ fn import_single_image_returns_error_on_duplicate_path() {
 
 #[test]
 fn import_single_image_rejects_directory_path() {
-    let dir = std::env::temp_dir().join("sharaku_test_import_single_dir_reject");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
+    const LIB_ID: &str = "test_lib_import_single_dir_reject";
+    let temp = TempDir::new().unwrap();
 
-    let conn = crate::db::open_db_in_memory().unwrap();
-    crate::library::add_library(&conn, "Test", Some("/tmp")).ok();
+    let conn = test_db_with_library(LIB_ID);
 
-    let request = ImportRequest {
-        source_path: dir.to_string_lossy().to_string(),
-        title: "x".into(),
-        artist: None,
-        year: None,
-        genre: None,
-        circle: None,
-        origin: None,
-        kind: ImportKind::Image,
-    };
-
-    let lib_id = {
-        let mut stmt = conn.prepare("SELECT id FROM libraries LIMIT 1").unwrap();
-        stmt.query_row([], |row| row.get::<_, String>(0)).unwrap()
-    };
-
-    let result = import_single_image(&request, &conn, &lib_id);
+    let request = make_request(temp.path(), "x");
+    let result = import_single_image(&request, &conn, LIB_ID);
     assert!(result.is_err());
-
-    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 // import_work tests
@@ -437,6 +399,50 @@ fn import_work_registers_source_path_without_copy() {
 
     let works = crate::db::list_works(&conn, LIB_ID, "created_at", "desc").unwrap();
     assert_eq!(works.len(), 1);
+}
+
+#[test]
+fn import_work_returns_error_on_duplicate_path() {
+    const LIB_ID: &str = "test_lib_import_work_duplicate";
+    let temp = TempDir::new().unwrap();
+    let source = temp.path().join("folder");
+    std::fs::create_dir_all(&source).unwrap();
+    write_test_image(&source.join("01.png"));
+
+    let conn = test_db_with_library(LIB_ID);
+
+    // Pre-register a work at the same source path so the UNIQUE(library_id, path)
+    // constraint fails on insert, since in-place registration keeps the original path.
+    crate::db::insert_work(
+        &conn,
+        &crate::db::WorkRecord {
+            library_id: LIB_ID,
+            title: "Existing",
+            path: &source.to_string_lossy(),
+            work_type: "folder",
+            page_count: 1,
+            thumbnail: b"thumb",
+            artist: None,
+            year: None,
+            genre: None,
+            circle: None,
+            origin: None,
+        },
+    )
+    .unwrap();
+
+    let request = ImportRequest {
+        source_path: source.to_string_lossy().to_string(),
+        title: "MyFolder".to_string(),
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        kind: ImportKind::Folder,
+    };
+    let result = import_work(&request, &conn, LIB_ID);
+    assert!(result.is_err());
 }
 
 #[test]

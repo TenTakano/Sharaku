@@ -1,7 +1,69 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::db::{self, WorkDetail, WorkSummary};
 use crate::AppState;
+
+/// Copies src into dest recursively (dest must not already exist for directories).
+/// Refuses to follow symlinks: a symlinked entry could form a directory cycle
+/// (unbounded recursion) or point outside the source tree (unintended copies
+/// of external data), so any symlink encountered is treated as an error.
+fn copy_recursive(src: &Path, dest: &Path) -> std::io::Result<()> {
+    let metadata = std::fs::symlink_metadata(src)?;
+    if metadata.is_symlink() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("シンボリックリンクはコピーできません: {}", src.display()),
+        ));
+    }
+    if metadata.is_dir() {
+        std::fs::create_dir_all(dest)?;
+        for entry in std::fs::read_dir(src)? {
+            let entry = entry?;
+            let dest_path = dest.join(entry.file_name());
+            copy_recursive(&entry.path(), &dest_path)?;
+        }
+    } else {
+        std::fs::copy(src, dest)?;
+    }
+    Ok(())
+}
+
+/// Copies src to dest, then removes src, for use when rename cannot move
+/// src to dest atomically (e.g. EXDEV, when src/dest are on different
+/// filesystems).
+fn copy_then_remove_src(src: &Path, dest: &Path) -> Result<(), String> {
+    if let Err(copy_err) = copy_recursive(src, dest) {
+        let _ = std::fs::remove_dir_all(dest);
+        let _ = std::fs::remove_file(dest);
+        return Err(copy_err.to_string());
+    }
+    let remove_result = if src.is_dir() {
+        std::fs::remove_dir_all(src)
+    } else {
+        std::fs::remove_file(src)
+    };
+    if let Err(remove_err) = remove_result {
+        // dest already holds a complete copy at this point, and
+        // remove_dir_all(src) may have deleted some of src's entries
+        // before failing (it is not atomic). Deleting dest here could
+        // therefore destroy the only remaining copy of those entries,
+        // so we leave dest in place (at the cost of a possibly
+        // orphaned leftover under src) and just report the error.
+        return Err(remove_err.to_string());
+    }
+    Ok(())
+}
+
+/// Moves src to dest, falling back to copy+remove when the rename fails
+/// because src/dest are on different filesystems (EXDEV), which rename
+/// cannot handle atomically.
+fn move_path(src: &Path, dest: &Path) -> Result<(), String> {
+    match std::fs::rename(src, dest) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::CrossesDevices => copy_then_remove_src(src, dest),
+        Err(e) => Err(e.to_string()),
+    }
+}
 
 /// Fetches the registered path for work_id and checks that it still exists on disk.
 /// If it is missing, returns missing_message as-is as the error
@@ -136,7 +198,7 @@ pub(crate) async fn delete_work(
                             .unwrap_or_default();
                         dest = trash_dir.join(format!("{}_{}{}", stem, timestamp, ext));
                     }
-                    std::fs::rename(&src, &dest).map_err(|e| e.to_string())?;
+                    move_path(&src, &dest)?;
                 }
                 _ => {} // "none" — metadata only
             }
