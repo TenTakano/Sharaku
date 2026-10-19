@@ -262,7 +262,7 @@
   </main>
 {:else if currentView === "add-library"}
   <SetupView
-    initialStep="mode-select"
+    initialStep="select"
     onComplete={handleLibrarySwitch}
     onCancel={handleBackToLibrary}
   />
