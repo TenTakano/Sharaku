@@ -94,18 +94,24 @@
             <span class="radio-option-label">実行時に確認する</span>
             <span class="radio-option-desc">削除時に処理方法を選択</span>
           </label>
-          <label class="radio-option">
+          <label
+            class="radio-option"
+            class:radio-option-disabled={!libraryPath}
+          >
             <input
               type="radio"
               name="delete-file-action"
               checked={deleteFileAction === "trash"}
+              disabled={!libraryPath}
               onchange={() => setDeleteFileAction("trash")}
             />
             <span class="radio-option-label"
               >非追跡ディレクトリに退避させる</span
             >
             <span class="radio-option-desc"
-              >ライブラリ内の .trash ディレクトリに移動</span
+              >{libraryPath
+                ? "ライブラリ内の .trash ディレクトリに移動"
+                : "ライブラリにフォルダが未設定のため利用できません"}</span
             >
           </label>
           <label class="radio-option">
