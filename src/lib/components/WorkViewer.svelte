@@ -16,12 +16,23 @@
     workId: number;
     workIds: number[];
     libraryName: string;
+    /** Page to open the first work at ("続きから"); later works start at 0. */
+    initialPage?: number;
     onBack: () => void;
     onNavigateWork: (workId: number) => void;
   }
 
-  let { workId, workIds, libraryName, onBack, onNavigateWork }: Props =
-    $props();
+  let {
+    workId,
+    workIds,
+    libraryName,
+    initialPage = 0,
+    onBack,
+    onNavigateWork,
+  }: Props = $props();
+
+  // initialPage applies only to the work the viewer was opened with.
+  let initialPageUsed = false;
 
   let work = $state<WorkDetail | null>(null);
   let error = $state<string | null>(null);
@@ -53,11 +64,11 @@
   type ViewSession = { id: Promise<number | null>; ended: boolean };
   let session: ViewSession | null = null;
 
-  function startSession(targetWorkId: number) {
+  function startSession(targetWorkId: number, page: number) {
     session = {
       id: invoke<number>("start_view_session", {
         workId: targetWorkId,
-        page: 0,
+        page,
       }).catch((e) => {
         console.error("Failed to start view session:", e);
         return null;
@@ -140,6 +151,9 @@
   async function loadWork() {
     try {
       work = await invoke("get_work", { workId });
+      if (work && currentPage >= work.pageCount) {
+        currentPage = Math.max(0, work.pageCount - 1);
+      }
       workTags = await invoke("get_tags_for_work", { workId });
     } catch (e) {
       error = String(e);
@@ -352,10 +366,12 @@
     void workId;
     work = null;
     error = null;
-    currentPage = 0;
+    const startPage = initialPageUsed ? 0 : untrack(() => initialPage);
+    initialPageUsed = true;
+    currentPage = startPage;
     workTags = [];
     loadWork();
-    startSession(workId);
+    startSession(workId, startPage);
     // Covers closing the viewer; a no-op when navigateToWork already ended it.
     return () => endSession(untrack(() => currentPage));
   });
