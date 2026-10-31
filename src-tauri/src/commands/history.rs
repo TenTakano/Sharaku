@@ -81,6 +81,43 @@ pub(crate) async fn list_frequently_viewed_works(
 }
 
 #[tauri::command]
+pub(crate) async fn list_recently_added_works(
+    state: tauri::State<'_, AppState>,
+    limit: u32,
+) -> Result<Vec<WorkWithHistory>, String> {
+    state
+        .with_active_db(move |db, active| {
+            history::list_recently_added_works(&db.conn, &active.id, limit)
+                .map_err(|e| e.to_string())
+        })
+        .await
+}
+
+#[tauri::command]
+pub(crate) async fn list_pickup_works(
+    state: tauri::State<'_, AppState>,
+    limit: u32,
+) -> Result<Vec<WorkWithHistory>, String> {
+    state
+        .with_active_db(move |db, active| {
+            history::list_pickup_works(&db.conn, &active.id, limit).map_err(|e| e.to_string())
+        })
+        .await
+}
+
+#[tauri::command]
+pub(crate) async fn list_random_works(
+    state: tauri::State<'_, AppState>,
+    limit: u32,
+) -> Result<Vec<WorkWithHistory>, String> {
+    state
+        .with_active_db(move |db, active| {
+            history::list_random_works(&db.conn, &active.id, limit).map_err(|e| e.to_string())
+        })
+        .await
+}
+
+#[tauri::command]
 pub(crate) async fn get_work_history(
     state: tauri::State<'_, AppState>,
     work_id: i64,
