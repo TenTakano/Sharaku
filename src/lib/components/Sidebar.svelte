@@ -1,13 +1,11 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { SvelteSet } from "svelte/reactivity";
   import { createLatestRequestGuard } from "../utils/latestRequest";
-  import { groupTagsByCategory } from "../utils/tagGrouping";
   import { focusOnMount } from "../utils/focusOnMount";
   import { addToast } from "../stores/toast.svelte";
   import ContextMenu from "./ContextMenu.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
-  import type { Library, Playlist, Tag, ViewKind } from "../types";
+  import type { Library, Playlist, ViewKind } from "../types";
 
   interface Props {
     activeLibrary: Library;
@@ -16,9 +14,7 @@
     playlistReloadTrigger: number;
     onSwitchLibrary: (library: Library) => void;
     onNavigate: (view: ViewKind) => void;
-    onTagSelect: (tag: Tag) => void;
     onNavigateToAppSettings: () => void;
-    selectedTagIds: number[];
     selectedPlaylistId: number | null;
     onSelectPlaylist: (playlist: Playlist) => void;
     onPlaylistRenamed: (playlist: Playlist) => void;
@@ -32,9 +28,7 @@
     playlistReloadTrigger,
     onSwitchLibrary,
     onNavigate,
-    onTagSelect,
     onNavigateToAppSettings,
-    selectedTagIds,
     selectedPlaylistId,
     onSelectPlaylist,
     onPlaylistRenamed,
@@ -42,8 +36,20 @@
   }: Props = $props();
 
   let libraries = $state<Library[]>([]);
-  let tags = $state<Tag[]>([]);
-  let expandedCategories = new SvelteSet<string>();
+  let libraryMenuOpen = $state(false);
+  let footerEl = $state<HTMLDivElement | null>(null);
+
+  function handleWindowPointerDown(e: PointerEvent) {
+    if (libraryMenuOpen && !footerEl?.contains(e.target as Node)) {
+      libraryMenuOpen = false;
+    }
+  }
+
+  function handleWindowKeydown(e: KeyboardEvent) {
+    if (libraryMenuOpen && e.key === "Escape") {
+      libraryMenuOpen = false;
+    }
+  }
 
   let playlists = $state<Playlist[]>([]);
   let creatingPlaylist = $state(false);
@@ -57,8 +63,6 @@
   } | null>(null);
   let deletingPlaylist = $state<Playlist | null>(null);
 
-  let tagsByCategory = $derived(groupTagsByCategory(tags));
-
   async function loadLibraries() {
     try {
       libraries = await invoke<Library[]>("list_libraries");
@@ -67,23 +71,13 @@
     }
   }
 
-  const tagLoadGuard = createLatestRequestGuard();
-
-  async function loadTags() {
-    const currentId = tagLoadGuard.next();
-    try {
-      const result = await invoke<Tag[]>("list_tags");
-      if (tagLoadGuard.isLatest(currentId)) {
-        tags = result;
-      }
-    } catch {
-      if (tagLoadGuard.isLatest(currentId)) {
-        tags = [];
-      }
-    }
+  function navigateFromLibraryMenu(view: ViewKind) {
+    libraryMenuOpen = false;
+    onNavigate(view);
   }
 
   async function selectLibrary(lib: Library) {
+    libraryMenuOpen = false;
     if (lib.id === activeLibrary?.id) return;
     try {
       await invoke("switch_library", { id: lib.id });
@@ -210,31 +204,9 @@
     }
   }
 
-  function toggleCategory(category: string | null) {
-    const key = category ?? "__null__";
-    if (expandedCategories.has(key)) {
-      expandedCategories.delete(key);
-    } else {
-      expandedCategories.add(key);
-    }
-  }
-
-  function isCategoryExpanded(category: string | null): boolean {
-    return expandedCategories.has(category ?? "__null__");
-  }
-
-  function isTagSelected(tagId: number): boolean {
-    return selectedTagIds.includes(tagId);
-  }
-
   $effect(() => {
     void reloadTrigger;
     loadLibraries();
-  });
-
-  $effect(() => {
-    void activeLibrary;
-    loadTags();
   });
 
   $effect(() => {
@@ -245,8 +217,16 @@
   });
 </script>
 
+<svelte:window
+  onpointerdown={handleWindowPointerDown}
+  onkeydown={handleWindowKeydown}
+/>
+
 <aside class="sidebar">
-  <div class="sidebar-logo">SHARAKU</div>
+  <div class="sidebar-logo">
+    <span class="sidebar-logo-mark">写楽</span>
+    <span class="sidebar-logo-text">SHARAKU</span>
+  </div>
 
   <nav class="sidebar-nav" aria-label="メインナビゲーション">
     <button
@@ -255,6 +235,9 @@
       aria-current={currentView === "home" ? "page" : undefined}
       onclick={() => onNavigate("home")}
     >
+      <svg aria-hidden="true" viewBox="0 0 24 24" class="sidebar-nav-icon"
+        ><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg
+      >
       ホーム
     </button>
     <button
@@ -263,54 +246,23 @@
       aria-current={currentView === "library" ? "page" : undefined}
       onclick={() => onNavigate("library")}
     >
+      <svg aria-hidden="true" viewBox="0 0 24 24" class="sidebar-nav-icon"
+        ><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"
+        ></path></svg
+      >
       ブラウズ
     </button>
-  </nav>
-
-  <div class="sidebar-section">
-    <div class="sidebar-section-header">Libraries</div>
-    <div class="sidebar-library-list">
-      {#each libraries as lib (lib.id)}
-        <button
-          class="sidebar-library-item"
-          class:active={lib.id === activeLibrary?.id}
-          onclick={() => selectLibrary(lib)}
-        >
-          <span class="sidebar-library-name">{lib.name}</span>
-          {#if lib.id === activeLibrary?.id}
-            <span
-              class="sidebar-library-settings"
-              class:settings-active={currentView === "settings"}
-              role="button"
-              tabindex="-1"
-              onclick={(e: MouseEvent) => {
-                e.stopPropagation();
-                onNavigate("settings");
-              }}
-              onkeydown={(e: KeyboardEvent) => {
-                if (e.key === "Enter") {
-                  e.stopPropagation();
-                  onNavigate("settings");
-                }
-              }}
-              title="ライブラリ設定"
-            >
-              &#9881;
-            </span>
-          {/if}
-        </button>
-      {/each}
-    </div>
-    <button
-      class="sidebar-add-library"
-      onclick={() => onNavigate("add-library")}
+    <div
+      class="sidebar-nav-item sidebar-nav-group"
+      class:active={currentView === "playlist"}
     >
-      + ライブラリを追加
-    </button>
-  </div>
-
-  <div class="sidebar-section">
-    <div class="sidebar-section-header">Playlists</div>
+      <svg aria-hidden="true" viewBox="0 0 24 24" class="sidebar-nav-icon"
+        ><rect x="3" y="5" width="18" height="14" rx="2"></rect><path
+          d="M3 9h18"
+        ></path></svg
+      >
+      コレクション
+    </div>
     <div class="sidebar-playlist-list">
       {#each playlists as playlist (playlist.id)}
         {#if renamingPlaylistId === playlist.id}
@@ -334,69 +286,86 @@
           </button>
         {/if}
       {/each}
+      {#if creatingPlaylist}
+        <input
+          class="sidebar-playlist-create-input"
+          placeholder="プレイリスト名"
+          bind:value={newPlaylistName}
+          onkeydown={handleCreatePlaylistKeydown}
+          onblur={submitCreatePlaylist}
+          use:focusOnMount
+        />
+      {:else}
+        <button class="sidebar-add-playlist" onclick={startCreatingPlaylist}>
+          + 新規プレイリスト作成
+        </button>
+      {/if}
     </div>
-    {#if creatingPlaylist}
-      <input
-        class="sidebar-playlist-create-input"
-        placeholder="プレイリスト名"
-        bind:value={newPlaylistName}
-        onkeydown={handleCreatePlaylistKeydown}
-        onblur={submitCreatePlaylist}
-        use:focusOnMount
-      />
-    {:else}
-      <button class="sidebar-add-playlist" onclick={startCreatingPlaylist}>
-        + 新規プレイリスト作成
-      </button>
-    {/if}
-  </div>
+  </nav>
 
-  {#if tags.length > 0}
-    <div class="sidebar-section sidebar-tags-section">
-      <div class="sidebar-section-header">Tags</div>
-      <div class="sidebar-tag-browser">
-        {#each tagsByCategory as group (group.displayName)}
-          <div class="sidebar-tag-category">
-            <button
-              class="sidebar-tag-category-header"
-              onclick={() => toggleCategory(group.category)}
-            >
-              <span class="sidebar-tag-category-arrow">
-                {isCategoryExpanded(group.category) ? "\u25BC" : "\u25B6"}
-              </span>
-              {group.displayName}
-              <span class="sidebar-tag-category-count"
-                >({group.tags.length})</span
-              >
-            </button>
-            {#if isCategoryExpanded(group.category)}
-              <div class="sidebar-tag-list">
-                {#each group.tags as tag (tag.id)}
-                  <button
-                    class="sidebar-tag-item"
-                    class:selected={isTagSelected(tag.id)}
-                    data-category={tag.category}
-                    onclick={() => onTagSelect(tag)}
-                  >
-                    {tag.name}
-                  </button>
-                {/each}
-              </div>
-            {/if}
-          </div>
+  <div class="sidebar-footer" bind:this={footerEl}>
+    {#if libraryMenuOpen}
+      <div class="sidebar-library-menu" role="menu">
+        {#each libraries as lib (lib.id)}
+          <button
+            class="sidebar-library-item"
+            class:active={lib.id === activeLibrary?.id}
+            role="menuitem"
+            onclick={() => selectLibrary(lib)}
+          >
+            {lib.name}
+          </button>
         {/each}
+        <div class="sidebar-library-menu-separator"></div>
+        <button
+          class="sidebar-library-item"
+          class:active={currentView === "settings"}
+          role="menuitem"
+          onclick={() => navigateFromLibraryMenu("settings")}
+        >
+          ライブラリ設定
+        </button>
+        <button
+          class="sidebar-library-item"
+          role="menuitem"
+          onclick={() => navigateFromLibraryMenu("add-library")}
+        >
+          + ライブラリを追加
+        </button>
       </div>
-    </div>
-  {/if}
-
-  <div class="sidebar-footer">
+    {/if}
     <button
-      class="sidebar-app-settings"
-      class:active={currentView === "app-settings"}
-      onclick={onNavigateToAppSettings}
+      class="sidebar-library-switcher"
+      aria-haspopup="menu"
+      aria-expanded={libraryMenuOpen}
+      onclick={() => (libraryMenuOpen = !libraryMenuOpen)}
     >
-      &#9881; アプリ設定
+      <span class="sidebar-library-switcher-text">
+        <span class="sidebar-library-switcher-label">ライブラリ</span>
+        <span class="sidebar-library-switcher-name">{activeLibrary.name}</span>
+      </span>
+      <svg aria-hidden="true" viewBox="0 0 24 24" class="sidebar-nav-icon"
+        ><path d="M6 15l6-6 6 6"></path></svg
+      >
     </button>
+    <div class="sidebar-footer-row">
+      <button
+        class="sidebar-footer-button sidebar-import"
+        class:active={currentView === "bulk-import"}
+        onclick={() => onNavigate("bulk-import")}
+      >
+        取り込む
+      </button>
+      <button
+        class="sidebar-footer-button sidebar-app-settings"
+        class:active={currentView === "app-settings"}
+        aria-label="アプリ設定"
+        title="アプリ設定"
+        onclick={onNavigateToAppSettings}
+      >
+        &#9881;
+      </button>
+    </div>
   </div>
 </aside>
 
