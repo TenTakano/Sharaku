@@ -233,6 +233,24 @@ pub fn run() {
             commands::history::list_frequently_viewed_works,
             commands::history::get_work_history,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                end_open_view_sessions(app);
+            }
+        });
+}
+
+/// Closes viewing sessions left open because the app exited with the viewer open.
+fn end_open_view_sessions(app: &tauri::AppHandle) {
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
+    let Ok(guard) = state.db.lock() else {
+        return;
+    };
+    if let Err(e) = history::end_open_view_sessions(&guard.conn) {
+        eprintln!("Warning: 閲覧セッションの終了に失敗: {e}");
+    }
 }

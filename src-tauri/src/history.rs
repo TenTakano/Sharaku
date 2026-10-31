@@ -128,6 +128,28 @@ pub fn end_view_session(conn: &Connection, session_id: i64, page: i64) -> Result
     Ok(())
 }
 
+/// Closes every session still open, ending it now. Called when the app exits
+/// with the viewer still open, where the frontend gets no chance to close it.
+pub fn end_open_view_sessions(conn: &Connection) -> Result<usize, AppError> {
+    Ok(conn.execute(
+        "UPDATE view_sessions \
+         SET ended_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
+         WHERE ended_at IS NULL",
+        [],
+    )?)
+}
+
+/// Closes sessions left open by a previous run that did not exit cleanly (crash,
+/// killed process). Their real end time is unknown, so they are closed with zero
+/// duration (`ended_at = started_at`); `last_page` keeps the last recorded page.
+/// Called when the database is opened, before any session of this run starts.
+pub fn close_orphaned_view_sessions(conn: &Connection) -> Result<usize, AppError> {
+    Ok(conn.execute(
+        "UPDATE view_sessions SET ended_at = started_at WHERE ended_at IS NULL",
+        [],
+    )?)
+}
+
 /// Viewed works, most recently viewed first.
 pub fn list_recently_viewed_works(
     conn: &Connection,
