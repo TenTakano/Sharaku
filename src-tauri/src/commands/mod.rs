@@ -1,3 +1,4 @@
+pub(crate) mod history;
 pub(crate) mod import;
 pub(crate) mod library;
 pub(crate) mod playlist;
