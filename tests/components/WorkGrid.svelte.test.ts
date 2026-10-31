@@ -45,10 +45,6 @@ const MOCK_WORKS: WorkSummary[] = [
 ];
 
 const MOCK_SETTINGS: AppSettings = {
-  resourceMode: "full",
-  directoryTemplate: "{artist}/{title}",
-  typeLabelImage: "Image",
-  typeLabelFolder: "Folder",
   deleteFileAction: "ask",
 };
 
