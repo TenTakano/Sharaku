@@ -231,6 +231,9 @@ pub fn run() {
             commands::history::list_recently_viewed_works,
             commands::history::list_unviewed_works,
             commands::history::list_frequently_viewed_works,
+            commands::history::list_recently_added_works,
+            commands::history::list_pickup_works,
+            commands::history::list_random_works,
             commands::history::get_work_history,
         ])
         .build(tauri::generate_context!())
