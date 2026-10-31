@@ -24,7 +24,7 @@
 <button class="shelf-card" onclick={() => onclick(work.id)}>
   <span class="shelf-card-cover">
     {#if thumbnailUrl}
-      <img src={thumbnailUrl} alt={work.title} />
+      <img src={thumbnailUrl} alt="" />
     {/if}
     {#if badge}
       <span class="shelf-card-badge">{badge}</span>

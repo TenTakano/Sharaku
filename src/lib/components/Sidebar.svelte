@@ -38,6 +38,8 @@
   let libraries = $state<Library[]>([]);
   let libraryMenuOpen = $state(false);
   let footerEl = $state<HTMLDivElement | null>(null);
+  let libraryMenuEl = $state<HTMLDivElement | null>(null);
+  let librarySwitcherEl = $state<HTMLButtonElement | null>(null);
 
   function handleWindowPointerDown(e: PointerEvent) {
     if (libraryMenuOpen && !footerEl?.contains(e.target as Node)) {
@@ -48,8 +50,42 @@
   function handleWindowKeydown(e: KeyboardEvent) {
     if (libraryMenuOpen && e.key === "Escape") {
       libraryMenuOpen = false;
+      librarySwitcherEl?.focus();
     }
   }
+
+  function libraryMenuItems(): HTMLElement[] {
+    return Array.from(
+      libraryMenuEl?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
+    );
+  }
+
+  // Menu keyboard pattern: ↑/↓ wrap around, Home/End jump, Tab leaves and closes.
+  function handleLibraryMenuKeydown(e: KeyboardEvent) {
+    if (e.key === "Tab") {
+      libraryMenuOpen = false;
+      return;
+    }
+    const items = libraryMenuItems();
+    if (items.length === 0) return;
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    let next: number;
+    if (e.key === "ArrowDown") next = (current + 1) % items.length;
+    else if (e.key === "ArrowUp")
+      next = (current - 1 + items.length) % items.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = items.length - 1;
+    else return;
+    e.preventDefault();
+    items[next].focus();
+  }
+
+  // Opening the menu moves focus into it, onto the active library.
+  $effect(() => {
+    if (!libraryMenuOpen || !libraryMenuEl) return;
+    const items = libraryMenuItems();
+    (items.find((el) => el.classList.contains("active")) ?? items[0])?.focus();
+  });
 
   let playlists = $state<Playlist[]>([]);
   let creatingPlaylist = $state(false);
@@ -305,18 +341,26 @@
 
   <div class="sidebar-footer" bind:this={footerEl}>
     {#if libraryMenuOpen}
-      <div class="sidebar-library-menu" role="menu">
+      <div
+        class="sidebar-library-menu"
+        role="menu"
+        aria-label="ライブラリ"
+        tabindex="-1"
+        bind:this={libraryMenuEl}
+        onkeydown={handleLibraryMenuKeydown}
+      >
         {#each libraries as lib (lib.id)}
           <button
             class="sidebar-library-item"
             class:active={lib.id === activeLibrary?.id}
             role="menuitem"
+            aria-current={lib.id === activeLibrary?.id ? "true" : undefined}
             onclick={() => selectLibrary(lib)}
           >
             {lib.name}
           </button>
         {/each}
-        <div class="sidebar-library-menu-separator"></div>
+        <div class="sidebar-library-menu-separator" role="separator"></div>
         <button
           class="sidebar-library-item"
           class:active={currentView === "settings"}
@@ -336,6 +380,7 @@
     {/if}
     <button
       class="sidebar-library-switcher"
+      bind:this={librarySwitcherEl}
       aria-haspopup="menu"
       aria-expanded={libraryMenuOpen}
       onclick={() => (libraryMenuOpen = !libraryMenuOpen)}

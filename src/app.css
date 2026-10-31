@@ -35,6 +35,9 @@
   --sk-text-sub: #3d3b37;
   --sk-muted: #6e6b65;
   --sk-accent: #e4693f;
+  /* Accent for text and focus rings: the plain accent is under 4.5:1 (text)
+     and 3:1 (rings) on the light backgrounds. */
+  --sk-accent-strong: #b2461f;
   --sk-on-accent: #160b07;
   --sk-overlay: rgba(17, 17, 19, 0.72);
   --sk-on-overlay: #edebe7;
@@ -2093,6 +2096,7 @@ button:disabled {
   --sk-text: #edebe7;
   --sk-text-sub: #c9c7c2;
   --sk-muted: #a3a19c;
+  --sk-accent-strong: #e4693f;
   --sk-overlay: rgba(17, 17, 19, 0.82);
 
   button {
@@ -2788,7 +2792,8 @@ button:disabled {
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  padding: 0 40px 6px;
+  /* Room for the cover's hover/focus outline, which the scroller would clip. */
+  padding: 4px 40px 6px;
 }
 
 .home button.shelf-card {
@@ -2817,9 +2822,19 @@ button:disabled {
   background: var(--sk-placeholder);
 }
 
-.home button.shelf-card:hover .shelf-card-cover,
-.home button.shelf-card:focus-visible .shelf-card-cover {
+.home button.shelf-card:hover .shelf-card-cover {
   outline: 2px solid var(--sk-accent);
+  outline-offset: 2px;
+}
+
+.home button.shelf-card:focus-visible {
+  outline: none;
+}
+
+.home button.shelf-card:focus-visible .shelf-card-cover,
+.home button:focus-visible,
+.sidebar button:focus-visible {
+  outline: 2px solid var(--sk-accent-strong);
   outline-offset: 2px;
 }
 
@@ -3007,7 +3022,7 @@ button:disabled {
 
 .sidebar button.sidebar-playlist-item.active,
 .sidebar button.sidebar-library-item.active {
-  color: var(--sk-accent);
+  color: var(--sk-accent-strong);
   font-weight: 700;
 }
 

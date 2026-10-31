@@ -113,6 +113,34 @@ describe("Sidebar コンポーネント", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
+  it("ライブラリメニューは開くとアクティブなライブラリにフォーカスし、矢印キーで移動し、Escape で切り替えボタンに戻る", async () => {
+    const user = userEvent.setup();
+    render(Sidebar, createProps());
+    await waitFor(() => {
+      expect(screen.getByText("マイライブラリ")).toBeInTheDocument();
+    });
+
+    await openLibraryMenu(user);
+    const items = await screen.findAllByRole("menuitem");
+    await waitFor(() => {
+      expect(items[0]).toHaveFocus();
+    });
+    await user.keyboard("{ArrowDown}");
+    expect(
+      screen.getByRole("menuitem", { name: "サブライブラリ" }),
+    ).toHaveFocus();
+    await user.keyboard("{ArrowUp}{ArrowUp}");
+    expect(
+      screen.getByRole("menuitem", { name: "+ ライブラリを追加" }),
+    ).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /ライブラリ/, expanded: false }),
+    ).toHaveFocus();
+  });
+
   it("ライブラリメニューの「ライブラリ設定」で onNavigate('settings') が呼ばれる", async () => {
     const user = userEvent.setup();
     const props = createProps();
