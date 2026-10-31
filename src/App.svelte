@@ -46,6 +46,9 @@
   let bulkImportRootPath = $state<string | undefined>(undefined);
   let bulkImportDroppedPaths = $state<string[] | undefined>(undefined);
   let previousView = $state<ViewKind>("library");
+  // Where "←" on the bulk import screen returns when it was opened from the
+  // navigation or the library settings (drops return to the work grid).
+  let bulkImportOrigin = $state<ViewKind>("settings");
 
   async function loadActiveLibrary() {
     try {
@@ -135,8 +138,10 @@
       bulkImportRootPath = undefined;
       bulkImportDroppedPaths = undefined;
       currentView = "library";
-    } else {
+    } else if (bulkImportOrigin === "settings") {
       handleBackToSettings();
+    } else {
+      currentView = bulkImportOrigin;
     }
   }
 
@@ -158,19 +163,10 @@
   }
 
   function handleSidebarNavigate(view: ViewKind) {
+    if (view === "bulk-import") {
+      bulkImportOrigin = currentView;
+    }
     currentView = view;
-  }
-
-  function handleSidebarTagSelect(tag: Tag) {
-    if (currentView !== "library") {
-      currentView = "library";
-    }
-    const exists = filterTags.some((t) => t.id === tag.id);
-    if (exists) {
-      filterTags = filterTags.filter((t) => t.id !== tag.id);
-    } else {
-      filterTags = [...filterTags, tag];
-    }
   }
 
   async function classifyDropPath(path: string): Promise<DropKind> {
@@ -292,9 +288,7 @@
       {playlistReloadTrigger}
       onSwitchLibrary={handleLibrarySwitch}
       onNavigate={handleSidebarNavigate}
-      onTagSelect={handleSidebarTagSelect}
       onNavigateToAppSettings={handleNavigateToAppSettings}
-      selectedTagIds={filterTags.map((t) => t.id)}
       selectedPlaylistId={selectedPlaylist?.id ?? null}
       onSelectPlaylist={handleSelectPlaylist}
       onPlaylistRenamed={handlePlaylistRenamed}

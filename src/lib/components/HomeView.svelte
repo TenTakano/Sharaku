@@ -3,6 +3,7 @@
   import Shelf from "./Shelf.svelte";
   import { SHELF_LIMIT, SHELVES, type ShelfDefinition } from "../shelves";
   import { loadThumbnail } from "../thumbnailCache";
+  import { createLatestRequestGuard } from "../utils/latestRequest";
   import { formatAgo } from "../utils/relativeTime";
   import type { WorkWithHistory } from "../types";
 
@@ -39,25 +40,36 @@
     }
   }
 
-  async function loadResume() {
+  async function fetchResume(): Promise<WorkWithHistory | null> {
     try {
       const [last] =
         (await invoke<WorkWithHistory[] | null>("list_recently_viewed_works", {
           limit: 1,
         })) ?? [];
-      resume = last ?? null;
-      resumeThumbnail = resume ? await loadThumbnail(resume.id) : null;
+      return last ?? null;
     } catch (e) {
       console.error("Failed to load resume:", e);
-      resume = null;
+      return null;
     }
   }
 
+  // A reload (library switch) can start before the previous one finishes;
+  // only the latest one may write its results.
+  const loadGuard = createLatestRequestGuard();
+
   async function loadAll() {
-    now = new Date();
-    const results = await Promise.all(SHELVES.map(fetchShelf));
+    const requestId = loadGuard.next();
+    const startedAt = new Date();
+    const [results, last] = await Promise.all([
+      Promise.all(SHELVES.map(fetchShelf)),
+      fetchResume(),
+    ]);
+    const thumbnail = last ? await loadThumbnail(last.id) : null;
+    if (!loadGuard.isLatest(requestId)) return;
+    now = startedAt;
     shelfWorks = Object.fromEntries(SHELVES.map((s, i) => [s.id, results[i]]));
-    await loadResume();
+    resume = last;
+    resumeThumbnail = thumbnail;
     loaded = true;
   }
 
@@ -100,7 +112,7 @@
     <section class="home-resume" aria-labelledby="home-resume-title">
       <div class="home-resume-cover">
         {#if resumeThumbnail}
-          <img src={resumeThumbnail} alt={resume.title} />
+          <img src={resumeThumbnail} alt="" />
         {/if}
       </div>
       <div class="home-resume-body">

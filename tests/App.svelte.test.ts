@@ -685,6 +685,25 @@ describe("App の Home", () => {
     });
   });
 
+  it("ナビの「取り込む」から一括取り込みを開き、戻ると元の画面に戻る", async () => {
+    const user = userEvent.setup();
+    mockHomeIPC();
+    render(App);
+
+    await waitFor(() => {
+      expect(screen.getByText("最近追加した")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "取り込む" }));
+    await waitFor(() => {
+      expect(screen.getByText(/一括取り込み:/)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("←"));
+    await waitFor(() => {
+      expect(screen.getByText("最近追加した")).toBeInTheDocument();
+    });
+  });
+
   it("ナビのブラウズで作品一覧に、ホームで Home に移る", async () => {
     const user = userEvent.setup();
     mockHomeIPC();
