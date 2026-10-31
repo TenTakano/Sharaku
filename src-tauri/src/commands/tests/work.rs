@@ -29,8 +29,6 @@ fn insert_work_at(conn: &rusqlite::Connection, path: &str) -> i64 {
     conn.last_insert_rowid()
 }
 
-const MISSING_MESSAGE: &str = "見つかりません";
-
 #[test]
 fn returns_path_when_it_exists_on_disk() {
     let conn = test_db_with_library(TEST_LIBRARY_ID);
@@ -40,9 +38,9 @@ fn returns_path_when_it_exists_on_disk() {
 
     let work_id = insert_work_at(&conn, &work_dir.to_string_lossy());
 
-    let result = validated_work_path(&conn, work_id, MISSING_MESSAGE).unwrap();
+    let result = existing_work_path(&conn, work_id).unwrap();
 
-    assert_eq!(result, work_dir);
+    assert_eq!(result, Some(work_dir));
 }
 
 #[test]
@@ -54,21 +52,21 @@ fn accepts_path_outside_any_library_root_when_it_exists() {
 
     let work_id = insert_work_at(&conn, &outside_work_dir.to_string_lossy());
 
-    let result = validated_work_path(&conn, work_id, MISSING_MESSAGE).unwrap();
+    let result = existing_work_path(&conn, work_id).unwrap();
 
-    assert_eq!(result, outside_work_dir);
+    assert_eq!(result, Some(outside_work_dir));
 }
 
 #[test]
-fn rejects_path_missing_from_disk() {
+fn returns_none_when_path_is_missing_from_disk() {
     let conn = test_db_with_library(TEST_LIBRARY_ID);
     let missing_path = PathBuf::from("/nonexistent-sharaku-test-path/work");
 
     let work_id = insert_work_at(&conn, &missing_path.to_string_lossy());
 
-    let result = validated_work_path(&conn, work_id, MISSING_MESSAGE);
+    let result = existing_work_path(&conn, work_id);
 
-    assert_eq!(result, Err(MISSING_MESSAGE.to_string()));
+    assert_eq!(result, Ok(None));
 }
 
 #[test]
@@ -103,6 +101,26 @@ fn copy_recursive_copies_single_file() {
     copy_recursive(&src, &dest).unwrap();
 
     assert_eq!(fs::read(dest).unwrap(), b"content");
+}
+
+#[cfg(unix)]
+#[test]
+fn copy_recursive_refuses_symlinks() {
+    let src_dir = TempDir::new().unwrap();
+    let dest_dir = TempDir::new().unwrap();
+    let src = src_dir.path().join("work");
+    let dest = dest_dir.path().join("work");
+    fs::create_dir_all(&src).unwrap();
+    fs::write(src_dir.path().join("outside.txt"), b"outside").unwrap();
+    std::os::unix::fs::symlink(src_dir.path().join("outside.txt"), src.join("link.txt")).unwrap();
+
+    let result = copy_recursive(&src, &dest);
+
+    assert!(result.is_err());
+    assert!(
+        !dest.join("link.txt").exists(),
+        "symlink target must not be copied"
+    );
 }
 
 #[test]
