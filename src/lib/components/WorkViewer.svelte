@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { untrack } from "svelte";
   import type {
     WorkDetail,
     FitMode,
@@ -46,6 +47,50 @@
   let workTags = $state<Tag[]>([]);
   let tagToRemove = $state<Tag | null>(null);
   let showEditDialog = $state(false);
+
+  // Viewing session of the current work (docs/spec-viewer.md "閲覧履歴").
+  // Not reactive state: it is only read from effects/handlers, never rendered.
+  type ViewSession = { id: Promise<number | null>; ended: boolean };
+  let session: ViewSession | null = null;
+
+  function startSession(targetWorkId: number) {
+    session = {
+      id: invoke<number>("start_view_session", {
+        workId: targetWorkId,
+        page: 0,
+      }).catch((e) => {
+        console.error("Failed to start view session:", e);
+        return null;
+      }),
+      ended: false,
+    };
+  }
+
+  // Chained on the start promise, so a session whose id arrives after the
+  // viewer moved on is still closed.
+  function endSession(page: number) {
+    const current = session;
+    if (!current || current.ended) return;
+    current.ended = true;
+    session = null;
+    current.id.then((sessionId) => {
+      if (sessionId === null) return;
+      invoke("end_view_session", { sessionId, page }).catch((e) =>
+        console.error("Failed to end view session:", e),
+      );
+    });
+  }
+
+  function recordPage(page: number) {
+    const current = session;
+    if (!current) return;
+    current.id.then((sessionId) => {
+      if (sessionId === null || current.ended) return;
+      invoke("update_view_session_page", { sessionId, page }).catch((e) =>
+        console.error("Failed to update view session:", e),
+      );
+    });
+  }
 
   let imageUrl = $derived(`sharaku://localhost/view/${workId}/${currentPage}`);
   let pageCount = $derived(work?.pageCount ?? 1);
@@ -137,6 +182,8 @@
   }
 
   function navigateToWork(newWorkId: number) {
+    // End before resetting the page so the session records where the user left off.
+    endSession(currentPage);
     currentPage = 0;
     onNavigateWork(newWorkId);
   }
@@ -308,6 +355,13 @@
     currentPage = 0;
     workTags = [];
     loadWork();
+    startSession(workId);
+    // Covers closing the viewer; a no-op when navigateToWork already ended it.
+    return () => endSession(untrack(() => currentPage));
+  });
+
+  $effect(() => {
+    recordPage(currentPage);
   });
 
   $effect(() => {

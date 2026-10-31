@@ -236,4 +236,99 @@ describe("WorkViewer コンポーネント", () => {
       });
     });
   });
+
+  describe("閲覧履歴", () => {
+    type Call = { cmd: string; args: Record<string, unknown> };
+    let calls: Call[];
+
+    function sessionCalls() {
+      return calls.filter((c) => c.cmd.includes("view_session"));
+    }
+
+    beforeEach(() => {
+      calls = [];
+      mockIPC((cmd: string, args?: unknown) => {
+        calls.push({ cmd, args: (args ?? {}) as Record<string, unknown> });
+        if (cmd === "get_work") return MOCK_WORK;
+        if (cmd === "get_tags_for_work") return MOCK_TAGS;
+        if (cmd === "start_view_session") return 42;
+        return undefined;
+      });
+    });
+
+    it("開いた作品のセッションを開始する", async () => {
+      render(WorkViewer, createProps({ workId: 2 }));
+      await waitFor(() => {
+        expect(sessionCalls()[0]).toEqual({
+          cmd: "start_view_session",
+          args: { workId: 2, page: 0 },
+        });
+      });
+    });
+
+    it("ページ送りで最後のページを更新する", async () => {
+      const user = userEvent.setup();
+      render(WorkViewer, createProps());
+      await waitFor(() => {
+        expect(screen.getByText(/1\/3/)).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTitle("次へ"));
+
+      await waitFor(() => {
+        expect(sessionCalls()).toContainEqual({
+          cmd: "update_view_session_page",
+          args: { sessionId: 42, page: 1 },
+        });
+      });
+    });
+
+    it("閉じたときに表示中のページでセッションを終了する", async () => {
+      const user = userEvent.setup();
+      const { unmount } = render(WorkViewer, createProps());
+      await waitFor(() => {
+        expect(screen.getByText(/1\/3/)).toBeInTheDocument();
+      });
+      await user.click(screen.getByTitle("次へ"));
+      await waitFor(() => {
+        expect(screen.getByText(/2\/3/)).toBeInTheDocument();
+      });
+
+      unmount();
+
+      await waitFor(() => {
+        expect(sessionCalls()).toContainEqual({
+          cmd: "end_view_session",
+          args: { sessionId: 42, page: 1 },
+        });
+      });
+    });
+
+    it("次の作品へ遷移するとき最後のページでセッションを終了する", async () => {
+      const user = userEvent.setup();
+      const props = createProps();
+      render(WorkViewer, props);
+      await waitFor(() => {
+        expect(screen.getByText(/1\/3/)).toBeInTheDocument();
+      });
+      await user.click(screen.getByTitle("次へ"));
+      await user.click(screen.getByTitle("次へ"));
+      await waitFor(() => {
+        expect(screen.getByText(/3\/3/)).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTitle("次へ"));
+
+      expect(props.onNavigateWork).toHaveBeenCalledWith(2);
+      await waitFor(() => {
+        expect(sessionCalls()).toContainEqual({
+          cmd: "end_view_session",
+          args: { sessionId: 42, page: 2 },
+        });
+      });
+      expect(
+        sessionCalls().filter((c) => c.cmd === "end_view_session"),
+      ).toHaveLength(1);
+    });
+  });
 });

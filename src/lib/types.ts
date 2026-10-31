@@ -51,6 +51,19 @@ export interface PlaylistItem {
   createdAt: string;
 }
 
+/** A work with its viewing history, returned by the history commands. */
+export interface WorkWithHistory {
+  id: number;
+  title: string;
+  workType: string;
+  pageCount: number;
+  createdAt: string;
+  lastViewedAt: string | null;
+  viewCount: number;
+  lastPage: number | null;
+  totalViewSeconds: number;
+}
+
 export interface Library {
   id: string;
   name: string;
