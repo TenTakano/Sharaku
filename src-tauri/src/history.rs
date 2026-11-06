@@ -195,6 +195,57 @@ pub fn list_frequently_viewed_works(
     )
 }
 
+/// Works in registration order, newest first, whether viewed or not.
+pub fn list_recently_added_works(
+    conn: &Connection,
+    library_id: &str,
+    limit: u32,
+) -> Result<Vec<WorkWithHistory>, AppError> {
+    query_library_history(
+        conn,
+        library_id,
+        "1 = 1",
+        "w.created_at DESC, w.id DESC",
+        limit,
+    )
+}
+
+/// Works viewed at least `PICKUP_MIN_VIEWS` times but not in the last
+/// `PICKUP_IDLE_DAYS` days ("よく見ていたのに、しばらく開いていない"), the longest
+/// untouched first, ties broken by view count.
+///
+/// A deliberately simple rule for the Home pickup shelf; a real rediscovery score
+/// replaces it later (#355).
+pub fn list_pickup_works(
+    conn: &Connection,
+    library_id: &str,
+    limit: u32,
+) -> Result<Vec<WorkWithHistory>, AppError> {
+    let filter = format!(
+        "s.view_count >= {PICKUP_MIN_VIEWS} \
+         AND s.last_viewed_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-{PICKUP_IDLE_DAYS} days')"
+    );
+    query_library_history(
+        conn,
+        library_id,
+        &filter,
+        "s.last_viewed_at ASC, s.view_count DESC, w.id DESC",
+        limit,
+    )
+}
+
+const PICKUP_MIN_VIEWS: u32 = 2;
+const PICKUP_IDLE_DAYS: u32 = 14;
+
+/// A random sample of the library's works (a new sample on every call).
+pub fn list_random_works(
+    conn: &Connection,
+    library_id: &str,
+    limit: u32,
+) -> Result<Vec<WorkWithHistory>, AppError> {
+    query_library_history(conn, library_id, "1 = 1", "RANDOM()", limit)
+}
+
 /// Viewing history of a single work (zero/None values if never viewed).
 pub fn get_work_history(conn: &Connection, work_id: i64) -> Result<WorkWithHistory, AppError> {
     let sql = format!("{HISTORY_SELECT} WHERE w.id = ?1");

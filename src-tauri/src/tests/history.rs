@@ -344,3 +344,83 @@ fn reopening_db_closes_orphaned_sessions_with_zero_duration() {
     assert_eq!(stats.view_count, 2);
     assert_eq!(stats.total_view_seconds, 0);
 }
+
+#[test]
+fn recently_added_lists_all_works_newest_first() {
+    let conn = test_db_with_library(TEST_LIBRARY_ID);
+    let a = insert_work(&conn, "A");
+    let b = insert_work(&conn, "B");
+    let c = insert_work(&conn, "C");
+    for (id, created_at) in [
+        (a, "2026-01-02T00:00:00.000Z"),
+        (b, "2026-01-03T00:00:00.000Z"),
+        (c, "2026-01-01T00:00:00.000Z"),
+    ] {
+        conn.execute(
+            "UPDATE works SET created_at = ?1 WHERE id = ?2",
+            rusqlite::params![created_at, id],
+        )
+        .unwrap();
+    }
+    insert_session(&conn, a, "2026-01-05T00:00:00.000Z", None, 0);
+
+    let works = list_recently_added_works(&conn, TEST_LIBRARY_ID, 10).unwrap();
+    assert_eq!(ids(&works), vec![b, a, c]);
+    assert_eq!(
+        ids(&list_recently_added_works(&conn, TEST_LIBRARY_ID, 1).unwrap()),
+        vec![b]
+    );
+}
+
+#[test]
+fn pickup_lists_often_viewed_works_untouched_for_a_while() {
+    let conn = test_db_with_library(TEST_LIBRARY_ID);
+    let a = insert_work(&conn, "A");
+    let b = insert_work(&conn, "B");
+    let tie = insert_work(&conn, "Tie");
+    let once = insert_work(&conn, "Once");
+    let recent = insert_work(&conn, "Recent");
+    let _unviewed = insert_work(&conn, "Unviewed");
+
+    let closed = |work_id: i64, at: &str| insert_session(&conn, work_id, at, Some(at), 0);
+    for _ in 0..3 {
+        closed(a, "2020-01-01T00:00:00.000Z");
+    }
+    // Same last view as A but fewer sessions: ranked after A.
+    for _ in 0..2 {
+        closed(tie, "2020-01-01T00:00:00.000Z");
+    }
+    for _ in 0..2 {
+        closed(b, "2019-01-01T00:00:00.000Z");
+    }
+    // Viewed only once: not "often".
+    closed(once, "2018-01-01T00:00:00.000Z");
+    // Often viewed but opened again just now: not "a while".
+    for _ in 0..5 {
+        closed(recent, "2020-01-01T00:00:00.000Z");
+    }
+    let session = start_view_session(&conn, TEST_LIBRARY_ID, recent, 0).unwrap();
+    end_view_session(&conn, session, 0).unwrap();
+
+    let works = list_pickup_works(&conn, TEST_LIBRARY_ID, 10).unwrap();
+    assert_eq!(ids(&works), vec![b, a, tie]);
+}
+
+#[test]
+fn random_samples_works_of_the_library_up_to_limit() {
+    let conn = test_db_with_library(TEST_LIBRARY_ID);
+    let mut all: Vec<i64> = (0..5)
+        .map(|i| insert_work(&conn, &format!("W{i}")))
+        .collect();
+    let other_lib = library::add_library(&conn, "Other", Some("/other")).unwrap();
+    insert_work_in(&conn, &other_lib.id, "X", "/other/X");
+
+    let mut works = ids(&list_random_works(&conn, TEST_LIBRARY_ID, 10).unwrap());
+    works.sort_unstable();
+    all.sort_unstable();
+    assert_eq!(works, all);
+    assert_eq!(
+        list_random_works(&conn, TEST_LIBRARY_ID, 3).unwrap().len(),
+        3
+    );
+}
