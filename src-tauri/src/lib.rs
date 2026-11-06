@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod error;
+mod history;
 mod import_queue;
 mod importer;
 mod library;
@@ -224,6 +225,13 @@ pub fn run() {
             commands::playlist::add_item_to_playlist,
             commands::playlist::remove_item_from_playlist,
             commands::playlist::reorder_playlist_items,
+            commands::history::start_view_session,
+            commands::history::update_view_session_page,
+            commands::history::end_view_session,
+            commands::history::list_recently_viewed_works,
+            commands::history::list_unviewed_works,
+            commands::history::list_frequently_viewed_works,
+            commands::history::get_work_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
