@@ -266,6 +266,40 @@ describe("WorkViewer コンポーネント", () => {
       });
     });
 
+    it("initialPage を指定すると、そのページから開いてセッションを開始する", async () => {
+      render(WorkViewer, createProps({ initialPage: 2 }));
+      await waitFor(() => {
+        expect(screen.getByText(/3\/3/)).toBeInTheDocument();
+      });
+      expect(sessionCalls()[0]).toEqual({
+        cmd: "start_view_session",
+        args: { workId: 1, page: 2 },
+      });
+    });
+
+    it("initialPage は最初の作品だけに適用し、次の作品は先頭から開く", async () => {
+      const { rerender } = render(WorkViewer, createProps({ initialPage: 2 }));
+      await waitFor(() => {
+        expect(screen.getByText(/3\/3/)).toBeInTheDocument();
+      });
+
+      await rerender(createProps({ initialPage: 2, workId: 2 }));
+
+      await waitFor(() => {
+        expect(sessionCalls()).toContainEqual({
+          cmd: "start_view_session",
+          args: { workId: 2, page: 0 },
+        });
+      });
+    });
+
+    it("initialPage が作品のページ数を超える場合は最後のページに収める", async () => {
+      render(WorkViewer, createProps({ initialPage: 10 }));
+      await waitFor(() => {
+        expect(screen.getByText(/3\/3/)).toBeInTheDocument();
+      });
+    });
+
     it("ページ送りで最後のページを更新する", async () => {
       const user = userEvent.setup();
       render(WorkViewer, createProps());
