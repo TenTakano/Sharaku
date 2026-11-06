@@ -24,7 +24,6 @@
     Playlist,
     Tag,
     TagSearchMode,
-    UnregisteredEntry,
     ViewKind,
   } from "./lib/types";
 
@@ -44,9 +43,6 @@
   let importSourceKind = $state<ImportKind>("folder");
   let bulkImportRootPath = $state<string | undefined>(undefined);
   let bulkImportDroppedPaths = $state<string[] | undefined>(undefined);
-  let pendingBulkImportEntries = $state<UnregisteredEntry[] | undefined>(
-    undefined,
-  );
   let previousView = $state<ViewKind>("library");
 
   async function loadActiveLibrary() {
@@ -120,7 +116,6 @@
 
   function handleBackToSettings() {
     currentView = "settings";
-    pendingBulkImportEntries = undefined;
     bulkImportRootPath = undefined;
   }
 
@@ -132,11 +127,6 @@
     } else {
       handleBackToSettings();
     }
-  }
-
-  function handleImportUnregistered(entries: UnregisteredEntry[]) {
-    pendingBulkImportEntries = entries;
-    currentView = "bulk-import";
   }
 
   async function handleDeleteLibrary() {
@@ -206,7 +196,6 @@
           const unique = [...new Set(paths)];
           bulkImportDroppedPaths = unique;
           bulkImportRootPath = undefined;
-          pendingBulkImportEntries = undefined;
           currentView = "bulk-import";
         } else if (paths.length === 1) {
           const path = paths[0];
@@ -219,7 +208,6 @@
                 if (hasSubs) {
                   bulkImportRootPath = path;
                   bulkImportDroppedPaths = undefined;
-                  pendingBulkImportEntries = undefined;
                   currentView = "bulk-import";
                 } else {
                   importSourcePath = path;
@@ -337,7 +325,6 @@
           libraryName={activeLibrary.name}
           libraryPath={activeLibrary.path}
           onNavigate={handleSidebarNavigate}
-          onImportUnregistered={handleImportUnregistered}
           onDeleteLibrary={handleDeleteLibrary}
         />
       {:else if currentView === "import"}
@@ -348,7 +335,6 @@
         />
       {:else if currentView === "bulk-import"}
         <BulkImportView
-          initialEntries={pendingBulkImportEntries}
           initialRootPath={bulkImportRootPath}
           initialDroppedPaths={bulkImportDroppedPaths}
           onBack={handleBulkImportBack}

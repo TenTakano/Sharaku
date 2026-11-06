@@ -3,10 +3,8 @@ mod db;
 mod error;
 mod import_queue;
 mod importer;
-mod integrity;
 mod library;
 mod migration;
-mod relocator;
 mod scanner;
 mod settings;
 mod template;
@@ -211,8 +209,6 @@ pub fn run() {
             commands::import::enqueue_import,
             commands::import::discover_folders,
             commands::import::discover_dropped_paths,
-            commands::import::preview_relocation,
-            commands::import::relocate_works,
             commands::tag::list_tags,
             commands::tag::search_tags,
             commands::tag::create_tag,
@@ -223,8 +219,6 @@ pub fn run() {
             commands::tag::get_tags_for_work,
             commands::tag::search_works_by_tags,
             commands::work::delete_work,
-            commands::work::check_integrity,
-            commands::work::delete_orphan_works,
             commands::settings::get_theme,
             commands::settings::set_theme,
             commands::settings::get_banner_auto_close,
