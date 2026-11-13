@@ -4,17 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import Sidebar from "../../src/lib/components/Sidebar.svelte";
 import { getToasts, removeToast } from "../../src/lib/stores/toast.svelte";
-import type { Library, Playlist, Tag } from "../../src/lib/types";
+import type { Library, Playlist } from "../../src/lib/types";
 
 const MOCK_LIBRARIES: Library[] = [
   { id: "lib-1", name: "マイライブラリ", path: "/path/to/lib1" },
   { id: "lib-2", name: "サブライブラリ", path: "/path/to/lib2" },
-];
-
-const MOCK_TAGS: Tag[] = [
-  { id: 1, name: "風景", category: "genre" },
-  { id: 2, name: "人物", category: "genre" },
-  { id: 3, name: "田中太郎", category: "artist" },
 ];
 
 const MOCK_PLAYLISTS: Playlist[] = [
@@ -30,9 +24,7 @@ function createProps(overrides = {}) {
     playlistReloadTrigger: 0,
     onSwitchLibrary: vi.fn(),
     onNavigate: vi.fn(),
-    onTagSelect: vi.fn(),
     onNavigateToAppSettings: vi.fn(),
-    selectedTagIds: [] as number[],
     selectedPlaylistId: null as number | null,
     onSelectPlaylist: vi.fn(),
     onPlaylistRenamed: vi.fn(),
@@ -48,7 +40,6 @@ beforeEach(() => {
   }
   mockIPC((cmd: string) => {
     if (cmd === "list_libraries") return MOCK_LIBRARIES;
-    if (cmd === "list_tags") return MOCK_TAGS;
     if (cmd === "list_playlists") return MOCK_PLAYLISTS;
   });
 });
@@ -59,24 +50,27 @@ describe("Sidebar コンポーネント", () => {
     expect(screen.getByText("SHARAKU")).toBeInTheDocument();
   });
 
-  it("ライブラリ一覧が表示される", async () => {
-    render(Sidebar, createProps());
+  async function openLibraryMenu(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: /ライブラリ/ }));
+  }
 
-    await waitFor(() => {
-      expect(screen.getByText("マイライブラリ")).toBeInTheDocument();
-      expect(screen.getByText("サブライブラリ")).toBeInTheDocument();
-    });
+  it("ライブラリ切り替えボタンにアクティブなライブラリ名が表示される", () => {
+    render(Sidebar, createProps());
+    expect(
+      screen.getByRole("button", { name: /マイライブラリ/ }),
+    ).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("アクティブなライブラリがハイライトされる", async () => {
+  it("ライブラリ切り替えボタンを押すとライブラリ一覧が開き、アクティブなものがハイライトされる", async () => {
+    const user = userEvent.setup();
     const { container } = render(Sidebar, createProps());
 
-    await waitFor(() => {
-      expect(screen.getByText("マイライブラリ")).toBeInTheDocument();
-    });
+    await openLibraryMenu(user);
 
+    await waitFor(() => {
+      expect(screen.getByText("サブライブラリ")).toBeInTheDocument();
+    });
     const activeItem = container.querySelector(".sidebar-library-item.active");
-    expect(activeItem).toBeInTheDocument();
     expect(activeItem?.textContent).toContain("マイライブラリ");
   });
 
@@ -85,12 +79,12 @@ describe("Sidebar コンポーネント", () => {
     const switchSpy = vi.fn();
     mockIPC((cmd: string) => {
       if (cmd === "list_libraries") return MOCK_LIBRARIES;
-      if (cmd === "list_tags") return MOCK_TAGS;
       if (cmd === "switch_library") return switchSpy();
     });
     const props = createProps();
     render(Sidebar, props);
 
+    await openLibraryMenu(user);
     await waitFor(() => {
       expect(screen.getByText("サブライブラリ")).toBeInTheDocument();
     });
@@ -101,106 +95,104 @@ describe("Sidebar コンポーネント", () => {
       expect(switchSpy).toHaveBeenCalled();
       expect(props.onSwitchLibrary).toHaveBeenCalledWith(MOCK_LIBRARIES[1]);
     });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  it("アクティブライブラリの設定ボタンクリックで onNavigate('settings') が呼ばれる", async () => {
+  it("ライブラリメニューは Escape とメニューの外のクリックで閉じる", async () => {
     const user = userEvent.setup();
-    const props = createProps();
-    const { container } = render(Sidebar, props);
+    render(Sidebar, createProps());
 
+    await openLibraryMenu(user);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    await openLibraryMenu(user);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    await user.click(screen.getByText("SHARAKU"));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("ライブラリメニューは開くとアクティブなライブラリにフォーカスし、矢印キーで移動し、Escape で切り替えボタンに戻る", async () => {
+    const user = userEvent.setup();
+    render(Sidebar, createProps());
     await waitFor(() => {
       expect(screen.getByText("マイライブラリ")).toBeInTheDocument();
     });
 
-    const settingsBtn = container.querySelector(".sidebar-library-settings")!;
-    await user.click(settingsBtn as HTMLElement);
+    await openLibraryMenu(user);
+    const items = await screen.findAllByRole("menuitem");
+    await waitFor(() => {
+      expect(items[0]).toHaveFocus();
+    });
+    await user.keyboard("{ArrowDown}");
+    expect(
+      screen.getByRole("menuitem", { name: "サブライブラリ" }),
+    ).toHaveFocus();
+    await user.keyboard("{ArrowUp}{ArrowUp}");
+    expect(
+      screen.getByRole("menuitem", { name: "+ ライブラリを追加" }),
+    ).toHaveFocus();
 
-    expect(props.onNavigate).toHaveBeenCalledWith("settings");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /ライブラリ/, expanded: false }),
+    ).toHaveFocus();
   });
 
-  it("「+ ライブラリを追加」ボタンで onNavigate('add-library') が呼ばれる", async () => {
+  it("ライブラリメニューの「ライブラリ設定」で onNavigate('settings') が呼ばれる", async () => {
     const user = userEvent.setup();
     const props = createProps();
     render(Sidebar, props);
 
+    await openLibraryMenu(user);
+    await user.click(screen.getByText("ライブラリ設定"));
+
+    expect(props.onNavigate).toHaveBeenCalledWith("settings");
+  });
+
+  it("ライブラリメニューの「+ ライブラリを追加」で onNavigate('add-library') が呼ばれる", async () => {
+    const user = userEvent.setup();
+    const props = createProps();
+    render(Sidebar, props);
+
+    await openLibraryMenu(user);
     await user.click(screen.getByText("+ ライブラリを追加"));
 
     expect(props.onNavigate).toHaveBeenCalledWith("add-library");
   });
 
-  it("タグがある場合、Tags セクションが表示される", async () => {
-    render(Sidebar, createProps());
-
-    await waitFor(() => {
-      expect(screen.getByText("Tags")).toBeInTheDocument();
-    });
-  });
-
-  it("タグがない場合、Tags セクションが表示されない", async () => {
-    mockIPC((cmd: string) => {
-      if (cmd === "list_libraries") return MOCK_LIBRARIES;
-      if (cmd === "list_tags") return [];
-    });
-    render(Sidebar, createProps());
-
-    await waitFor(() => {
-      expect(screen.getByText("マイライブラリ")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText("Tags")).not.toBeInTheDocument();
-  });
-
-  it("カテゴリヘッダーをクリックするとタグリストが展開される", async () => {
+  it("ナビのホーム・ブラウズで onNavigate が呼ばれ、表示中の項目に aria-current が付く", async () => {
     const user = userEvent.setup();
-    render(Sidebar, createProps());
+    const props = createProps({ currentView: "home" });
+    render(Sidebar, props);
 
-    await waitFor(() => {
-      expect(screen.getByText("Tags")).toBeInTheDocument();
-    });
+    const home = screen.getByRole("button", { name: "ホーム" });
+    expect(home).toHaveAttribute("aria-current", "page");
 
-    await user.click(screen.getByText(/^genre/));
-
-    await waitFor(() => {
-      expect(screen.getByText("風景")).toBeInTheDocument();
-      expect(screen.getByText("人物")).toBeInTheDocument();
-    });
+    await user.click(screen.getByRole("button", { name: "ブラウズ" }));
+    expect(props.onNavigate).toHaveBeenCalledWith("library");
+    await user.click(home);
+    expect(props.onNavigate).toHaveBeenCalledWith("home");
   });
 
-  it("展開されたカテゴリのタグをクリックすると onTagSelect が呼ばれる", async () => {
+  it("「取り込む」で onNavigate('bulk-import') が呼ばれる", async () => {
     const user = userEvent.setup();
     const props = createProps();
     render(Sidebar, props);
 
-    await waitFor(() => {
-      expect(screen.getByText("Tags")).toBeInTheDocument();
-    });
+    await user.click(screen.getByRole("button", { name: "取り込む" }));
 
-    await user.click(screen.getByText(/^genre/));
-    await waitFor(() => {
-      expect(screen.getByText("風景")).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByText("風景"));
-    expect(props.onTagSelect).toHaveBeenCalledWith(MOCK_TAGS[0]);
+    expect(props.onNavigate).toHaveBeenCalledWith("bulk-import");
   });
 
-  it("selectedTagIds に含まれるタグに selected クラスが付与される", async () => {
-    const user = userEvent.setup();
-    const { container } = render(Sidebar, createProps({ selectedTagIds: [1] }));
-
+  it("タグの一覧は表示しない（タグはブラウズの絞り込みから使う）", async () => {
+    render(Sidebar, createProps());
     await waitFor(() => {
-      expect(screen.getByText("Tags")).toBeInTheDocument();
+      expect(screen.getByText("お気に入り")).toBeInTheDocument();
     });
-
-    await user.click(screen.getByText(/^genre/));
-
-    await waitFor(() => {
-      const selectedItem = container.querySelector(
-        ".sidebar-tag-item.selected",
-      );
-      expect(selectedItem).toBeInTheDocument();
-      expect(selectedItem?.textContent).toBe("風景");
-    });
+    expect(screen.queryByText("Tags")).not.toBeInTheDocument();
   });
 
   it("アプリ設定ボタンで onNavigateToAppSettings が呼ばれる", async () => {
@@ -208,7 +200,7 @@ describe("Sidebar コンポーネント", () => {
     const props = createProps();
     render(Sidebar, props);
 
-    await user.click(screen.getByText(/アプリ設定/));
+    await user.click(screen.getByRole("button", { name: "アプリ設定" }));
 
     expect(props.onNavigateToAppSettings).toHaveBeenCalledOnce();
   });
@@ -270,7 +262,6 @@ describe("Sidebar コンポーネント", () => {
       const createSpy = vi.fn(() => ({ id: 3, name: "新しいプレイリスト" }));
       mockIPC((cmd: string) => {
         if (cmd === "list_libraries") return MOCK_LIBRARIES;
-        if (cmd === "list_tags") return MOCK_TAGS;
         if (cmd === "list_playlists") return MOCK_PLAYLISTS;
         if (cmd === "create_playlist") return createSpy();
       });
@@ -311,7 +302,6 @@ describe("Sidebar コンポーネント", () => {
       const renameSpy = vi.fn();
       mockIPC((cmd: string) => {
         if (cmd === "list_libraries") return MOCK_LIBRARIES;
-        if (cmd === "list_tags") return MOCK_TAGS;
         if (cmd === "list_playlists") return MOCK_PLAYLISTS;
         if (cmd === "rename_playlist") return renameSpy();
       });
@@ -345,7 +335,6 @@ describe("Sidebar コンポーネント", () => {
       const deleteSpy = vi.fn();
       mockIPC((cmd: string) => {
         if (cmd === "list_libraries") return MOCK_LIBRARIES;
-        if (cmd === "list_tags") return MOCK_TAGS;
         if (cmd === "list_playlists") return MOCK_PLAYLISTS;
         if (cmd === "delete_playlist") return deleteSpy();
       });
@@ -381,7 +370,6 @@ describe("Sidebar コンポーネント", () => {
       const user = userEvent.setup();
       mockIPC((cmd: string) => {
         if (cmd === "list_libraries") return MOCK_LIBRARIES;
-        if (cmd === "list_tags") return MOCK_TAGS;
         if (cmd === "list_playlists") return MOCK_PLAYLISTS;
         if (cmd === "create_playlist") throw new Error("db error");
       });
@@ -404,7 +392,6 @@ describe("Sidebar コンポーネント", () => {
       const user = userEvent.setup();
       mockIPC((cmd: string) => {
         if (cmd === "list_libraries") return MOCK_LIBRARIES;
-        if (cmd === "list_tags") return MOCK_TAGS;
         if (cmd === "list_playlists") return MOCK_PLAYLISTS;
         if (cmd === "rename_playlist") throw new Error("db error");
       });
@@ -436,7 +423,6 @@ describe("Sidebar コンポーネント", () => {
       const user = userEvent.setup();
       mockIPC((cmd: string) => {
         if (cmd === "list_libraries") return MOCK_LIBRARIES;
-        if (cmd === "list_tags") return MOCK_TAGS;
         if (cmd === "list_playlists") return MOCK_PLAYLISTS;
         if (cmd === "delete_playlist") throw new Error("db error");
       });
