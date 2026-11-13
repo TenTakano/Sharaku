@@ -5,7 +5,7 @@ use crate::library;
 
 /// Opens an in-memory DB, adds a single test library, and pins its ID to test_library_id.
 /// Test helper consolidation: gathers here the setup that was duplicated across
-/// tests/{db, settings}.rs.
+/// multiple test modules.
 pub(crate) fn test_db_with_library(test_library_id: &str) -> Connection {
     let conn = db::open_db_in_memory().unwrap();
     library::add_library(&conn, "Test", Some("/test")).ok();
