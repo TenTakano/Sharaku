@@ -177,29 +177,6 @@ fn build_work_record<'a>(
     }
 }
 
-/// Copies images into dest. When ensure_dest_dir is true, this also creates dest
-/// (pass false when the caller has already run create_dir_all).
-/// build_error lets the caller choose which AppError variant to construct on
-/// filename-extraction failure (ImportError vs RelocationError differ by caller).
-pub(crate) fn copy_images_to_dir(
-    images: &[PathBuf],
-    dest: &Path,
-    ensure_dest_dir: bool,
-    build_error: impl Fn(String) -> AppError,
-) -> Result<(), AppError> {
-    if ensure_dest_dir {
-        std::fs::create_dir_all(dest)?;
-    }
-    for image in images {
-        let file_name = image
-            .file_name()
-            .ok_or_else(|| build_error("無効なファイル名".to_string()))?;
-        let dest_file = dest.join(file_name);
-        std::fs::copy(image, &dest_file)?;
-    }
-    Ok(())
-}
-
 pub fn import_single_image(
     request: &ImportRequest,
     conn: &rusqlite::Connection,

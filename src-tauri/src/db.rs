@@ -208,18 +208,6 @@ pub fn get_thumbnail(conn: &Connection, work_id: i64) -> Result<Vec<u8>, AppErro
     thumb.ok_or(AppError::NotFound)
 }
 
-pub fn list_folder_works(conn: &Connection, library_id: &str) -> Result<Vec<WorkDetail>, AppError> {
-    let mut stmt = conn.prepare_cached(
-        "SELECT id, title, path, type, page_count, created_at, artist, year, genre, circle, origin FROM works WHERE library_id = ?1 AND type = 'folder'",
-    )?;
-    let rows = stmt.query_map([library_id], map_work_detail_row)?;
-    let mut works = Vec::new();
-    for row in rows {
-        works.push(row?);
-    }
-    Ok(works)
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn update_work(
     conn: &Connection,
@@ -238,14 +226,6 @@ pub fn update_work(
     if rows == 0 {
         return Err(AppError::NotFound);
     }
-    Ok(())
-}
-
-pub fn update_work_path(conn: &Connection, work_id: i64, new_path: &str) -> Result<(), AppError> {
-    conn.execute(
-        "UPDATE works SET path = ?1 WHERE id = ?2",
-        rusqlite::params![new_path, work_id],
-    )?;
     Ok(())
 }
 
@@ -419,35 +399,6 @@ pub fn search_works_by_tags(
         works.push(row?);
     }
     Ok(works)
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WorkPathEntry {
-    pub id: i64,
-    pub title: String,
-    pub path: String,
-    pub work_type: String,
-}
-
-pub fn list_work_paths(
-    conn: &Connection,
-    library_id: &str,
-) -> Result<Vec<WorkPathEntry>, AppError> {
-    let mut stmt = conn.prepare("SELECT id, title, path, type FROM works WHERE library_id = ?1")?;
-    let rows = stmt.query_map([library_id], |row| {
-        Ok(WorkPathEntry {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            path: row.get(2)?,
-            work_type: row.get(3)?,
-        })
-    })?;
-    let mut entries = Vec::new();
-    for row in rows {
-        entries.push(row?);
-    }
-    Ok(entries)
 }
 
 pub fn delete_works_by_ids(

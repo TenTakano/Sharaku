@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use crate::db::{self, WorkDetail, WorkSummary};
-use crate::integrity::{self, IntegrityCheckProgress, IntegrityReport};
 use crate::AppState;
 
 /// Fetches the registered path for work_id and checks that it still exists on disk.
@@ -144,31 +143,6 @@ pub(crate) async fn delete_work(
 
             db::delete_works_by_ids(&db.conn, &active.id, &[work_id]).map_err(|e| e.to_string())?;
             Ok(())
-        })
-        .await
-}
-
-#[tauri::command]
-pub(crate) async fn check_integrity(
-    state: tauri::State<'_, AppState>,
-    on_progress: tauri::ipc::Channel<IntegrityCheckProgress>,
-) -> Result<IntegrityReport, String> {
-    state
-        .with_active_db(move |db, active| {
-            integrity::check_integrity(&db.conn, &active.id, active.path.as_deref(), &on_progress)
-                .map_err(|e| e.to_string())
-        })
-        .await
-}
-
-#[tauri::command]
-pub(crate) async fn delete_orphan_works(
-    state: tauri::State<'_, AppState>,
-    ids: Vec<i64>,
-) -> Result<usize, String> {
-    state
-        .with_active_db(move |db, active| {
-            integrity::delete_orphan_works(&db.conn, &active.id, &ids).map_err(|e| e.to_string())
         })
         .await
 }
