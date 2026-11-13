@@ -229,16 +229,6 @@ pub fn unique_path(base: &Path, is_taken: impl Fn(&Path) -> bool) -> PathBuf {
     unreachable!()
 }
 
-pub fn resolve_unique_work_path(
-    library_root: &Path,
-    template: &str,
-    metadata: &WorkMetadata,
-    work_kind: &str,
-) -> PathBuf {
-    let base = resolve_work_path(library_root, template, metadata, work_kind);
-    unique_path(&base, |p| p.exists())
-}
-
 pub fn sample_metadata() -> WorkMetadata {
     WorkMetadata {
         title: "My Artwork".to_string(),

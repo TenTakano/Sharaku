@@ -12,7 +12,7 @@ fn write_test_image(path: &Path) {
     img.save(path).unwrap();
 }
 
-fn make_request(source_path: &Path, title: &str, mode: ImportMode) -> ImportRequest {
+fn make_request(source_path: &Path, title: &str) -> ImportRequest {
     ImportRequest {
         source_path: source_path.to_string_lossy().to_string(),
         title: title.to_string(),
@@ -21,7 +21,6 @@ fn make_request(source_path: &Path, title: &str, mode: ImportMode) -> ImportRequ
         genre: None,
         circle: None,
         origin: None,
-        mode,
         kind: ImportKind::Image,
     }
 }
@@ -171,36 +170,6 @@ fn preview_path_for_image_kind() {
         crate::template::WORK_KIND_IMAGE,
     );
     assert_eq!(result, "/library/pictures/Artist/Sketch");
-}
-
-// paths_overlap tests
-
-#[test]
-fn paths_overlap_identical() {
-    assert!(paths_overlap(Path::new("/a/b"), Path::new("/a/b")));
-}
-
-#[test]
-fn paths_overlap_source_contains_dest() {
-    assert!(paths_overlap(Path::new("/a"), Path::new("/a/b")));
-}
-
-#[test]
-fn paths_overlap_dest_contains_source() {
-    assert!(paths_overlap(Path::new("/a/b/c"), Path::new("/a/b")));
-}
-
-#[test]
-fn paths_overlap_disjoint() {
-    assert!(!paths_overlap(Path::new("/a/b"), Path::new("/c/d")));
-}
-
-#[test]
-fn paths_overlap_partial_name_no_overlap() {
-    assert!(!paths_overlap(
-        Path::new("/library/art"),
-        Path::new("/library/artist")
-    ));
 }
 
 // Natural sort tests
@@ -380,7 +349,6 @@ fn import_single_image_rejects_non_image_file() {
         genre: None,
         circle: None,
         origin: None,
-        mode: ImportMode::Copy,
         kind: ImportKind::Image,
     };
 
@@ -389,26 +357,23 @@ fn import_single_image_rejects_non_image_file() {
         stmt.query_row([], |row| row.get::<_, String>(0)).unwrap()
     };
 
-    let result = import_single_image(&request, &conn, &lib_id, &dir);
+    let result = import_single_image(&request, &conn, &lib_id);
     assert!(result.is_err());
 
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
 #[test]
-fn import_single_image_metadata_only_registers_source_path_without_copy() {
-    const LIB_ID: &str = "test_lib_import_single_metadata_only";
+fn import_single_image_registers_source_path_without_copy() {
+    const LIB_ID: &str = "test_lib_import_single_in_place";
     let temp = TempDir::new().unwrap();
-    let library_root = temp.path().join("library");
-    std::fs::create_dir_all(&library_root).unwrap();
     let source = temp.path().join("source.png");
     write_test_image(&source);
 
     let conn = test_db_with_library(LIB_ID);
-    crate::settings::set_resource_mode(&conn, LIB_ID, "metadata_only").unwrap();
 
-    let request = make_request(&source, "MyImage", ImportMode::Copy);
-    let result = import_single_image(&request, &conn, LIB_ID, &library_root).unwrap();
+    let request = make_request(&source, "MyImage");
+    let result = import_single_image(&request, &conn, LIB_ID).unwrap();
 
     assert_eq!(result.destination_path, source.to_string_lossy());
     assert_eq!(result.page_count, 1);
@@ -419,88 +384,22 @@ fn import_single_image_metadata_only_registers_source_path_without_copy() {
 }
 
 #[test]
-fn import_single_image_full_copy_creates_file_and_keeps_source() {
-    const LIB_ID: &str = "test_lib_import_single_full_copy";
+fn import_single_image_returns_error_on_duplicate_path() {
+    const LIB_ID: &str = "test_lib_import_single_duplicate";
     let temp = TempDir::new().unwrap();
-    let library_root = temp.path().join("library");
-    std::fs::create_dir_all(&library_root).unwrap();
     let source = temp.path().join("source.png");
     write_test_image(&source);
 
     let conn = test_db_with_library(LIB_ID);
-    crate::settings::set_directory_template(&conn, LIB_ID, "{title}").unwrap();
 
-    let request = make_request(&source, "MyImage", ImportMode::Copy);
-    let result = import_single_image(&request, &conn, LIB_ID, &library_root).unwrap();
-
-    let dest = Path::new(&result.destination_path);
-    assert!(dest.exists());
-    assert!(dest.starts_with(library_root.join("pictures")));
-    assert!(source.exists());
-
-    let works = crate::db::list_works(&conn, LIB_ID, "created_at", "desc").unwrap();
-    assert_eq!(works.len(), 1);
-}
-
-#[test]
-fn import_single_image_move_removes_source_file() {
-    const LIB_ID: &str = "test_lib_import_single_move";
-    let temp = TempDir::new().unwrap();
-    let library_root = temp.path().join("library");
-    std::fs::create_dir_all(&library_root).unwrap();
-    let source = temp.path().join("source.png");
-    write_test_image(&source);
-
-    let conn = test_db_with_library(LIB_ID);
-    crate::settings::set_directory_template(&conn, LIB_ID, "{title}").unwrap();
-
-    let request = make_request(&source, "MyImage", ImportMode::Move);
-    let result = import_single_image(&request, &conn, LIB_ID, &library_root).unwrap();
-
-    let dest = Path::new(&result.destination_path);
-    assert!(dest.exists());
-    assert!(!source.exists());
-}
-
-#[test]
-fn import_single_image_rolls_back_dest_dir_on_db_insert_failure() {
-    const LIB_ID: &str = "test_lib_import_single_rollback";
-    let temp = TempDir::new().unwrap();
-    let library_root = temp.path().join("library");
-    std::fs::create_dir_all(&library_root).unwrap();
-    let source = temp.path().join("source.png");
-    write_test_image(&source);
-
-    let conn = test_db_with_library(LIB_ID);
-    crate::settings::set_directory_template(&conn, LIB_ID, "{title}").unwrap();
-
-    let request = make_request(&source, "MyImage", ImportMode::Copy);
-
-    // Pre-register a work whose path collides with the path import_single_image will
-    // compute (resolve_unique_work_path only checks filesystem existence, not the DB,
-    // so it cannot detect this in advance). This forces the UNIQUE(library_id, path)
-    // constraint to fail on insert, exercising the rollback branch.
-    let dest_dir = template::resolve_unique_work_path(
-        &library_root,
-        "{title}",
-        &WorkMetadata {
-            title: "MyImage".to_string(),
-            artist: None,
-            year: None,
-            genre: None,
-            circle: None,
-            origin: None,
-            work_type: None,
-        },
-        template::WORK_KIND_IMAGE,
-    );
-    let colliding_path = dest_dir.join("source.png");
+    // Pre-register a work at the same source path so the UNIQUE(library_id, path)
+    // constraint fails on insert, since in-place registration keeps the original path.
     crate::db::insert_work(
         &conn,
         &crate::db::WorkRecord {
             library_id: LIB_ID,
             title: "Existing",
-            path: &colliding_path.to_string_lossy(),
+            path: &source.to_string_lossy(),
             work_type: "image",
             page_count: 1,
             thumbnail: b"thumb",
@@ -513,9 +412,9 @@ fn import_single_image_rolls_back_dest_dir_on_db_insert_failure() {
     )
     .unwrap();
 
-    let result = import_single_image(&request, &conn, LIB_ID, &library_root);
+    let request = make_request(&source, "MyImage");
+    let result = import_single_image(&request, &conn, LIB_ID);
     assert!(result.is_err());
-    assert!(!dest_dir.exists());
 }
 
 #[test]
@@ -535,7 +434,6 @@ fn import_single_image_rejects_directory_path() {
         genre: None,
         circle: None,
         origin: None,
-        mode: ImportMode::Copy,
         kind: ImportKind::Image,
     };
 
@@ -544,10 +442,89 @@ fn import_single_image_rejects_directory_path() {
         stmt.query_row([], |row| row.get::<_, String>(0)).unwrap()
     };
 
-    let result = import_single_image(&request, &conn, &lib_id, &dir);
+    let result = import_single_image(&request, &conn, &lib_id);
     assert!(result.is_err());
 
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+// import_work tests
+
+#[test]
+fn import_work_registers_source_path_without_copy() {
+    const LIB_ID: &str = "test_lib_import_work_in_place";
+    let temp = TempDir::new().unwrap();
+    let source = temp.path().join("folder");
+    std::fs::create_dir_all(&source).unwrap();
+    write_test_image(&source.join("01.png"));
+    write_test_image(&source.join("02.png"));
+
+    let conn = test_db_with_library(LIB_ID);
+
+    let request = ImportRequest {
+        source_path: source.to_string_lossy().to_string(),
+        title: "MyFolder".to_string(),
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        kind: ImportKind::Folder,
+    };
+    let result = import_work(&request, &conn, LIB_ID).unwrap();
+
+    assert_eq!(result.destination_path, source.to_string_lossy());
+    assert_eq!(result.page_count, 2);
+    assert!(source.exists());
+
+    let works = crate::db::list_works(&conn, LIB_ID, "created_at", "desc").unwrap();
+    assert_eq!(works.len(), 1);
+}
+
+#[test]
+fn import_work_rejects_non_directory_source() {
+    const LIB_ID: &str = "test_lib_import_work_non_dir";
+    let temp = TempDir::new().unwrap();
+    let source = temp.path().join("file.png");
+    write_test_image(&source);
+
+    let conn = test_db_with_library(LIB_ID);
+
+    let request = ImportRequest {
+        source_path: source.to_string_lossy().to_string(),
+        title: "MyFolder".to_string(),
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        kind: ImportKind::Folder,
+    };
+    let result = import_work(&request, &conn, LIB_ID);
+    assert!(result.is_err());
+}
+
+#[test]
+fn import_work_rejects_empty_folder() {
+    const LIB_ID: &str = "test_lib_import_work_empty";
+    let temp = TempDir::new().unwrap();
+    let source = temp.path().join("empty_folder");
+    std::fs::create_dir_all(&source).unwrap();
+
+    let conn = test_db_with_library(LIB_ID);
+
+    let request = ImportRequest {
+        source_path: source.to_string_lossy().to_string(),
+        title: "MyFolder".to_string(),
+        artist: None,
+        year: None,
+        genre: None,
+        circle: None,
+        origin: None,
+        kind: ImportKind::Folder,
+    };
+    let result = import_work(&request, &conn, LIB_ID);
+    assert!(result.is_err());
 }
 
 #[test]

@@ -222,51 +222,6 @@ fn top_level_for_defaults_to_works() {
     assert_eq!(top_level_for("unknown"), "works");
 }
 
-// resolve_unique_work_path tests
-
-#[test]
-fn resolve_unique_nonexistent_returns_base() {
-    let dir = std::env::temp_dir().join("sharaku_test_unique_nonexist");
-    let _ = std::fs::remove_dir_all(&dir);
-
-    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata(), WORK_KIND_FOLDER);
-    assert_eq!(path, dir.join("works/My Title"));
-}
-
-#[test]
-fn resolve_unique_existing_gets_suffix() {
-    let dir = std::env::temp_dir().join("sharaku_test_unique_exist");
-    let _ = std::fs::remove_dir_all(&dir);
-    let target = dir.join("works/My Title");
-    std::fs::create_dir_all(&target).unwrap();
-
-    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata(), WORK_KIND_FOLDER);
-    assert_ne!(path, target);
-    assert!(path
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .starts_with("My Title_"));
-
-    std::fs::remove_dir_all(&dir).unwrap();
-}
-
-#[test]
-fn resolve_unique_skips_existing_suffixes() {
-    let dir = std::env::temp_dir().join("sharaku_test_unique_skip");
-    let _ = std::fs::remove_dir_all(&dir);
-
-    let base = dir.join("works/My Title");
-    let first_suffix = dir.join("works/My Title_0001");
-    std::fs::create_dir_all(&base).unwrap();
-    std::fs::create_dir_all(&first_suffix).unwrap();
-
-    let path = resolve_unique_work_path(&dir, "{title}", &full_metadata(), WORK_KIND_FOLDER);
-    assert_eq!(path.file_name().unwrap().to_string_lossy(), "My Title_0002");
-
-    std::fs::remove_dir_all(&dir).unwrap();
-}
-
 #[test]
 fn render_type_placeholder_with_value() {
     let mut meta = full_metadata();

@@ -151,18 +151,6 @@ pub fn set_banner_auto_close(conn: &Connection, seconds: u32) -> Result<(), AppE
     }
 }
 
-pub fn resolve_type_label(
-    conn: &Connection,
-    library_id: &str,
-    work_type: &str,
-) -> Result<String, AppError> {
-    match work_type {
-        "image" => get_type_label_image(conn, library_id),
-        "folder" => get_type_label_folder(conn, library_id),
-        _ => Ok(work_type.to_string()),
-    }
-}
-
 #[cfg(test)]
 #[path = "tests/settings.rs"]
 mod tests;
