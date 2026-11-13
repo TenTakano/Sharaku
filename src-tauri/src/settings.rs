@@ -29,65 +29,7 @@ pub fn set_setting(
     Ok(())
 }
 
-pub const DEFAULT_DIRECTORY_TEMPLATE: &str = "{artist}/{title}";
-
-const KEY_DIRECTORY_TEMPLATE: &str = "directory_template";
-const KEY_TYPE_LABEL_IMAGE: &str = "type_label_image";
-const KEY_TYPE_LABEL_FOLDER: &str = "type_label_folder";
-const KEY_RESOURCE_MODE: &str = "resource_mode";
 const KEY_DELETE_FILE_ACTION: &str = "delete_file_action";
-
-const DEFAULT_TYPE_LABEL_IMAGE: &str = "Image";
-const DEFAULT_TYPE_LABEL_FOLDER: &str = "Folder";
-
-pub fn get_directory_template(
-    conn: &Connection,
-    library_id: &str,
-) -> Result<Option<String>, AppError> {
-    get_setting(conn, library_id, KEY_DIRECTORY_TEMPLATE)
-}
-
-pub fn set_directory_template(
-    conn: &Connection,
-    library_id: &str,
-    template: &str,
-) -> Result<(), AppError> {
-    set_setting(conn, library_id, KEY_DIRECTORY_TEMPLATE, template)
-}
-
-pub fn get_type_label_image(conn: &Connection, library_id: &str) -> Result<String, AppError> {
-    Ok(get_setting(conn, library_id, KEY_TYPE_LABEL_IMAGE)?
-        .unwrap_or_else(|| DEFAULT_TYPE_LABEL_IMAGE.into()))
-}
-
-pub fn set_type_label_image(
-    conn: &Connection,
-    library_id: &str,
-    label: &str,
-) -> Result<(), AppError> {
-    set_setting(conn, library_id, KEY_TYPE_LABEL_IMAGE, label)
-}
-
-pub fn get_type_label_folder(conn: &Connection, library_id: &str) -> Result<String, AppError> {
-    Ok(get_setting(conn, library_id, KEY_TYPE_LABEL_FOLDER)?
-        .unwrap_or_else(|| DEFAULT_TYPE_LABEL_FOLDER.into()))
-}
-
-pub fn set_type_label_folder(
-    conn: &Connection,
-    library_id: &str,
-    label: &str,
-) -> Result<(), AppError> {
-    set_setting(conn, library_id, KEY_TYPE_LABEL_FOLDER, label)
-}
-
-pub fn get_resource_mode(conn: &Connection, library_id: &str) -> Result<String, AppError> {
-    Ok(get_setting(conn, library_id, KEY_RESOURCE_MODE)?.unwrap_or_else(|| "full".into()))
-}
-
-pub fn set_resource_mode(conn: &Connection, library_id: &str, mode: &str) -> Result<(), AppError> {
-    set_setting(conn, library_id, KEY_RESOURCE_MODE, mode)
-}
 
 pub fn get_delete_file_action(conn: &Connection, library_id: &str) -> Result<String, AppError> {
     Ok(get_setting(conn, library_id, KEY_DELETE_FILE_ACTION)?.unwrap_or_else(|| "ask".into()))
