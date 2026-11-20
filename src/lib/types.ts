@@ -1,6 +1,7 @@
 export type TimerHandle = ReturnType<typeof setTimeout> | null;
 
 export type ViewKind =
+  | "home"
   | "library"
   | "viewer"
   | "settings"
