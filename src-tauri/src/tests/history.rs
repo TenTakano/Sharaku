@@ -287,3 +287,60 @@ fn sessions_persist_across_reopen() {
     assert_eq!(stats.view_count, 1);
     assert_eq!(stats.last_page, Some(3));
 }
+
+fn session_end(conn: &Connection, session_id: i64) -> (String, Option<String>, i64) {
+    conn.query_row(
+        "SELECT started_at, ended_at, last_page FROM view_sessions WHERE id = ?1",
+        [session_id],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )
+    .unwrap()
+}
+
+#[test]
+fn end_open_sessions_closes_only_unclosed_sessions() {
+    let conn = test_db_with_library(TEST_LIBRARY_ID);
+    let a = insert_work(&conn, "A");
+    let closed = insert_session(
+        &conn,
+        a,
+        "2026-01-01T10:00:00.000Z",
+        Some("2026-01-01T10:01:00.000Z"),
+        1,
+    );
+    let open = start_view_session(&conn, TEST_LIBRARY_ID, a, 0).unwrap();
+    update_view_session_page(&conn, open, 4).unwrap();
+
+    assert_eq!(end_open_view_sessions(&conn).unwrap(), 1);
+
+    let (_, closed_end, _) = session_end(&conn, closed);
+    assert_eq!(closed_end.as_deref(), Some("2026-01-01T10:01:00.000Z"));
+    let (started_at, open_end, last_page) = session_end(&conn, open);
+    assert!(open_end.expect("open session should be ended") >= started_at);
+    assert_eq!(last_page, 4);
+}
+
+#[test]
+fn reopening_db_closes_orphaned_sessions_with_zero_duration() {
+    let tmp_dir = tempfile::TempDir::new().unwrap();
+    let (lib_id, work_id, orphan) = {
+        let conn = db::open_db(tmp_dir.path()).unwrap();
+        let lib = library::add_library(&conn, "Lib", Some("/lib")).unwrap();
+        let work_id = insert_work_in(&conn, &lib.id, "A", "/lib/A");
+        let orphan = insert_session(&conn, work_id, "2026-01-01T10:00:00.000Z", None, 6);
+        (lib.id, work_id, orphan)
+    };
+
+    let conn = db::open_db(tmp_dir.path()).unwrap();
+    let (_, ended_at, last_page) = session_end(&conn, orphan);
+    assert_eq!(ended_at.as_deref(), Some("2026-01-01T10:00:00.000Z"));
+    assert_eq!(last_page, 6);
+
+    // Sessions started after the database is opened are left open.
+    let current = start_view_session(&conn, &lib_id, work_id, 0).unwrap();
+    assert_eq!(session_end(&conn, current).1, None);
+
+    let stats = get_work_history(&conn, work_id).unwrap();
+    assert_eq!(stats.view_count, 2);
+    assert_eq!(stats.total_view_seconds, 0);
+}
