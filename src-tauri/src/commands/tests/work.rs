@@ -29,10 +29,10 @@ fn insert_work_at(conn: &rusqlite::Connection, path: &str) -> i64 {
     conn.last_insert_rowid()
 }
 
-const OUT_OF_ROOT_MESSAGE: &str = "ルート外です";
+const MISSING_MESSAGE: &str = "見つかりません";
 
 #[test]
-fn returns_path_when_within_library_root() {
+fn returns_path_when_it_exists_on_disk() {
     let conn = test_db_with_library(TEST_LIBRARY_ID);
     let lib_root = TempDir::new().unwrap();
     let work_dir = lib_root.path().join("work");
@@ -40,69 +40,33 @@ fn returns_path_when_within_library_root() {
 
     let work_id = insert_work_at(&conn, &work_dir.to_string_lossy());
 
-    let result = validated_work_path(&conn, work_id, lib_root.path(), OUT_OF_ROOT_MESSAGE).unwrap();
+    let result = validated_work_path(&conn, work_id, MISSING_MESSAGE).unwrap();
 
     assert_eq!(result, work_dir);
 }
 
 #[test]
-fn rejects_path_outside_library_root() {
+fn accepts_path_outside_any_library_root_when_it_exists() {
     let conn = test_db_with_library(TEST_LIBRARY_ID);
-    let lib_root = TempDir::new().unwrap();
     let outside = TempDir::new().unwrap();
     let outside_work_dir = outside.path().join("work");
     fs::create_dir_all(&outside_work_dir).unwrap();
 
     let work_id = insert_work_at(&conn, &outside_work_dir.to_string_lossy());
 
-    let result = validated_work_path(&conn, work_id, lib_root.path(), OUT_OF_ROOT_MESSAGE);
+    let result = validated_work_path(&conn, work_id, MISSING_MESSAGE).unwrap();
 
-    assert_eq!(result, Err(OUT_OF_ROOT_MESSAGE.to_string()));
+    assert_eq!(result, outside_work_dir);
 }
 
 #[test]
-#[cfg(unix)]
-fn rejects_symlink_resolving_outside_library_root() {
-    use std::os::unix::fs::symlink;
-
+fn rejects_path_missing_from_disk() {
     let conn = test_db_with_library(TEST_LIBRARY_ID);
-    let lib_root = TempDir::new().unwrap();
-    let outside = TempDir::new().unwrap();
-    let outside_work_dir = outside.path().join("real_work");
-    fs::create_dir_all(&outside_work_dir).unwrap();
+    let missing_path = PathBuf::from("/nonexistent-sharaku-test-path/work");
 
-    let linked_path = lib_root.path().join("linked_work");
-    symlink(&outside_work_dir, &linked_path).unwrap();
+    let work_id = insert_work_at(&conn, &missing_path.to_string_lossy());
 
-    let work_id = insert_work_at(&conn, &linked_path.to_string_lossy());
+    let result = validated_work_path(&conn, work_id, MISSING_MESSAGE);
 
-    let result = validated_work_path(&conn, work_id, lib_root.path(), OUT_OF_ROOT_MESSAGE);
-
-    assert_eq!(result, Err(OUT_OF_ROOT_MESSAGE.to_string()));
-}
-
-#[test]
-fn falls_back_to_raw_paths_when_canonicalize_fails() {
-    let conn = test_db_with_library(TEST_LIBRARY_ID);
-    let lib_root = PathBuf::from("/nonexistent-sharaku-test-root");
-    let work_path = lib_root.join("sub/work");
-
-    let work_id = insert_work_at(&conn, &work_path.to_string_lossy());
-
-    let result = validated_work_path(&conn, work_id, &lib_root, OUT_OF_ROOT_MESSAGE).unwrap();
-
-    assert_eq!(result, work_path);
-}
-
-#[test]
-fn falls_back_to_raw_paths_and_rejects_when_outside_nonexistent_root() {
-    let conn = test_db_with_library(TEST_LIBRARY_ID);
-    let lib_root = PathBuf::from("/nonexistent-sharaku-test-root-a");
-    let work_path = PathBuf::from("/nonexistent-sharaku-test-root-b/work");
-
-    let work_id = insert_work_at(&conn, &work_path.to_string_lossy());
-
-    let result = validated_work_path(&conn, work_id, &lib_root, OUT_OF_ROOT_MESSAGE);
-
-    assert_eq!(result, Err(OUT_OF_ROOT_MESSAGE.to_string()));
+    assert_eq!(result, Err(MISSING_MESSAGE.to_string()));
 }
