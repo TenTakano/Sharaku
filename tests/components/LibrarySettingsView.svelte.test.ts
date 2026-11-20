@@ -20,7 +20,6 @@ function createProps(overrides = {}) {
     libraryName: "テストライブラリ",
     libraryPath: "/path/to/library",
     onNavigate: vi.fn(),
-    onImportUnregistered: vi.fn(),
     onDeleteLibrary: vi.fn(),
     ...overrides,
   };
@@ -40,12 +39,6 @@ beforeEach(() => {
     if (cmd === "set_directory_template") return undefined;
     if (cmd === "set_type_labels") return undefined;
     if (cmd === "remove_library") return undefined;
-    if (cmd === "check_integrity")
-      return {
-        totalWorks: 10,
-        orphanWorks: [],
-        unregisteredEntries: [],
-      };
   });
 });
 
