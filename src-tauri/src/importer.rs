@@ -8,7 +8,6 @@ use walkdir::WalkDir;
 use crate::db::{self, WorkRecord};
 use crate::error::AppError;
 use crate::scanner;
-use crate::settings;
 use crate::template::{self, WorkMetadata};
 use crate::thumbnail;
 
@@ -22,7 +21,6 @@ pub struct ImportRequest {
     pub genre: Option<String>,
     pub circle: Option<String>,
     pub origin: Option<String>,
-    pub mode: ImportMode,
     #[serde(default)]
     pub kind: ImportKind,
 }
@@ -39,15 +37,6 @@ pub struct ImportResult {
 pub struct ParsedMetadata {
     pub title: String,
     pub artist: Option<String>,
-}
-
-// keep-in-sync: corresponds to ImportMode ("copy" | "move") in src/lib/types.ts.
-// rename_all = "camelCase" serializes Copy/Move as "copy"/"move" respectively.
-#[derive(Deserialize, Clone, Copy, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum ImportMode {
-    Copy,
-    Move,
 }
 
 #[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Default)]
@@ -128,7 +117,6 @@ pub fn import_work(
     request: &ImportRequest,
     conn: &rusqlite::Connection,
     library_id: &str,
-    library_root: &Path,
 ) -> Result<ImportResult, AppError> {
     let source = Path::new(&request.source_path);
     if !source.is_dir() {
@@ -144,96 +132,24 @@ pub fn import_work(
         ));
     }
 
-    let resource_mode = settings::get_resource_mode(conn, library_id)?;
     let thumb = thumbnail::generate_thumbnail(&images[0])?;
     let page_count = images.len();
+    let source_str = source.to_string_lossy().to_string();
 
-    if resource_mode == "metadata_only" {
-        let source_str = source.to_string_lossy().to_string();
-
-        db::insert_work(
-            conn,
-            &build_work_record(
-                request,
-                library_id,
-                &source_str,
-                template::WORK_KIND_FOLDER,
-                page_count as i32,
-                &thumb,
-            ),
-        )?;
-
-        return Ok(ImportResult {
-            destination_path: source_str,
-            page_count,
-        });
-    }
-
-    let template_str = settings::get_directory_template(conn, library_id)?.ok_or_else(|| {
-        AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
-    })?;
-
-    let type_label = settings::resolve_type_label(conn, library_id, template::WORK_KIND_FOLDER)?;
-    let metadata = WorkMetadata {
-        title: request.title.clone(),
-        artist: request.artist.clone(),
-        year: request.year,
-        genre: request.genre.clone(),
-        circle: request.circle.clone(),
-        origin: request.origin.clone(),
-        work_type: Some(type_label),
-    };
-
-    let dest = template::resolve_unique_work_path(
-        library_root,
-        &template_str,
-        &metadata,
-        template::WORK_KIND_FOLDER,
-    );
-
-    if paths_overlap(source, &dest) {
-        return Err(AppError::ImportError(
-            "取り込み元と取り込み先が重複しています".to_string(),
-        ));
-    }
-
-    std::fs::create_dir_all(&dest)?;
-
-    let rollback = |dest: &Path| {
-        let _ = std::fs::remove_dir_all(dest);
-    };
-
-    if let Err(e) = copy_images_to_dir(&images, &dest, false, AppError::ImportError) {
-        rollback(&dest);
-        return Err(e);
-    }
-
-    let dest_str = dest.to_string_lossy().to_string();
-
-    if let Err(e) = db::insert_work(
+    db::insert_work(
         conn,
         &build_work_record(
             request,
             library_id,
-            &dest_str,
+            &source_str,
             template::WORK_KIND_FOLDER,
             page_count as i32,
             &thumb,
         ),
-    ) {
-        rollback(&dest);
-        return Err(e);
-    }
-
-    if request.mode == ImportMode::Move {
-        for image in &images {
-            let _ = std::fs::remove_file(image);
-        }
-        let _ = std::fs::remove_dir(source);
-    }
+    )?;
 
     Ok(ImportResult {
-        destination_path: dest_str,
+        destination_path: source_str,
         page_count,
     })
 }
@@ -259,10 +175,6 @@ fn build_work_record<'a>(
         circle: request.circle.as_deref(),
         origin: request.origin.as_deref(),
     }
-}
-
-fn paths_overlap(a: &Path, b: &Path) -> bool {
-    a.starts_with(b) || b.starts_with(a)
 }
 
 /// Copies images into dest. When ensure_dest_dir is true, this also creates dest
@@ -292,7 +204,6 @@ pub fn import_single_image(
     request: &ImportRequest,
     conn: &rusqlite::Connection,
     library_id: &str,
-    library_root: &Path,
 ) -> Result<ImportResult, AppError> {
     let source = Path::new(&request.source_path);
     if !source.is_file() || !scanner::is_image_file(source) {
@@ -301,97 +212,23 @@ pub fn import_single_image(
         ));
     }
 
-    let resource_mode = settings::get_resource_mode(conn, library_id)?;
     let thumb = thumbnail::generate_thumbnail(source)?;
+    let source_str = source.to_string_lossy().to_string();
 
-    if resource_mode == "metadata_only" {
-        let source_str = source.to_string_lossy().to_string();
-
-        db::insert_work(
-            conn,
-            &build_work_record(
-                request,
-                library_id,
-                &source_str,
-                template::WORK_KIND_IMAGE,
-                1,
-                &thumb,
-            ),
-        )?;
-
-        return Ok(ImportResult {
-            destination_path: source_str,
-            page_count: 1,
-        });
-    }
-
-    let template_str = settings::get_directory_template(conn, library_id)?.ok_or_else(|| {
-        AppError::ImportError("ディレクトリテンプレートが設定されていません".to_string())
-    })?;
-
-    let type_label = settings::resolve_type_label(conn, library_id, template::WORK_KIND_IMAGE)?;
-    let metadata = WorkMetadata {
-        title: request.title.clone(),
-        artist: request.artist.clone(),
-        year: request.year,
-        genre: request.genre.clone(),
-        circle: request.circle.clone(),
-        origin: request.origin.clone(),
-        work_type: Some(type_label),
-    };
-
-    let dest_dir = template::resolve_unique_work_path(
-        library_root,
-        &template_str,
-        &metadata,
-        template::WORK_KIND_IMAGE,
-    );
-
-    if paths_overlap(source, &dest_dir) {
-        return Err(AppError::ImportError(
-            "取り込み元と取り込み先が重複しています".to_string(),
-        ));
-    }
-
-    let file_name = source
-        .file_name()
-        .ok_or_else(|| AppError::ImportError("無効なファイル名".to_string()))?;
-    let dest_file = dest_dir.join(file_name);
-
-    std::fs::create_dir_all(&dest_dir)?;
-
-    let rollback = |dest_dir: &Path| {
-        let _ = std::fs::remove_dir_all(dest_dir);
-    };
-
-    if let Err(e) = std::fs::copy(source, &dest_file) {
-        rollback(&dest_dir);
-        return Err(AppError::Io(e));
-    }
-
-    let dest_str = dest_file.to_string_lossy().to_string();
-
-    if let Err(e) = db::insert_work(
+    db::insert_work(
         conn,
         &build_work_record(
             request,
             library_id,
-            &dest_str,
+            &source_str,
             template::WORK_KIND_IMAGE,
             1,
             &thumb,
         ),
-    ) {
-        rollback(&dest_dir);
-        return Err(e);
-    }
-
-    if request.mode == ImportMode::Move {
-        let _ = std::fs::remove_file(source);
-    }
+    )?;
 
     Ok(ImportResult {
-        destination_path: dest_str,
+        destination_path: source_str,
         page_count: 1,
     })
 }
