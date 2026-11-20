@@ -54,7 +54,6 @@
   let addingToPlaylistWorkId = $state<number | null>(null);
   let deleteFileAction = $state<DeleteFileAction>("ask");
   let selectedFileAction = $state<DeleteFileAction | "none">("none");
-  let isFullMode = $state(false);
 
   const CARD_WIDTH = 180;
   const GAP = 16;
@@ -150,10 +149,8 @@
     if (!work) return;
     try {
       const settings = await invoke<AppSettings>("get_settings");
-      isFullMode = settings.resourceMode === "full";
       deleteFileAction = settings.deleteFileAction;
     } catch {
-      isFullMode = false;
       deleteFileAction = "ask";
     }
     selectedFileAction = "none";
@@ -161,7 +158,6 @@
   }
 
   function resolveEffectiveDeleteAction(): DeleteFileAction | "none" {
-    if (!isFullMode) return "none";
     if (deleteFileAction === "ask") return selectedFileAction;
     return deleteFileAction;
   }
@@ -314,15 +310,15 @@
     onCancel={() => (deletingWork = null)}
   >
     {#snippet extra()}
-      {#if isFullMode && deleteFileAction === "delete"}
+      {#if deleteFileAction === "delete"}
         <p class="confirm-dialog-file-action-note">
           ※ ローカルファイルも削除されます
         </p>
-      {:else if isFullMode && deleteFileAction === "trash"}
+      {:else if deleteFileAction === "trash"}
         <p class="confirm-dialog-file-action-note">
           ※ ローカルファイルはゴミ箱に退避されます
         </p>
-      {:else if isFullMode && deleteFileAction === "ask"}
+      {:else if deleteFileAction === "ask"}
         <div class="confirm-dialog-file-action">
           <label class="confirm-dialog-radio">
             <input

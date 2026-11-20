@@ -4,9 +4,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 use crate::import_queue::{ImportJob, ImportQueueEvent};
-use crate::importer::{self, DiscoverProgress, DiscoverResult, ImportKind, ParsedMetadata};
-use crate::template::WorkMetadata;
-use crate::{scanner, settings, AppState};
+use crate::importer::{self, DiscoverProgress, DiscoverResult, ParsedMetadata};
+use crate::{scanner, AppState};
 
 #[tauri::command]
 pub(crate) async fn has_image_subfolders(dir: String) -> Result<bool, String> {
@@ -26,32 +25,6 @@ pub(crate) async fn classify_drop_path(path: String) -> Result<scanner::DropKind
 #[tauri::command]
 pub(crate) async fn parse_folder_name(folder_name: String) -> Result<ParsedMetadata, String> {
     Ok(importer::parse_folder_name(&folder_name))
-}
-
-#[tauri::command]
-pub(crate) async fn preview_import_path(
-    state: tauri::State<'_, AppState>,
-    metadata: WorkMetadata,
-    kind: Option<ImportKind>,
-) -> Result<String, String> {
-    let kind = kind.unwrap_or_default();
-    state
-        .with_active_db(move |db, active| {
-            let lib_path = active
-                .path
-                .as_ref()
-                .ok_or("ライブラリルートが設定されていません")?;
-            let template_str = settings::get_directory_template(&db.conn, &active.id)
-                .map_err(|e| e.to_string())?
-                .ok_or_else(|| "ディレクトリテンプレートが設定されていません".to_string())?;
-            Ok(importer::preview_import_path(
-                lib_path,
-                &template_str,
-                &metadata,
-                kind.work_kind(),
-            ))
-        })
-        .await
 }
 
 #[derive(Serialize)]
