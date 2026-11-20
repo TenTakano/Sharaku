@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
-  import { getCachedThumbnail, setCachedThumbnail } from "../thumbnailCache";
+  import { loadThumbnail as fetchThumbnail } from "../thumbnailCache";
   import type { WorkSummary } from "../types";
 
   interface Props {
@@ -14,25 +13,8 @@
   let loading = $state(true);
 
   async function loadThumbnail() {
-    const cached = getCachedThumbnail(work.id);
-    if (cached) {
-      thumbnailUrl = cached;
-      loading = false;
-      return;
-    }
-    try {
-      const bytes: number[] = await invoke("get_thumbnail", {
-        workId: work.id,
-      });
-      const blob = new Blob([new Uint8Array(bytes)], { type: "image/webp" });
-      const url = URL.createObjectURL(blob);
-      setCachedThumbnail(work.id, url);
-      thumbnailUrl = url;
-    } catch {
-      thumbnailUrl = null;
-    } finally {
-      loading = false;
-    }
+    thumbnailUrl = await fetchThumbnail(work.id);
+    loading = false;
   }
 
   $effect(() => {
