@@ -629,3 +629,78 @@ describe("App のプレイリストリネーム反映", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("App の Home", () => {
+  const HOME_WORK = {
+    id: 1,
+    title: "作品A",
+    workType: "image",
+    pageCount: 3,
+    createdAt: "2025-01-01T00:00:00Z",
+    lastViewedAt: null,
+    viewCount: 0,
+    lastPage: null,
+    totalViewSeconds: 0,
+  };
+
+  function mockHomeIPC() {
+    mockWindows("main");
+    mockIPC((cmd: string) => {
+      if (cmd === "get_active_library") return MOCK_LIBRARY;
+      if (cmd === "list_libraries") return [MOCK_LIBRARY];
+      if (cmd === "list_tags") return [];
+      if (cmd === "list_playlists") return [];
+      if (cmd === "list_works") return [];
+      if (cmd === "list_recently_added_works") return [HOME_WORK];
+      if (cmd === "get_thumbnail") return [0x52, 0x49, 0x46, 0x46];
+      if (cmd === "get_work") return MOCK_WORK;
+      if (cmd === "get_tags_for_work") return [];
+      if (cmd === "start_view_session") return 1;
+      if (cmd === "plugin:window|is_fullscreen") return false;
+      return [];
+    });
+  }
+
+  it("起動後は Home を表示し、作品を開いて閉じると Home に戻る", async () => {
+    const user = userEvent.setup();
+    mockHomeIPC();
+    render(App);
+
+    await waitFor(() => {
+      expect(screen.getByText("最近追加した")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("作品A"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("作品A", { selector: ".viewer-title" }),
+      ).toBeInTheDocument();
+    });
+    await user.click(
+      screen.getByText(/テストライブラリ/, { selector: "button" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("最近追加した")).toBeInTheDocument();
+    });
+  });
+
+  it("ナビのブラウズで作品一覧に、ホームで Home に移る", async () => {
+    const user = userEvent.setup();
+    mockHomeIPC();
+    render(App);
+
+    await waitFor(() => {
+      expect(screen.getByText("最近追加した")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "ブラウズ" }));
+    await waitFor(() => {
+      expect(screen.getByText("0 works")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "ホーム" }));
+    await waitFor(() => {
+      expect(screen.getByText("最近追加した")).toBeInTheDocument();
+    });
+  });
+});

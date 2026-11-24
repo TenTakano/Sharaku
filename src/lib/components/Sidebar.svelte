@@ -248,6 +248,25 @@
 <aside class="sidebar">
   <div class="sidebar-logo">SHARAKU</div>
 
+  <nav class="sidebar-nav" aria-label="メインナビゲーション">
+    <button
+      class="sidebar-nav-item"
+      class:active={currentView === "home"}
+      aria-current={currentView === "home" ? "page" : undefined}
+      onclick={() => onNavigate("home")}
+    >
+      ホーム
+    </button>
+    <button
+      class="sidebar-nav-item"
+      class:active={currentView === "library"}
+      aria-current={currentView === "library" ? "page" : undefined}
+      onclick={() => onNavigate("library")}
+    >
+      ブラウズ
+    </button>
+  </nav>
+
   <div class="sidebar-section">
     <div class="sidebar-section-header">Libraries</div>
     <div class="sidebar-library-list">

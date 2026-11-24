@@ -16,6 +16,28 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* Design tokens of the discovery screens (Home and its navigation). */
+  --sk-font:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+    "Noto Sans CJK JP", "Yu Gothic UI", "Yu Gothic", "Meiryo", sans-serif;
+  --sk-font-serif:
+    "Hiragino Mincho ProN", "Noto Serif JP", "Noto Serif CJK JP", "Yu Mincho",
+    serif;
+  --sk-bg: #f7f6f3;
+  --sk-nav: #efeeea;
+  --sk-surface: #ffffff;
+  --sk-surface-active: #e4e2dd;
+  --sk-line: #e2e0db;
+  --sk-line-strong: #cfccc6;
+  --sk-placeholder: #e2e0db;
+  --sk-text: #1c1b19;
+  --sk-text-sub: #3d3b37;
+  --sk-muted: #6e6b65;
+  --sk-accent: #e4693f;
+  --sk-on-accent: #160b07;
+  --sk-overlay: rgba(17, 17, 19, 0.72);
+  --sk-on-overlay: #edebe7;
 }
 
 html,
@@ -2368,6 +2390,18 @@ button:disabled {
   color: #f6f6f6;
   background-color: #2f2f2f;
 
+  --sk-bg: #111113;
+  --sk-nav: #18181b;
+  --sk-surface: #1f1f23;
+  --sk-surface-active: #26262b;
+  --sk-line: #2c2c31;
+  --sk-line-strong: #3a3a40;
+  --sk-placeholder: #2c2c31;
+  --sk-text: #edebe7;
+  --sk-text-sub: #c9c7c2;
+  --sk-muted: #a3a19c;
+  --sk-overlay: rgba(17, 17, 19, 0.82);
+
   button {
     color: #ffffff;
     background-color: #0f0f0f98;
@@ -2987,4 +3021,327 @@ button:disabled {
   .viewer-toolbar-separator {
     color: #666;
   }
+}
+
+/* ============================
+   Home (discovery)
+   Colors come from the --sk-* tokens, which follow the light/dark theme.
+   Button rules are written as `.x button.y` and kept after the dark-mode
+   block so they win over its `:root.dark button` defaults.
+   ============================ */
+
+.home {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -24px -16px;
+  padding: 24px 0 64px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  background: var(--sk-bg);
+  color: var(--sk-text);
+  font-family: var(--sk-font);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.home h2 {
+  margin: 0;
+}
+
+.home-top {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 40px;
+}
+
+.home button.home-surprise {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--sk-accent);
+  color: var(--sk-on-accent);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.home button.home-surprise:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.home-resume {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: center;
+  margin: 0 40px;
+  padding: 24px;
+  border: 1px solid var(--sk-line);
+  border-radius: 16px;
+  background: var(--sk-surface);
+}
+
+.home-resume-cover {
+  flex: none;
+  width: 132px;
+  height: 176px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--sk-placeholder);
+}
+
+.home-resume-cover img,
+.shelf-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.home-resume-body {
+  flex: 1 1 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-resume-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--sk-muted);
+}
+
+.home-resume-title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.home-resume-meta {
+  color: var(--sk-muted);
+}
+
+.home-resume-progress {
+  max-width: 360px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sk-line);
+}
+
+.home-resume-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sk-accent);
+}
+
+.home-resume-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.home button.home-resume-primary,
+.home button.home-resume-secondary {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.home button.home-resume-primary {
+  border: 0;
+  background: var(--sk-text);
+  color: var(--sk-bg);
+  font-weight: 700;
+}
+
+.home button.home-resume-secondary {
+  border: 1px solid var(--sk-line-strong);
+  background: transparent;
+  color: var(--sk-text);
+}
+
+.home-empty {
+  padding: 0 40px;
+  color: var(--sk-muted);
+}
+
+.shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.shelf-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+  padding: 0 40px;
+}
+
+.shelf-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shelf-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.shelf-rule {
+  font-size: 12px;
+  color: var(--sk-muted);
+}
+
+.shelf-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.home button.shelf-action {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sk-text);
+  font-size: 13px;
+  box-shadow: none;
+}
+
+.home button.shelf-action-outline {
+  border-color: var(--sk-line-strong);
+}
+
+.home button.shelf-action-muted {
+  color: var(--sk-muted);
+}
+
+.home button.shelf-action:hover {
+  border-color: var(--sk-line-strong);
+}
+
+.shelf-items {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 0 40px 6px;
+}
+
+.home button.shelf-card {
+  flex: none;
+  width: 160px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sk-text);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  font-weight: 400;
+}
+
+.shelf-card-cover {
+  position: relative;
+  display: block;
+  width: 160px;
+  height: 213px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--sk-placeholder);
+}
+
+.home button.shelf-card:hover .shelf-card-cover,
+.home button.shelf-card:focus-visible .shelf-card-cover {
+  outline: 2px solid var(--sk-accent);
+  outline-offset: 2px;
+}
+
+/* Same specificity as `:root.dark button:active`; wins by coming later. */
+.home button.home-surprise:active {
+  background: var(--sk-accent);
+}
+
+.home button.home-resume-primary:active {
+  background: var(--sk-text);
+}
+
+.home button.home-resume-secondary:active,
+.home button.shelf-action:active,
+.home button.shelf-card:active {
+  background: transparent;
+}
+
+.shelf-card-badge,
+.shelf-card-pages {
+  position: absolute;
+  background: var(--sk-overlay);
+  color: var(--sk-on-overlay);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.shelf-card-badge {
+  left: 8px;
+  top: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.shelf-card-pages {
+  right: 8px;
+  bottom: 8px;
+  padding: 1px 7px;
+  border-radius: 6px;
+}
+
+.shelf-card-title {
+  font-weight: 500;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf-card-meta {
+  margin-top: -6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sk-muted);
+}
+
+/* Main navigation (kept after the dark-mode block for the same reason). */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 8px 8px;
+}
+
+.sidebar button.sidebar-nav-item {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  box-shadow: none;
+}
+
+.sidebar button.sidebar-nav-item:active,
+.sidebar button.sidebar-nav-item.active {
+  background: rgba(228, 105, 63, 0.14);
+  color: #e4693f;
+  font-weight: 700;
 }

@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import AppSettingsView from "./lib/components/AppSettingsView.svelte";
   import BulkImportView from "./lib/components/BulkImportView.svelte";
+  import HomeView from "./lib/components/HomeView.svelte";
   import ImportBanner from "./lib/components/ImportBanner.svelte";
   import ImportView from "./lib/components/ImportView.svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
@@ -31,11 +32,12 @@
   let playlistReloadTrigger = $state(0);
   let filterTags = $state<Tag[]>([]);
   let tagSearchMode = $state<TagSearchMode>("and");
-  let currentView = $state<ViewKind>("library");
+  let currentView = $state<ViewKind>("home");
   let selectedWorkId = $state<number | null>(null);
   let workIds = $state<number[]>([]);
   let selectedPlaylist = $state<Playlist | null>(null);
-  let viewerOrigin = $state<ViewKind>("library");
+  let viewerOrigin = $state<ViewKind>("home");
+  let viewerStartPage = $state(0);
   let activeLibrary = $state<Library | null>(null);
   let libraryLoading = $state(true);
   let dragging = $state(false);
@@ -58,13 +60,22 @@
   function handleLibrarySwitch(library: Library) {
     activeLibrary = library;
     filterTags = [];
-    currentView = "library";
+    currentView = "home";
     selectedPlaylist = null;
     reloadTrigger++;
   }
 
   function handleSelectWork(workId: number) {
     viewerOrigin = currentView === "playlist" ? "playlist" : "library";
+    viewerStartPage = 0;
+    selectedWorkId = workId;
+    currentView = "viewer";
+  }
+
+  function handleOpenFromHome(ids: number[], workId: number, page = 0) {
+    workIds = ids;
+    viewerOrigin = "home";
+    viewerStartPage = page;
     selectedWorkId = workId;
     currentView = "viewer";
   }
@@ -132,7 +143,7 @@
   async function handleDeleteLibrary() {
     activeLibrary = await invoke<Library | null>("get_active_library");
     if (activeLibrary) {
-      currentView = "library";
+      currentView = "home";
       reloadTrigger++;
     }
   }
@@ -143,7 +154,7 @@
   }
 
   function handleBackFromAppSettings() {
-    currentView = activeLibrary ? previousView : "library";
+    currentView = activeLibrary ? previousView : "home";
   }
 
   function handleSidebarNavigate(view: ViewKind) {
@@ -184,7 +195,7 @@
 
   $effect(() => {
     const unlisten = getCurrentWebview().onDragDropEvent((event) => {
-      if (currentView !== "library") return;
+      if (currentView !== "library" && currentView !== "home") return;
       if (event.payload.type === "enter") {
         dragging = true;
       } else if (event.payload.type === "leave") {
@@ -253,6 +264,7 @@
     workId={selectedWorkId}
     {workIds}
     libraryName={activeLibrary.name}
+    initialPage={viewerStartPage}
     onBack={handleViewerBack}
     onNavigateWork={handleNavigateWork}
   />
@@ -289,37 +301,45 @@
       onPlaylistDeleted={handlePlaylistDeleted}
     />
     <main class="content-area">
-      <div class="context-bar">
-        <div class="context-bar-left">
-          {#if currentView === "settings"}
-            <button class="context-bar-back" onclick={handleBackToLibrary}>
-              ←
-            </button>
-            <h1 class="context-bar-title">設定: {activeLibrary.name}</h1>
-          {:else if currentView === "import"}
-            <button class="context-bar-back" onclick={handleBackToLibrary}>
-              ←
-            </button>
-            <h1 class="context-bar-title">取り込み: {activeLibrary.name}</h1>
-          {:else if currentView === "bulk-import"}
-            <button class="context-bar-back" onclick={handleBulkImportBack}>
-              ←
-            </button>
-            <h1 class="context-bar-title">
-              一括取り込み: {activeLibrary.name}
-            </h1>
-          {:else if currentView === "playlist" && selectedPlaylist}
-            <button class="context-bar-back" onclick={handleBackToLibrary}>
-              ←
-            </button>
-            <h1 class="context-bar-title">{selectedPlaylist.name}</h1>
-          {:else}
-            <h1 class="context-bar-title">{activeLibrary.name}</h1>
-          {/if}
+      {#if currentView !== "home"}
+        <div class="context-bar">
+          <div class="context-bar-left">
+            {#if currentView === "settings"}
+              <button class="context-bar-back" onclick={handleBackToLibrary}>
+                ←
+              </button>
+              <h1 class="context-bar-title">設定: {activeLibrary.name}</h1>
+            {:else if currentView === "import"}
+              <button class="context-bar-back" onclick={handleBackToLibrary}>
+                ←
+              </button>
+              <h1 class="context-bar-title">取り込み: {activeLibrary.name}</h1>
+            {:else if currentView === "bulk-import"}
+              <button class="context-bar-back" onclick={handleBulkImportBack}>
+                ←
+              </button>
+              <h1 class="context-bar-title">
+                一括取り込み: {activeLibrary.name}
+              </h1>
+            {:else if currentView === "playlist" && selectedPlaylist}
+              <button class="context-bar-back" onclick={handleBackToLibrary}>
+                ←
+              </button>
+              <h1 class="context-bar-title">{selectedPlaylist.name}</h1>
+            {:else}
+              <h1 class="context-bar-title">{activeLibrary.name}</h1>
+            {/if}
+          </div>
         </div>
-      </div>
+      {/if}
 
-      {#if currentView === "settings"}
+      {#if currentView === "home"}
+        <HomeView
+          {reloadTrigger}
+          onOpenWork={handleOpenFromHome}
+          onBrowseAll={() => (currentView = "library")}
+        />
+      {:else if currentView === "settings"}
         <LibrarySettingsView
           libraryId={activeLibrary.id}
           libraryName={activeLibrary.name}
@@ -359,7 +379,7 @@
         />
       {/if}
 
-      {#if dragging && currentView === "library"}
+      {#if dragging && (currentView === "library" || currentView === "home")}
         <div class="drop-overlay">
           <div class="drop-overlay-content">
             ここにフォルダをドロップして取り込み
