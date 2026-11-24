@@ -100,10 +100,6 @@ export interface WorkMetadata {
   origin: string | null;
 }
 
-// keep-in-sync: corresponds to ImportMode in src-tauri/src/importer.rs (#[serde(rename_all = "camelCase")]).
-// The Rust side's Copy/Move become "copy"/"move" once camelCased.
-export type ImportMode = "copy" | "move";
-
 export type ImportKind = "folder" | "image";
 
 export type DropKind = "folder" | "image" | "other";
@@ -116,7 +112,6 @@ export interface ImportRequest {
   genre: string | null;
   circle: string | null;
   origin: string | null;
-  mode: ImportMode;
   kind: ImportKind;
 }
 
@@ -128,20 +123,6 @@ export interface ImportResult {
 export interface ParsedMetadata {
   title: string;
   artist: string | null;
-}
-
-// keep-in-sync: corresponds to the RelocationProgress enum in src-tauri/src/relocator.rs.
-export type RelocationProgress =
-  | { type: "started"; total: number }
-  | { type: "moving"; current: number; total: number; title: string }
-  | { type: "completed"; relocated: number; skipped: number; failed: number }
-  | { type: "error"; message: string };
-
-export interface RelocationPreview {
-  workId: number;
-  title: string;
-  oldPath: string;
-  newPath: string;
 }
 
 export interface DiscoveredFolder {
@@ -189,31 +170,6 @@ export interface BulkImportSummary {
   succeeded: number;
   failed: number;
 }
-
-export interface OrphanWork {
-  id: number;
-  title: string;
-  path: string;
-  workType: string;
-}
-
-export interface UnregisteredEntry {
-  path: string;
-  folderName: string;
-  imageCount: number;
-}
-
-export interface IntegrityReport {
-  totalWorks: number;
-  orphanWorks: OrphanWork[];
-  unregisteredEntries: UnregisteredEntry[];
-}
-
-// keep-in-sync: corresponds to the IntegrityCheckProgress enum in src-tauri/src/integrity.rs.
-export type IntegrityCheckProgress =
-  | { type: "checkingWorks"; checked: number; total: number }
-  | { type: "scanningDirectory"; scannedDirs: number }
-  | { type: "completed" };
 
 // keep-in-sync: corresponds to the ImportQueueEvent enum in src-tauri/src/import_queue.rs.
 export type ImportQueueEvent =

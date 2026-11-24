@@ -4,15 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import ImportView from "../../src/lib/components/ImportView.svelte";
 import { getToasts, removeToast } from "../../src/lib/stores/toast.svelte";
-import type { AppSettings } from "../../src/lib/types";
-
-const MOCK_SETTINGS: AppSettings = {
-  resourceMode: "full",
-  directoryTemplate: "{artist}/{title}",
-  typeLabelImage: "Image",
-  typeLabelFolder: "Folder",
-  deleteFileAction: "ask",
-};
 
 function createProps(overrides = {}) {
   return {
@@ -27,11 +18,8 @@ beforeEach(() => {
     removeToast(toast.id);
   }
   mockIPC((cmd: string) => {
-    if (cmd === "get_settings") return MOCK_SETTINGS;
     if (cmd === "parse_folder_name")
       return { title: "パースされたタイトル", artist: "パースアーティスト" };
-    if (cmd === "preview_import_path")
-      return "/library/パースアーティスト/パースされたタイトル";
     if (cmd === "enqueue_import") return { jobId: "job-1" };
     if (cmd === "plugin:dialog|open") return "/path/to/folder";
   });
@@ -83,12 +71,11 @@ describe("ImportView コンポーネント", () => {
       });
     });
 
-    it("fullモードで取り込みモード選択が表示される", async () => {
+    it("元の場所に登録される旨の案内が表示される", async () => {
       render(ImportView, createProps({ initialSourcePath: "/path/to/source" }));
 
       await waitFor(() => {
-        expect(screen.getByText("コピー")).toBeInTheDocument();
-        expect(screen.getByText("移動")).toBeInTheDocument();
+        expect(screen.getByText("元の場所に登録されます")).toBeInTheDocument();
       });
     });
 
@@ -166,7 +153,6 @@ describe("ImportView コンポーネント", () => {
       const user = userEvent.setup();
       const dialogOpenSpy = vi.fn(() => "/path/to/folder");
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings") return MOCK_SETTINGS;
         if (cmd === "plugin:dialog|open") return dialogOpenSpy(args);
       });
       render(ImportView, createProps());
@@ -184,7 +170,6 @@ describe("ImportView コンポーネント", () => {
       const user = userEvent.setup();
       const dialogOpenSpy = vi.fn(() => "/path/to/photo.jpg");
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings") return MOCK_SETTINGS;
         if (cmd === "parse_folder_name")
           return { title: "パースされたタイトル", artist: null };
         if (cmd === "plugin:dialog|open") return dialogOpenSpy(args);
@@ -218,9 +203,7 @@ describe("ImportView コンポーネント", () => {
         artist: null,
       }));
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings") return MOCK_SETTINGS;
         if (cmd === "parse_folder_name") return parseFolderNameSpy(args);
-        if (cmd === "preview_import_path") return "/library/pictures/my-photo";
       });
 
       render(
@@ -238,14 +221,11 @@ describe("ImportView コンポーネント", () => {
       });
     });
 
-    it("preview_import_pathとenqueue_importにkind=imageが伝播する", async () => {
-      const previewSpy = vi.fn(() => "/library/pictures/my-photo");
+    it("enqueue_importにkind=imageが伝播する", async () => {
       const enqueueSpy = vi.fn(() => ({ jobId: "job-1" }));
       mockIPC((cmd: string, args: Record<string, unknown>) => {
-        if (cmd === "get_settings") return MOCK_SETTINGS;
         if (cmd === "parse_folder_name")
           return { title: "my-photo", artist: null };
-        if (cmd === "preview_import_path") return previewSpy(args);
         if (cmd === "enqueue_import") return enqueueSpy(args);
       });
 
@@ -257,9 +237,7 @@ describe("ImportView コンポーネント", () => {
       render(ImportView, props);
 
       await waitFor(() => {
-        expect(previewSpy).toHaveBeenCalledWith(
-          expect.objectContaining({ kind: "image" }),
-        );
+        expect(screen.getByText("取り込み実行")).toBeInTheDocument();
       });
 
       await user.click(screen.getByText("取り込み実行"));

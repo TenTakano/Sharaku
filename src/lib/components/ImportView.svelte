@@ -2,13 +2,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-dialog";
   import { addToast } from "../stores/toast.svelte";
-  import { debounce } from "../utils/debounce";
-  import { createLatestRequestGuard } from "../utils/latestRequest";
   import type {
-    AppSettings,
-    ResourceMode,
     ImportKind,
-    ImportMode,
     ImportRequest,
     EnqueueResult,
     ParsedMetadata,
@@ -26,7 +21,6 @@
 
   const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp"];
 
-  let resourceMode = $state<ResourceMode>("full");
   let step = $state<Step>("select");
   // svelte-ignore state_referenced_locally
   let kind = $state<ImportKind>(initialKind);
@@ -37,10 +31,7 @@
   let genre = $state("");
   let circle = $state("");
   let origin = $state("");
-  let mode = $state<ImportMode>("copy");
-  let previewPath = $state<string | null>(null);
   let submitting = $state(false);
-  const previewRequestGuard = createLatestRequestGuard();
 
   function basenameOf(path: string): string {
     const sep = path.includes("\\") ? "\\" : "/";
@@ -92,40 +83,12 @@
     };
   }
 
-  const debouncedFetchPreview = debounce(async () => {
-    if (!title.trim()) {
-      previewPath = null;
-      return;
-    }
-    const requestId = previewRequestGuard.next();
-    try {
-      const path = await invoke<string>("preview_import_path", {
-        metadata: buildMetadata(),
-        kind,
-      });
-      if (!previewRequestGuard.isLatest(requestId)) return;
-      previewPath = path;
-    } catch {
-      if (!previewRequestGuard.isLatest(requestId)) return;
-      previewPath = null;
-    }
-  }, 300);
-
-  function updatePreview() {
-    if (resourceMode === "metadata_only") {
-      previewPath = null;
-      return;
-    }
-    debouncedFetchPreview();
-  }
-
   async function executeImport() {
     submitting = true;
     try {
       const request: ImportRequest = {
         sourcePath,
         ...buildMetadata(),
-        mode,
         kind,
       };
       await invoke<EnqueueResult>("enqueue_import", { requests: [request] });
@@ -146,8 +109,6 @@
     genre = "";
     circle = "";
     origin = "";
-    mode = "copy";
-    previewPath = null;
   }
 
   async function loadFromPath(path: string) {
@@ -157,13 +118,9 @@
     artist = resolved.artist;
 
     step = "metadata";
-    updatePreview();
   }
 
   $effect(() => {
-    invoke<AppSettings>("get_settings").then((settings) => {
-      resourceMode = settings.resourceMode;
-    });
     if (initialSourcePath) {
       loadFromPath(initialSourcePath);
     }
@@ -215,7 +172,6 @@
             type="text"
             class="settings-input"
             bind:value={title}
-            oninput={updatePreview}
             placeholder="作品タイトル"
           />
         </div>
@@ -227,7 +183,6 @@
             type="text"
             class="settings-input"
             bind:value={artist}
-            oninput={updatePreview}
             placeholder="アーティスト名"
           />
         </div>
@@ -240,7 +195,6 @@
               type="text"
               class="settings-input"
               bind:value={year}
-              oninput={updatePreview}
               placeholder="2025"
             />
           </div>
@@ -251,7 +205,6 @@
               type="text"
               class="settings-input"
               bind:value={genre}
-              oninput={updatePreview}
               placeholder="ジャンル"
             />
           </div>
@@ -265,7 +218,6 @@
               type="text"
               class="settings-input"
               bind:value={circle}
-              oninput={updatePreview}
               placeholder="サークル名"
             />
           </div>
@@ -276,45 +228,15 @@
               type="text"
               class="settings-input"
               bind:value={origin}
-              oninput={updatePreview}
               placeholder="出典"
             />
           </div>
         </div>
-
-        {#if resourceMode === "full"}
-          <div class="import-field">
-            <span id="import-mode-label" class="import-label"
-              >取り込みモード</span
-            >
-            <div
-              class="import-mode-select"
-              role="radiogroup"
-              aria-labelledby="import-mode-label"
-            >
-              <label class="import-mode-option">
-                <input type="radio" bind:group={mode} value="copy" />
-                コピー
-              </label>
-              <label class="import-mode-option">
-                <input type="radio" bind:group={mode} value="move" />
-                移動
-              </label>
-            </div>
-          </div>
-        {/if}
       </div>
 
-      {#if resourceMode === "metadata_only"}
-        <div class="template-preview">
-          <span class="template-preview-label">元の場所に登録されます</span>
-        </div>
-      {:else if previewPath}
-        <div class="template-preview">
-          <span class="template-preview-label">配置先:</span>
-          <code class="template-preview-path">{previewPath}</code>
-        </div>
-      {/if}
+      <div class="template-preview">
+        <span class="template-preview-label">元の場所に登録されます</span>
+      </div>
 
       <div class="import-actions">
         <button class="settings-back-btn" onclick={resetForm}> ← 戻る </button>
