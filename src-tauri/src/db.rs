@@ -27,6 +27,7 @@ fn init_db(conn: &Connection) -> Result<(), AppError> {
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
     conn.execute_batch(include_str!("../migrations/004_unified_local_db.sql"))?;
     conn.execute_batch(include_str!("../migrations/005_view_sessions.sql"))?;
+    crate::history::close_orphaned_view_sessions(conn)?;
     migrate_libraries_path_nullable(conn)?;
     Ok(())
 }
