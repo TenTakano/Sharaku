@@ -8,7 +8,7 @@ use walkdir::WalkDir;
 use crate::db::{self, WorkRecord};
 use crate::error::AppError;
 use crate::scanner;
-use crate::template::{self, WorkMetadata};
+use crate::template;
 use crate::thumbnail;
 
 #[derive(Deserialize, Clone)]
@@ -45,15 +45,6 @@ pub enum ImportKind {
     #[default]
     Folder,
     Image,
-}
-
-impl ImportKind {
-    pub fn work_kind(self) -> &'static str {
-        match self {
-            ImportKind::Folder => template::WORK_KIND_FOLDER,
-            ImportKind::Image => template::WORK_KIND_IMAGE,
-        }
-    }
 }
 
 pub fn parse_folder_name(folder_name: &str) -> ParsedMetadata {
@@ -101,16 +92,6 @@ pub fn list_images_in_folder(folder_path: &Path) -> Result<Vec<PathBuf>, AppErro
         natord::compare(&a_name, &b_name)
     });
     Ok(images)
-}
-
-pub fn preview_import_path(
-    library_root: &Path,
-    template_str: &str,
-    metadata: &WorkMetadata,
-    work_kind: &str,
-) -> String {
-    let path = template::resolve_work_path(library_root, template_str, metadata, work_kind);
-    path.to_string_lossy().to_string()
 }
 
 pub fn import_work(
